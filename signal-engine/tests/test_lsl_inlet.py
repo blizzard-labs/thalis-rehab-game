@@ -3,12 +3,19 @@
 from __future__ import annotations
 
 import random
+import threading
 import time
 
 import numpy as np
 import pytest
+from pylsl import StreamInfo, StreamOutlet, cf_float32
 
-from acquisition.lsl_inlet import EEGInlet, StreamNotFoundError
+from acquisition.lsl_inlet import (
+    UNICORN_POSITIONAL_EEG_LABELS,
+    UNICORN_POSITIONAL_IMU_LABELS,
+    EEGInlet,
+    StreamNotFoundError,
+)
 from acquisition.mock_eeg_outlet import (
     DEFAULT_EEG_LABELS,
     DEFAULT_IMU_LABELS,
@@ -47,6 +54,56 @@ def permuted_mock_outlet():
 
 def _connect_inlet(timeout: float = 5.0) -> EEGInlet:
     return EEGInlet(timeout=timeout, pull_timeout=1.0)
+
+
+@pytest.fixture
+def unlabelled_data_outlet():
+    """Publish a 17-ch type 'Data' stream with NO channel-label XML.
+
+    Mirrors the real Unicorn LSL bridge (name 'UN-...', type 'Data', no labels).
+    Each channel pushes its own index as the sample value so positional slicing
+    can be verified (row r holds value r). A daemon thread keeps it fed.
+    """
+    name = "UN-TEST.POSITIONAL"
+    info = StreamInfo(
+        name=name, type="Data", channel_count=17,
+        nominal_srate=250.0, channel_format=cf_float32, source_id="unlabelled-test",
+    )  # deliberately NO info.desc() channels node
+    outlet = StreamOutlet(info, max_buffered=60)
+    stop = threading.Event()
+
+    def _pump():
+        sample = [float(i) for i in range(17)]  # value == channel index
+        while not stop.is_set():
+            outlet.push_chunk([sample] * 10)
+            time.sleep(0.04)
+
+    t = threading.Thread(target=_pump, daemon=True)
+    t.start()
+    time.sleep(0.3)  # let LSL discovery settle
+    try:
+        yield name
+    finally:
+        stop.set()
+        t.join(timeout=1.0)
+
+
+def test_inlet_positional_fallback_when_no_labels(unlabelled_data_outlet):
+    """A labelless 'Data' stream resolves by name and slices positionally."""
+    inlet = EEGInlet(timeout=5.0, pull_timeout=1.0, stream_name=unlabelled_data_outlet)
+    try:
+        assert inlet.eeg_labels == UNICORN_POSITIONAL_EEG_LABELS
+        assert inlet.imu_labels == UNICORN_POSITIONAL_IMU_LABELS
+        time.sleep(0.4)
+        eeg = inlet.get_eeg_chunk(max_samples=64, timeout=1.0)
+        imu = inlet.get_imu_chunk(max_samples=64, timeout=1.0)
+        assert eeg.shape[0] == 8 and eeg.shape[1] > 0
+        assert imu.shape[0] == 6 and imu.shape[1] > 0
+        # Each row holds its source channel index -> proves correct slicing.
+        assert np.allclose(eeg[:, 0], np.arange(8))           # EEG = channels 0..7
+        assert np.allclose(imu[:, 0], np.arange(8, 14))       # IMU = channels 8..13
+    finally:
+        inlet.close()
 
 
 def test_inlet_resolves_and_identifies_channels(mock_outlet):

@@ -43,6 +43,13 @@ _EEG_10_20_LABELS = {
 
 _TIME_CORRECTION_REFRESH_S = 5.0
 
+# Fixed g.tec Unicorn positional layout. Used as a fallback when a stream
+# carries no channel-label XML — the real Unicorn LSL bridge streams type
+# "Data" with no <channels> description, so label parsing finds nothing.
+# Verified against the device and archive/unicorneeg/stream.py.
+UNICORN_POSITIONAL_EEG_LABELS = ["Fz", "C3", "Cz", "C4", "Pz", "PO7", "Oz", "PO8"]
+UNICORN_POSITIONAL_IMU_LABELS = ["AccX", "AccY", "AccZ", "Gyro1", "Gyro2", "Gyro3"]
+
 
 class StreamNotFoundError(RuntimeError):
     """Raised when no LSL stream of the requested type resolves before timeout."""
@@ -127,26 +134,37 @@ class EEGInlet:
         timeout: float = 5.0,
         pull_timeout: float = 1.0,
         stream_type: str = "EEG",
+        stream_name: Optional[str] = None,
     ):
         """Resolve and open the LSL stream.
 
         Parameters
         ----------
         timeout : float
-            Max seconds to wait for a stream of `stream_type` to appear.
-            Raises StreamNotFoundError if none is found.
+            Max seconds to wait for the stream to appear. Raises
+            StreamNotFoundError if none is found.
         pull_timeout : float
             Default per-call timeout (seconds) for chunk pulls; chunk methods
             still accept a per-call override.
         stream_type : str
-            LSL stream type to resolve. Defaults to "EEG".
+            LSL stream type to resolve when `stream_name` is not given.
+            Defaults to "EEG". NOTE: the real Unicorn bridge advertises type
+            "Data" (not "EEG"), so resolve it by `stream_name` (or pass
+            stream_type="Data").
+        stream_name : str, optional
+            If given, resolve by stream NAME instead of type (e.g.
+            "UN-2024.06.42"). Preferred for the real Unicorn bridge.
         """
         self.pull_timeout = pull_timeout
 
-        streams = resolve_byprop("type", stream_type, timeout=timeout)
+        if stream_name is not None:
+            prop, value = "name", stream_name
+        else:
+            prop, value = "type", stream_type
+        streams = resolve_byprop(prop, value, timeout=timeout)
         if not streams:
             raise StreamNotFoundError(
-                f"No LSL stream of type={stream_type!r} found within {timeout}s"
+                f"No LSL stream with {prop}={value!r} found within {timeout}s"
             )
 
         self._inlet = StreamInlet(streams[0])
@@ -189,6 +207,22 @@ class EEGInlet:
             if axis in gyro_by_axis:
                 self._imu_idx.append(gyro_by_axis[axis])
                 self._imu_labels.append(self._labels[gyro_by_axis[axis]])
+
+        # Positional fallback: the real Unicorn bridge streams type "Data" with
+        # no channel-label XML, so the label scan above finds zero EEG channels.
+        # Fall back to the device's fixed positional layout (0..7 EEG, 8..13
+        # IMU). Streams that DO carry labels keep the label-based slicing above.
+        if not self._eeg_idx and self._n_channels >= 14:
+            logger.warning(
+                "No EEG channels parsed from labels (labels=%s); falling back to "
+                "the fixed Unicorn positional layout (0..7 EEG, 8..13 IMU).",
+                self._labels,
+            )
+            self._eeg_idx = list(range(8))
+            self._eeg_labels = list(UNICORN_POSITIONAL_EEG_LABELS)
+            self._eeg_units = ["microvolts"] * 8
+            self._imu_idx = list(range(8, 14))
+            self._imu_labels = list(UNICORN_POSITIONAL_IMU_LABELS)
 
         logger.info(
             "Connected to LSL stream name=%r type=%r srate=%.1f channels=%d",
