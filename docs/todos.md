@@ -1,9 +1,9 @@
 # thalis-rehab-game — Development Status & TODOs
 
 _Last updated: 2026-06-21. Scope of this doc: the `signal-engine` Python stack
-(acquisition → preprocessing → features) and its validation against the real
-g.tec Unicorn Hybrid Black. Game client, classifier, CV, and clinician console
-are tracked at a high level under "Roadmap" only._
+(acquisition → preprocessing → features → calibration) and its validation against
+the real g.tec Unicorn Hybrid Black. Game client, classifier, CV, and clinician
+console are tracked at a high level under "Roadmap" only._
 
 Reference spec: [`docs/specs.md`](specs.md). Phase prompts: [`docs/prompts/`](prompts/).
 
@@ -20,10 +20,13 @@ Unicorn HW → Unicorn LSL bridge → pylsl
            → ERDCalculator (mu/beta band power → ERD% → laterality index)
 ```
 
-runs live and meets the MVP latency target. **Next major piece: the online
-classifier + the WebSocket/OSC score server to the game** (neither exists yet).
+runs live and meets the MVP latency target. The **Graz-style cued MI calibration
+block** (cue paradigm + marker stream + labeled epoch collection) is now built
+and tested against the mock outlet. **Next major piece: the online classifier
+(CSP/LDA fit on calibration epochs) + the WebSocket/OSC score server to the game**
+(neither exists yet).
 
-Test suite: **31 passing, 1 skipped** (26 offline + 5 live; the skip is the
+Test suite: **36 passing, 1 skipped** (31 offline + 5 live; the skip is the
 on-head validation, which requires the cap worn). Run everything with:
 
 ```bash
@@ -61,6 +64,30 @@ conda run -n eeg python -m pytest signal-engine/tests/ -v
   sign for left/right injection, pre-calibration guard, zero-denominator LI,
   band-power shape contract. (End-to-end against the mock outlet.)
 
+### Calibration — `signal-engine/calibration/`
+- `orchestrator.py` — `CalibrationOrchestrator` runs the Graz cue-paced block
+  (fixation → cue → MI window → randomized ITI) with `perf_counter` absolute
+  per-segment deadlines (no accumulating sleep overshoot). Builds a balanced,
+  ≤3-consecutive trial order (rejection sampling, 1000-attempt fallback),
+  collects one fixed-length epoch per MI window, supports clean `abort_event`
+  early-exit (partial MI windows discarded), and returns a `CalibrationDataset`
+  (`epochs [n_trials, n_ch, n_samp]`, `labels`, `marker_timestamps`,
+  `session_info`). Raises `InsufficientDataError` only on an empty result;
+  below-`min_trials_per_class` is a soft warning so the §6.5 cross-val quality
+  gate decides usability.
+- `marker_outlet.py` — `create_marker_outlet` (LSL "NeuroReach-Markers", type
+  "Markers", 1-ch, irregular, string) + `send_marker`/`format_marker`/
+  `parse_marker` using the canonical `"label|{json}"` format shared with epoch
+  extraction and the game client.
+- `epoch_extractor.py` — `extract_epochs_from_dataset` (re-slice MI buffer to a
+  sub-window without re-running calibration; identity when `post_onset_s=None`)
+  + `label_encode` (sklearn `LabelEncoder`; returns `(y_int, encoder)` to
+  serialize alongside the classifier).
+- Tests (`test_calibration.py`, end-to-end against the mock outlet): dataset
+  shape `[6,8,N]` + label balance + no-long-runs, ±10% wall-clock timing, clean
+  abort → exactly 2 trials, `InsufficientDataError` on pre-trial abort, and the
+  `label_encode` int/length/`classes_` contract.
+
 ### Live hardware validation — `signal-engine/tests/test_live_unicorn.py`
 Opt-in (`THALIS_LIVE_UNICORN=1`), gated so CI/mock never runs it.
 - `test_stream_metadata_well_formed` — 250 Hz, 17 channels.
@@ -82,9 +109,10 @@ Opt-in (`THALIS_LIVE_UNICORN=1`), gated so CI/mock never runs it.
 |---|---|---|
 | **On-head signal quality + ERD magnitude** (`test_signal_quality_on_head_TODO`, currently `@skip`) | Validate real µV amplitude (10–100 µV) and 20–40% mu-ERD with contralateral laterality | Needs cap worn + self-paced MI protocol |
 | Wire `test_live_unicorn.py` to use `EEGInlet` instead of the local `_LiveUnicorn` shim | Exercise the production acquisition path end-to-end (needs timestamp access for the latency test) | EEGInlet drops LSL timestamps; add a timestamped pull or keep tapping `_inlet` |
-| Classifier unit/integration tests | LDA/EEGNet online decode | classifier not built |
+| Classifier unit/integration tests | CSP/LDA fit on `CalibrationDataset.epochs` + online decode | classifier not built (calibration epochs now available) |
 | WebSocket/OSC score-server tests | game-facing score stream, latency budget | server not built |
-| Calibration-block tests | baseline + CSP/LDA fit, versioned per patient | calibration routine not built |
+| ~~Calibration-block orchestration tests~~ | ~~cue paradigm + labeled epoch collection~~ | **done** — `test_calibration.py` (CSP/LDA fit + per-patient versioning still pending, belongs to the classifier piece) |
+| 60 s baseline-rest block + per-patient versioned filter persistence | spec §6.1/§6.6: resting spectral baseline + serialize CSP/LDA per patient/session | orchestrator collects MI trials only; baseline block + disk versioning not built |
 | Offline replay / regression harness | shadow-mode "no regression" before deploy | needs stored raw EEG+pose corpus |
 
 ---
@@ -119,6 +147,8 @@ Opt-in (`THALIS_LIVE_UNICORN=1`), gated so CI/mock never runs it.
 ### Still required
 - **`pytest.ini` / markers.** Add a `live` marker so live tests run via
   `-m live` instead of an env var, and register markers to silence warnings.
+  (`test_calibration.py` is mock-only/offline, so `-m "not live"` already
+  excludes nothing there, but the marker registration cleanup still applies.)
 - **Dead-channel handling.** Off-head, individual electrodes go flat (std 0).
   Production needs a per-channel quality flag feeding the clinician console’s
   "Check Cz contact" indicator (spec §10.2), not just a test tolerance.
@@ -149,10 +179,98 @@ Opt-in (`THALIS_LIVE_UNICORN=1`), gated so CI/mock never runs it.
 
 ## 6. Roadmap (beyond signal-engine, per `docs/specs.md`)
 
-- [ ] Online classifier: LDA baseline → optional EEGNet (`signal-engine/classifiers/`).
-- [ ] Calibration block + per-patient versioned filters (spec §6).
+- [ ] Online classifier: LDA baseline → optional EEGNet (`signal-engine/classifiers/`),
+  fit on `CalibrationDataset.epochs` / `label_encode` output.
+- [~] Calibration block (spec §6): **cued MI orchestration + marker stream + labeled
+  epoch collection done** (`signal-engine/calibration/`); still TODO — 60 s baseline-rest
+  block, CSP/LDA fit, per-patient versioned filter persistence.
 - [ ] Fusion/scoring service over WebSocket/OSC, EMA-smoothed IntentScore (spec §8).
 - [ ] Camera/CV pipeline (MediaPipe pose/hands) as validity gate + kinematic scoring (spec §7).
 - [ ] Unity game client consuming the score stream (spec §11).
 - [ ] Clinician console: live signal quality, ERD/LI trends, session history (spec §10).
 - [ ] Full-pipeline latency instrumentation incl. WebSocket→Unity frame (spec §13.2).
+
+---
+
+## 7. Headset testing schedule
+
+**Design principle:** everything that can be validated with synthetic/mock data must be, before
+touching the headset. Four on-head sessions, each gated on a code milestone.
+
+### Why only 4
+
+- Latency is signal-source-independent → the p95 18 ms result off-head is valid.
+- Classifier logic, calibration block protocol, fusion math, WebSocket server, CV pipeline, Unity
+  client, and clinician console can all be built and unit/integration tested with mock data.
+- Only four things genuinely require a real brain signal: (1) amplitude/ERD ground-truth,
+  (2) labeled MI calibration data, (3) end-to-end perceptual latency through the full stack,
+  (4) clinical workflow validation.
+
+---
+
+### Session H1 — Signal quality + ERD ground-truth
+**Gate:** §4 "still required" items done (pytest markers, dead-channel flag). No new code needed.  
+**When:** now (signal-engine is otherwise complete).
+
+| What | How |
+|---|---|
+| Un-skip `test_signal_quality_on_head_TODO` | Remove `@pytest.mark.skip`; run with headset on |
+| Confirm µV amplitudes in range 10–100 µV on C3/Cz/C4 | Assert in test |
+| Confirm DCOffsetRemover latches correct on-head DC (~−3.8e5 µV expected) | Log pre/post per channel |
+| Self-paced MI: 5 × "imagine right-hand grasp" → verify mu-ERD > 15% at C3, laterality index > 0 | Manual check; log ERD% to stdout |
+| IMU noise floor on a still head | Assert AccX/Y/Z variance < threshold |
+
+**Output:** confirmed µV/ERD numbers to set production thresholds. Updates §5 "important context."
+
+---
+
+### Session H2 — Calibration data collection + classifier validation
+**Gate:** `signal-engine/classifiers/` (LDA baseline) + calibration block routine built and
+unit-tested with mock data. Graz cue-paced block must run in software before this session.
+**Cued MI orchestration is now built** (`calibration/orchestrator.py`, mock-tested); remaining
+gate items: 60 s baseline-rest block, CSP/LDA fit on the collected epochs, per-patient filter
+versioning.
+
+| What | How |
+|---|---|
+| Run full Graz calibration block (~8 min): 60 s rest baseline + 20 cued MI trials | Use the production calibration routine |
+| Fit CSP + LDA on collected trials; log cross-validated accuracy | Must be ≥ 60% to proceed with EEG-led mode (else flag Blended Mode path) |
+| Verify per-patient CSP filters serialized/versioned to disk | Load back and confirm identical output |
+| Run online classifier for 5 min post-calibration; spot-check live ERD → classifier output correlation | Visual/stdout check |
+
+**Output:** first real calibration dataset. Confirms the classifier pipeline works with real neural
+signal before the game client exists. Dataset also seeds the offline regression harness (§3 table).
+
+---
+
+### Session H3 — End-to-end stack + perceptual latency
+**Gate:** Unity game client + WebSocket/OSC server + IntentScore fusion service all built and
+integration-tested with mock signal. CV pipeline may still be absent (use `w_kin=0` Mode A).
+
+| What | How |
+|---|---|
+| Full pipeline live: Unicorn → signal-engine → WebSocket → Unity | Visual check: game responds to MI |
+| Instrument end-to-end latency: LSL EEG timestamp → Unity frame update | Target p95 < 250 ms (spec §9.1); log distribution |
+| Subjective responsiveness check: does the game feel coupled to MI? | Developer judgment; 5–10 min play |
+| EMA smoothing τ ≈ 300 ms: does it reduce jitter without killing feel? | Tune if needed |
+| Clinician console live ERD/LI trace (if built) | Confirm trace updates < 500 ms behind signal |
+
+**Output:** first proof that the closed-loop BCI game actually works. Latency number for spec §13.
+
+---
+
+### Session H4 — Internal usability pilot + clinical workflow
+**Gate:** clinician console complete, hardening pass done (installer, signal-quality UX, dead-channel
+indicator), camera/CV pipeline integrated (or at minimum stubbed to `w_kin=0`).
+
+| What | How |
+|---|---|
+| Full 30–40 min session protocol end-to-end (spec §10.2) | One developer as "patient" |
+| Setup time: Unicorn BT pair → LSL bridge → calibration ready | Target < 10 min (spec §10.1) |
+| Adaptive difficulty staircase: does 70–80% success-rate band hold? | Check trial-level log |
+| Fatigue proxy: does declining classifier confidence actually trigger console flag? | Simulate by removing headset briefly mid-session |
+| Dead-channel indicator triggers on bad electrode contact | Lift one electrode, confirm console shows "Check Cz contact" |
+| Full session SQLite log + PDF export | Verify all trial fields populated |
+
+**Output:** pre-patient-pilot readiness check. Go/no-go for spec §13.2 (usability testing with
+healthy volunteers before any patient contact).
