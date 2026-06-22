@@ -13,6 +13,7 @@ from scipy.signal import welch
 
 from preprocessing.filters import (
     CausalFilterChain,
+    DCOffsetRemover,
     bandpass_filter_offline,
     notch_filter_offline,
 )
@@ -109,6 +110,73 @@ def test_causal_chain_chunked_matches_single_call(rng):
 
     assert chunked.shape == whole.shape
     assert np.max(np.abs(chunked - whole)) < 1e-6
+
+
+# ---------------------------------------------------------------------------
+# Front-end DC-offset removal
+
+
+def test_dc_remover_latches_first_chunk_mean(rng):
+    """Lazy latch: first chunk's per-channel mean is removed, output ~zero-mean."""
+    base = rng.standard_normal((N_CH, 500))
+    offset = base + np.array([[-3.8e5], [1e4], [0.0], [50.0], [-7.0], [2e5], [9.0], [-3.0]])
+
+    out = DCOffsetRemover().process_chunk(offset)
+
+    # First chunk -> latch its own mean -> per-channel mean is removed.
+    assert np.allclose(out.mean(axis=1), 0.0, atol=1e-6)
+    # Within-channel structure (AC content) is untouched, only DC shifted.
+    assert np.allclose(out, base - base.mean(axis=1, keepdims=True))
+
+
+def test_dc_remover_subtracts_fixed_offset_across_chunks(rng):
+    """Calibrated offset is held constant; later chunks keep their own DC drift.
+
+    The fixed constant must NOT be re-estimated per chunk — re-estimating would
+    inject a step at each boundary and re-excite the downstream IIR.
+    """
+    baseline = rng.standard_normal((N_CH, 500)) + 1000.0
+    rem = DCOffsetRemover()
+    rem.calibrate(baseline)
+    dc = baseline.mean(axis=1, keepdims=True)
+
+    # A later chunk with a DIFFERENT mean: only the calibrated dc comes off.
+    later = rng.standard_normal((N_CH, 300)) + 1234.0
+    out = rem.process_chunk(later)
+    assert np.allclose(out, later - dc)
+    # Residual DC (1234 - ~1000) survives -> proves no per-chunk re-estimation.
+    assert np.all(np.abs(out.mean(axis=1)) > 100.0)
+
+
+def test_dc_remover_kills_cold_start_filter_transient(rng):
+    """Front-end removal collapses the IIR cold-start ring from a huge offset."""
+    clean = rng.standard_normal((1, 2000))
+    offset = clean - 3.8e5  # Unicorn-scale electrode DC
+
+    cold = CausalFilterChain(fs=FS).process_chunk(offset)
+    deoffset = CausalFilterChain(fs=FS).process_chunk(
+        DCOffsetRemover().process_chunk(offset)
+    )
+
+    # Cold start rings enormously in the first second; DC removal does not.
+    assert np.max(np.abs(cold[:, :FS])) > 1e3
+    assert np.max(np.abs(deoffset[:, :FS])) < 1e3
+
+
+def test_dc_remover_rejects_channel_count_change(rng):
+    rem = DCOffsetRemover()
+    rem.calibrate(rng.standard_normal((N_CH, 100)))
+    with pytest.raises(ValueError, match="channel count changed"):
+        rem.process_chunk(rng.standard_normal((N_CH + 1, 100)))
+
+
+def test_dc_remover_reset_relatches(rng):
+    rem = DCOffsetRemover()
+    rem.calibrate(rng.standard_normal((N_CH, 100)) + 500.0)
+    rem.reset()
+    chunk = rng.standard_normal((N_CH, 100)) + 9.0
+    out = rem.process_chunk(chunk)  # re-latches from this chunk
+    assert np.allclose(out.mean(axis=1), 0.0, atol=1e-6)
 
 
 # ---------------------------------------------------------------------------

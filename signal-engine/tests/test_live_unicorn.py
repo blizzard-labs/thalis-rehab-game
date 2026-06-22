@@ -53,7 +53,7 @@ import pytest
 from pylsl import StreamInlet, local_clock, resolve_byprop
 
 from features.erd import ERDCalculator, laterality_index
-from preprocessing.filters import CausalFilterChain
+from preprocessing.filters import CausalFilterChain, DCOffsetRemover
 from preprocessing.spatial import common_average_reference
 
 FS = 250
@@ -129,18 +129,6 @@ def _collect(dev: _LiveUnicorn, seconds: float, max_samples: int = 125) -> np.nd
     return np.concatenate(parts, axis=1)
 
 
-def _estimate_dc(eeg: np.ndarray) -> np.ndarray:
-    """Per-channel DC offset (electrode bias) as a [n_ch, 1] column.
-
-    Raw Unicorn EEG carries a huge electrode DC offset (~-3.8e5 µV). Feeding
-    that straight into a cold-start causal IIR rings for seconds. A real
-    acquisition front-end removes the offset first; we estimate it once from a
-    rest buffer and subtract the SAME constant from every later chunk, so the
-    subtraction never injects its own discontinuity.
-    """
-    return eeg.mean(axis=1, keepdims=True)
-
-
 def _percentile(values: list[float], pct: float) -> float:
     if not values:
         return float("nan")
@@ -177,8 +165,9 @@ def test_eeg_data_is_live(dev: _LiveUnicorn):
     assert eeg.shape[0] == 8
     assert np.all(np.isfinite(eeg)), "non-finite samples in EEG"
 
-    # Remove electrode DC offset, then causal-filter; drop 1 s settle.
-    filtered = chain.process_chunk(eeg - _estimate_dc(eeg))[:, FS:]
+    # Remove electrode DC offset (production front-end), then causal-filter;
+    # drop 1 s settle. Single chunk -> DCOffsetRemover latches this chunk's mean.
+    filtered = chain.process_chunk(DCOffsetRemover().process_chunk(eeg))[:, FS:]
     stds = filtered.std(axis=1)
     # Majority of channels must be live. A single dead/railed electrode (std==0,
     # common off-head — here OZ) is tolerated; per-channel quality is an on-head
@@ -227,12 +216,15 @@ def test_acquisition_to_feature_latency_p95(dev: _LiveUnicorn):
     calc = ERDCalculator(channel_labels=["C3", "C4"], fs=FS, window_sec=1.0)
     tc = dev.time_correction()
 
-    # 3 s rest baseline: also estimates the DC offset and warms the filter.
+    # 3 s rest baseline: also calibrates the DC offset and warms the filter.
+    dc_rem = DCOffsetRemover()
     dev.drain()
     baseline = _collect(dev, 3.0)[EEG_SLICE]
     assert baseline.shape[1] > 2 * FS, "did not capture a full 3s baseline"
-    dc = _estimate_dc(baseline)
-    calc.calibrate_baseline(common_average_reference(chain.process_chunk(baseline - dc)), EEG_LABELS)
+    dc_rem.calibrate(baseline)
+    calc.calibrate_baseline(
+        common_average_reference(chain.process_chunk(dc_rem.process_chunk(baseline))), EEG_LABELS
+    )
 
     window_samples = int(FS * calc.window_sec)
     buf = np.empty((8, 0), dtype=np.float64)
@@ -250,7 +242,7 @@ def test_acquisition_to_feature_latency_p95(dev: _LiveUnicorn):
         newest_ts = timestamps[-1]
 
         t0 = local_clock()
-        filtered = chain.process_chunk(eeg - dc)
+        filtered = chain.process_chunk(dc_rem.process_chunk(eeg))
         reref = common_average_reference(filtered)
         buf = np.concatenate([buf, reref], axis=1)[:, -window_samples:]
         if buf.shape[1] >= window_samples:
@@ -301,16 +293,21 @@ def test_pipeline_end_to_end_on_live_data(dev: _LiveUnicorn):
     chain = CausalFilterChain(fs=FS, low=1.0, high=40.0, notch_freq=60.0)
     calc = ERDCalculator(channel_labels=["C3", "C4"], fs=FS, window_sec=1.0)
 
+    dc_rem = DCOffsetRemover()
     dev.drain()
     baseline = _collect(dev, 3.0)[EEG_SLICE]
     assert baseline.shape[1] > 2 * FS
-    dc = _estimate_dc(baseline)
-    calc.calibrate_baseline(common_average_reference(chain.process_chunk(baseline - dc)), EEG_LABELS)
+    dc_rem.calibrate(baseline)
+    calc.calibrate_baseline(
+        common_average_reference(chain.process_chunk(dc_rem.process_chunk(baseline))), EEG_LABELS
+    )
 
     dev.drain()
     task = _collect(dev, 2.0)[EEG_SLICE]
     assert task.shape[1] > FS
-    erd = calc.compute_erd(common_average_reference(chain.process_chunk(task - dc)), EEG_LABELS)
+    erd = calc.compute_erd(
+        common_average_reference(chain.process_chunk(dc_rem.process_chunk(task))), EEG_LABELS
+    )
 
     for ch in ("C3", "C4"):
         for band in ("mu", "beta"):

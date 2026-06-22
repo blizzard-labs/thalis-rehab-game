@@ -23,7 +23,7 @@ Unicorn HW → Unicorn LSL bridge → pylsl
 runs live and meets the MVP latency target. **Next major piece: the online
 classifier + the WebSocket/OSC score server to the game** (neither exists yet).
 
-Test suite: **26 passing, 1 skipped** (21 offline + 5 live; the skip is the
+Test suite: **31 passing, 1 skipped** (26 offline + 5 live; the skip is the
 on-head validation, which requires the cap worn). Run everything with:
 
 ```bash
@@ -100,15 +100,23 @@ Opt-in (`THALIS_LIVE_UNICORN=1`), gated so CI/mock never runs it.
   labels are absent. Label-based path unchanged for labelled streams (mock).
   Covered by `test_inlet_positional_fallback_when_no_labels` (offline) and
   verified live: `EEGInlet(stream_name="UN-2024.06.42")` slices 8 EEG / 6 IMU.
+- **Front-end DC-offset removal is now in production.** Added
+  `preprocessing.filters.DCOffsetRemover` — a stateful, causal front-end stage
+  that latches ONE per-channel offset (from `calibrate(baseline)` or lazily from
+  the first chunk) and subtracts that SAME constant on every later chunk, so it
+  never injects a boundary discontinuity that would re-excite the IIR. Sits
+  before the chain: `DCOffsetRemover → CausalFilterChain → CAR → …`.
+  `CausalFilterChain` is untouched, so its chunked==single-call equivalence test
+  still holds (rejected the "init filter state to steady-state" alternative for
+  exactly that reason). Live tests now consume the production component instead
+  of a local `_estimate_dc` helper. Offline coverage:
+  `test_dc_remover_*` in `test_preprocessing.py` (latch, fixed-offset-across-
+  chunks, cold-start-transient collapse, channel-count guard, reset). Suite:
+  **26 offline passing** (was 21); **31 passing / 1 skipped** with hardware
+  (live gated). _Live re-verify on hardware still pending (device was
+  unoccupied)._
 
 ### Still required
-- **Front-end DC-offset removal.** Raw Unicorn EEG carries a ~-3.8e5 µV
-  electrode DC offset; feeding it cold into the causal IIR rings for seconds.
-  Live tests subtract a per-channel DC estimate before filtering — this belongs
-  in the production acquisition/preprocessing front-end, not just the tests.
-  (Alternative: initialise `CausalFilterChain` state to the first-sample
-  steady-state; note this would change the chunked==single-call equivalence
-  assumption baked into `test_preprocessing.py`.)
 - **`pytest.ini` / markers.** Add a `live` marker so live tests run via
   `-m live` instead of an env var, and register markers to silence warnings.
 - **Dead-channel handling.** Off-head, individual electrodes go flat (std 0).

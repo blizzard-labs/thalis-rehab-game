@@ -86,6 +86,81 @@ def notch_filter_offline(
 # 2. Live / causal streaming path (persistent state). Real-time scoring.
 
 
+class DCOffsetRemover:
+    """Front-end per-channel electrode DC-offset removal (causal, stateful).
+
+    Raw Unicorn EEG carries a huge electrode DC offset (values ~ -3.8e5 µV).
+    Feeding that straight into a cold-start causal IIR (``CausalFilterChain``)
+    makes the filter ring for seconds before it settles. The bandpass removes
+    DC in steady state, so the offset is only a *startup-transient* problem —
+    but a bad one. This stage kills it at the front of the real-time pipeline,
+    BEFORE the filter chain:
+
+        DCOffsetRemover -> CausalFilterChain -> CommonAverageReference -> ...
+
+    It latches ONE per-channel offset (either calibrated from a rest buffer via
+    :meth:`calibrate`, or captured lazily from the first chunk) and subtracts
+    that SAME constant from every later chunk. A fixed offset never injects its
+    own discontinuity at chunk boundaries — important, because a per-chunk
+    re-estimated mean would step around and re-excite the downstream IIR.
+
+    Kept separate from :class:`CausalFilterChain` on purpose: the chain's
+    chunked == single-call equivalence (and its test) stays untouched.
+    """
+
+    def __init__(self):
+        self._dc: np.ndarray | None = None  # shape [n_channels, 1]
+
+    def calibrate(self, baseline: np.ndarray) -> None:
+        """Latch the per-channel DC offset from a rest ``baseline`` buffer.
+
+        Parameters
+        ----------
+        baseline : np.ndarray
+            ``[n_channels, n_samples]`` of resting data (e.g. the calibration
+            block). The per-channel mean is held as the fixed offset.
+        """
+        baseline = np.asarray(baseline, dtype=np.float64)
+        if baseline.ndim != 2:
+            raise ValueError(f"expected [n_channels, n_samples], got {baseline.shape}")
+        self._dc = baseline.mean(axis=1, keepdims=True)
+
+    def process_chunk(self, chunk: np.ndarray) -> np.ndarray:
+        """Subtract the latched per-channel offset from one chunk.
+
+        On the first chunk, if :meth:`calibrate` was never called, the offset is
+        captured from that chunk's own per-channel mean.
+
+        Parameters
+        ----------
+        chunk : np.ndarray
+            ``[n_channels, n_samples]``. ``n_samples`` may vary between calls.
+
+        Returns
+        -------
+        np.ndarray
+            ``chunk`` with the fixed per-channel offset removed, same shape.
+        """
+        chunk = np.asarray(chunk, dtype=np.float64)
+        if chunk.ndim != 2:
+            raise ValueError(f"expected [n_channels, n_samples], got {chunk.shape}")
+        n_ch = chunk.shape[0]
+
+        if self._dc is None:
+            self._dc = chunk.mean(axis=1, keepdims=True)
+        elif self._dc.shape[0] != n_ch:
+            raise ValueError(
+                f"channel count changed: remover holds offset for "
+                f"{self._dc.shape[0]} channels, got {n_ch}"
+            )
+
+        return chunk - self._dc
+
+    def reset(self) -> None:
+        """Clear the latched offset so the next calibrate/chunk re-latches."""
+        self._dc = None
+
+
 class CausalFilterChain:
     """Causal notch + bandpass with persistent per-channel filter state.
 
