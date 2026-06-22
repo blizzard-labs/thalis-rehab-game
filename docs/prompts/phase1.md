@@ -118,9 +118,9 @@ After completion, update todos.md on the current state of the pipeline and next 
 ## Prompt 2 — CSP + LDA Classifier with Quality Gate
 
 ```
-Working in the neuroreach repo. Python 3.11. Assumes Phase 0 preprocessing
+Assumes Phase 0 preprocessing
 modules and Phase 1 Prompt 1 (CalibrationDataset, label_encode) exist.
-Dependencies: mne>=1.6.0, scikit-learn>=1.4.0, joblib, numpy.
+Dependencies: mne>=1.6.0, scikit-learn>=1.4.0, joblib, numpy (work in conda eeg environment) Additionally refere to docs/specs.md and todos.md for final criterion.
 
 Create signal-engine/classifiers/csp_lda.py:
 
@@ -228,7 +228,7 @@ Tests:
   predict_proba and assert a clear ValueError is raised, not a silent
   shape error from numpy.
 
-Output a short summary and test run instructions.
+Output a short summary and test run instructions. Then update todos.md appropriately
 ```
 
 ---

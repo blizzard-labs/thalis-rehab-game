@@ -21,12 +21,14 @@ Unicorn HW → Unicorn LSL bridge → pylsl
 ```
 
 runs live and meets the MVP latency target. The **Graz-style cued MI calibration
-block** (cue paradigm + marker stream + labeled epoch collection) is now built
-and tested against the mock outlet. **Next major piece: the online classifier
-(CSP/LDA fit on calibration epochs) + the WebSocket/OSC score server to the game**
-(neither exists yet).
+block** (cue paradigm + marker stream + labeled epoch collection) and the
+**CSP+LDA online classifier** (offline fit on calibration epochs + live decode +
+joblib persistence) are now built and tested against synthetic/mock data.
+**Next major piece: the WebSocket/OSC score server feeding the game**, plus the
+60 s baseline-rest block and per-patient versioned filter persistence (spec
+§6.1/§6.6).
 
-Test suite: **36 passing, 1 skipped** (31 offline + 5 live; the skip is the
+Test suite: **44 passing, 1 skipped** (39 offline + 5 live; the skip is the
 on-head validation, which requires the cap worn). Run everything with:
 
 ```bash
@@ -88,6 +90,29 @@ conda run -n eeg python -m pytest signal-engine/tests/ -v
   abort → exactly 2 trials, `InsufficientDataError` on pre-trial abort, and the
   `label_encode` int/length/`classes_` contract.
 
+### Classifiers — `signal-engine/classifiers/`
+- `csp_lda.py` — `CSPLDAClassifier`: offline notch(60 Hz)+bandpass(1–40 Hz)
+  `filtfilt` of each epoch (reuses `preprocessing.filters`, never the causal
+  path), `label_encode`, `mne.decoding.CSP(n_components≤4, log=True)` →
+  shrinkage-LDA (`solver='lsqr'`, Ledoit-Wolf `shrinkage='auto'`) chained in a
+  sklearn `Pipeline`. `fit` runs `StratifiedKFold(5)` `cross_val_score` and
+  returns a `FitResult` (`mean_cv_accuracy`, `per_fold_accuracies`,
+  `is_reliable = acc ≥ 0.60` §6.5 gate — warns, not errors, on fail; `n_trials`,
+  `classes`, `timestamp`). Raises `ValueError` on <2 classes. `save`/`load`
+  joblib-serialize the fitted pipeline **and** the `LabelEncoder` together (the
+  encoder decodes predictions to class names); `save` on an unfitted instance
+  raises `ModelNotFittedError`.
+- `online_classifier.py` — `OnlineClassifier` wraps a fitted `CSPLDAClassifier`:
+  `predict_proba(epoch, channel_labels)` filters the full 4 s MI window and
+  returns `{class_name: prob}` (warns once/min when the model is unreliable);
+  `mi_score(...)` returns the target-class probability as 0–100 (EEG_Score for
+  the IntentScore fusion). Channel-count mismatch raises a clear `ValueError`.
+- Tests (`test_classifier.py`, synthetic lateralized 10 Hz MI vs rest, no
+  headset): strong-pattern fit CV > 0.65, noise quality-gate `is_reliable=False`
+  & acc≈0.5, save/load round-trip identical proba, `ModelNotFittedError` on
+  unfit save, single-class `ValueError`, `mi_score ∈ [0,100]`, channel-mismatch
+  `ValueError`. **8 passing.**
+
 ### Live hardware validation — `signal-engine/tests/test_live_unicorn.py`
 Opt-in (`THALIS_LIVE_UNICORN=1`), gated so CI/mock never runs it.
 - `test_stream_metadata_well_formed` — 250 Hz, 17 channels.
@@ -109,7 +134,7 @@ Opt-in (`THALIS_LIVE_UNICORN=1`), gated so CI/mock never runs it.
 |---|---|---|
 | **On-head signal quality + ERD magnitude** (`test_signal_quality_on_head_TODO`, currently `@skip`) | Validate real µV amplitude (10–100 µV) and 20–40% mu-ERD with contralateral laterality | Needs cap worn + self-paced MI protocol |
 | Wire `test_live_unicorn.py` to use `EEGInlet` instead of the local `_LiveUnicorn` shim | Exercise the production acquisition path end-to-end (needs timestamp access for the latency test) | EEGInlet drops LSL timestamps; add a timestamped pull or keep tapping `_inlet` |
-| Classifier unit/integration tests | CSP/LDA fit on `CalibrationDataset.epochs` + online decode | classifier not built (calibration epochs now available) |
+| ~~Classifier unit/integration tests~~ | ~~CSP/LDA fit on `CalibrationDataset.epochs` + online decode~~ | **done** — `test_classifier.py` (8 tests, synthetic MI vs rest). Real on-head CV accuracy still pending H2. |
 | WebSocket/OSC score-server tests | game-facing score stream, latency budget | server not built |
 | ~~Calibration-block orchestration tests~~ | ~~cue paradigm + labeled epoch collection~~ | **done** — `test_calibration.py` (CSP/LDA fit + per-patient versioning still pending, belongs to the classifier piece) |
 | 60 s baseline-rest block + per-patient versioned filter persistence | spec §6.1/§6.6: resting spectral baseline + serialize CSP/LDA per patient/session | orchestrator collects MI trials only; baseline block + disk versioning not built |
@@ -179,8 +204,9 @@ Opt-in (`THALIS_LIVE_UNICORN=1`), gated so CI/mock never runs it.
 
 ## 6. Roadmap (beyond signal-engine, per `docs/specs.md`)
 
-- [ ] Online classifier: LDA baseline → optional EEGNet (`signal-engine/classifiers/`),
-  fit on `CalibrationDataset.epochs` / `label_encode` output.
+- [~] Online classifier: **CSP+LDA baseline built** (`signal-engine/classifiers/`,
+  fit on `CalibrationDataset.epochs` / `label_encode` output, §6.5 CV gate,
+  joblib persistence, online decode + EEG_Score). Optional EEGNet upgrade later.
 - [~] Calibration block (spec §6): **cued MI orchestration + marker stream + labeled
   epoch collection done** (`signal-engine/calibration/`); still TODO — 60 s baseline-rest
   block, CSP/LDA fit, per-patient versioned filter persistence.
@@ -227,9 +253,10 @@ touching the headset. Four on-head sessions, each gated on a code milestone.
 ### Session H2 — Calibration data collection + classifier validation
 **Gate:** `signal-engine/classifiers/` (LDA baseline) + calibration block routine built and
 unit-tested with mock data. Graz cue-paced block must run in software before this session.
-**Cued MI orchestration is now built** (`calibration/orchestrator.py`, mock-tested); remaining
-gate items: 60 s baseline-rest block, CSP/LDA fit on the collected epochs, per-patient filter
-versioning.
+**Cued MI orchestration AND the CSP+LDA classifier are now built**
+(`calibration/orchestrator.py` + `classifiers/`, both mock/synthetic-tested);
+remaining gate items: 60 s baseline-rest block, per-patient filter versioning to
+disk, and the real on-head CV-accuracy check.
 
 | What | How |
 |---|---|
