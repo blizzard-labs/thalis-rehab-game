@@ -8954,3 +8954,642 @@ Unloading 0 unused Assets / (0.9 KB). Loaded Objects now: 4835.
 Memory consumption went from 349.2 MB to 349.2 MB.
 Total: 13.970083 ms (FindLiveObjects: 0.147791 ms CreateObjectMapping: 0.149667 ms MarkObjects: 13.654958 ms  DeleteObjects: 0.017334 ms)
 
+Asset Pipeline Refresh (id=56443d2f649c047e7a7c407303047595): Total: 0.066 seconds - Initiated by RefreshV2(AllowForceSynchronousImport)
+Asset Pipeline Refresh (id=9389246cc423148a4a7e27b11e25f7c1): Total: 0.054 seconds - Initiated by RefreshV2(AllowForceSynchronousImport)
+Asset Pipeline Refresh (id=39f7af304233247c4989c1d33c738571): Total: 0.050 seconds - Initiated by RefreshV2(AllowForceSynchronousImport)
+Asset Pipeline Refresh (id=bc22426e95cf24c87a818d0f398c6c2a): Total: 0.057 seconds - Initiated by RefreshV2(AllowForceSynchronousImport)
+2026-06-23 16:08:34.482 Unity[50318:9966907] NSEventModifierFlagFunction specified to -setKeyEquivalentModifierMask: for item <NSMenuItem: 0xa67cf0be0 SDF, ke='Command-F12'>, but is only supported for system-provided menu items; will not be used
+Asset Pipeline Refresh (id=920a2def5aaab492ba7511a2fe5a41b6): Total: 0.053 seconds - Initiated by RefreshV2(AllowForceSynchronousImport)
+Asset Pipeline Refresh (id=deaa401ea04314c16b1d2b7ed405f209): Total: 0.050 seconds - Initiated by RefreshV2(AllowForceSynchronousImport)
+[Worker0] Imported GUID: 7f58669888dd143bb9dc34aef984e485 - Path: Assets/Scenes/README.md - Importer: PreviewImporter -> (ImportResultId: 'e7dd0b4d7208a24bf834ea89406461cd') in 0.017269792 seconds
+[Worker0] Imported GUID: 731ab381accfc445f905494cc6cdae1b - Path: Assets/Scripts/NeuroReach.Core.asmdef - Importer: PreviewImporter -> (ImportResultId: '54066322c42f237535df506d78f10ffb') in 0.000318916 seconds
+Asset Pipeline Refresh (id=f6cc538c839454472b7e3e818fd8cf1b): Total: 0.053 seconds - Initiated by RefreshV2(AllowForceSynchronousImport)
+[Worker0] Imported GUID: ff5180855af1e40978f5cf3a95fcc1df - Path: Assets/Scripts/Networking/NeuroReachClient.cs - Importer: PreviewImporter -> (ImportResultId: 'fac715a09334ca9821969d4be3ccb19e') in 0.000369709 seconds
+2026-06-23 16:10:19.693 Unity[50318:9966907] NSEventModifierFlagFunction specified to -setKeyEquivalentModifierMask: for item <NSMenuItem: 0xa68fef8e0 SDF, ke='Command-F12'>, but is only supported for system-provided menu items; will not be used
+Asset Pipeline Refresh (id=169cff8bf72934ab9aa21bd5ebe745b4): Total: 0.047 seconds - Initiated by RefreshV2(AllowForceSynchronousImport)
+Asset Pipeline Refresh (id=673a0072d598c4330acee669779c6acd): Total: 0.037 seconds - Initiated by RefreshV2(AllowForceSynchronousImport)
+Asset Pipeline Refresh (id=80edb81b6e5c544f3bcbd754f1b000a5): Total: 0.051 seconds - Initiated by RefreshV2(AllowForceSynchronousImport)
+Thread 0x176347000 may have been prematurely finalized
+Reloading assemblies for play mode.
+Reloading assemblies after forced synchronous recompile.
+[Licensing::Client] Successfully resolved entitlement details
+Begin MonoManager ReloadAssembly
+2026-06-23 16:11:48.582 Unity[50318:9966907] NSEventModifierFlagFunction specified to -setKeyEquivalentModifierMask: for item <NSMenuItem: 0xa67cf37a0 SDF, ke='Command-F12'>, but is only supported for system-provided menu items; will not be used
+2026-06-23 16:11:48.584 Unity[50318:9966907] NSEventModifierFlagFunction specified to -setKeyEquivalentModifierMask: for item <NSMenuItem: 0xa6389cfa0 SDF, ke='Command-F12'>, but is only supported for system-provided menu items; will not be used
+Symbol file LoadedFromMemory is not a mono symbol file
+Refreshing native plugins compatible for Editor in 3.12 ms, found 2 plugins.
+Native extension for OSXStandalone target not found
+Native extension for WebGL target not found
+ScheduleIndexationOnStartup MainProcess:True IndexOnStartup:True
+[MODES] ModeService[none].Initialize
+[MODES] ModeService[none].LoadModes
+Mono: successfully reloaded assembly
+- Finished resetting the current domain, in  0.721 seconds
+Domain Reload Profiling: 1113ms
+	BeginReloadAssembly (279ms)
+		DisableScriptedObjects (26ms)
+		CreateAndSetChildDomain (166ms)
+	RebuildCommonClasses (4ms)
+	RebuildNativeTypeToScriptingClass (8ms)
+	initialDomainReloadingComplete (22ms)
+	LoadAllAssembliesAndSetupDomain (79ms)
+		LoadAssemblies (70ms)
+		AnalyzeDomain (7ms)
+			TypeCache.Refresh (4ms)
+	FinalizeReload (722ms)
+		SetupLoadedEditorAssemblies (0ms)
+			BeforeProcessingInitializeOnLoad (36ms)
+			ProcessInitializeOnLoadAttributes (113ms)
+			ProcessInitializeOnLoadMethodAttributes (117ms)
+		AwakeInstancesAfterBackupRestoration (251ms)
+
+Asset Pipeline Refresh (id=069131acaa2ee471bb783a5604078573): Total: 1.230 seconds - Initiated by StopAssetImportingV2(ForceSynchronousImport | ForceDomainReload)
+	(Values over 0.05ms)
+	Summary:
+		Imports: total=0 (actual=0, local cache=0, cache server=0)
+		Asset DB Process Time: managed=0 ms, native=766 ms
+		Asset DB Callback time: managed=12 ms, native=0 ms
+		Scripting: domain reloads=1, domain reload time=450 ms, compile time=1 ms, other=0 ms
+		Project Asset Count: scripts=813, non-scripts=1012
+		Asset File Changes: new=0, changed=0, moved=0, deleted=0
+		Scan Filter Count: 0
+	InvokePackagesCallback: 0.464ms
+	ApplyChangesToAssetFolders: 0.132ms
+	ProcessAssetsWithTransientArtifactChanges: 0.116ms
+	CategorizeAssets: 7.034ms
+	CompileScripts: 0.650ms
+	ImportOutOfDateAssets: 732.313ms (728.791ms without children)
+		UnloadImportedAssets: 0.067ms
+		EnsureUptoDateAssetsAreRegisteredWithGuidPM: 0.143ms
+		ImportSchedulerStart: 3.307ms
+	PostProcessAllAssets: 12.152ms
+		MonoPostProcessAllAssets: 12.151ms
+			SyncVS.PostprocessSyncProject 4.077ms
+			WindowAssetPostprocessingWatcher.OnPostprocessAllAssets 3.365ms
+			AssetPostprocessor.OnPostprocessAllAssets 1.413ms
+			SpeedTree9Postprocessor.OnPostprocessAllAssets 0.333ms
+			ReferencedClipsPostProcessor.OnPostprocessAllAssets 0.137ms
+			TerrainToolbarOverlayPostProcessor.OnPostprocessAllAssets 0.058ms
+			AssetDatabaseCallbacks.OnPostprocessAllAssets 0.057ms
+	UnloadStreamsBegin: 0.722ms
+	GenerateScriptTypeHashes: 0.517ms
+	GenerateScriptTypeSerializationHashes: 1.242ms
+	Untracked: 475.174ms
+
+Loaded scene 'Temp/__Backupscenes/0.backup'
+	Deserialize:            0.262 ms
+	Integration:            34.755 ms
+	Integration of assets:  0.000 ms
+	Thread Wait Time:       0.005 ms
+	Total Operation Time:   35.022 ms
+[Licensing::Client] Successfully resolved entitlement details
+[Licensing::Client] Successfully resolved entitlement details
+[Licensing::Client] Successfully resolved entitlement details
+[Licensing::Client] Successfully resolved entitlement details
+Asset Pipeline Refresh (id=a746622c578d545f9b8fb86ee6b83e2a): Total: 0.059 seconds - Initiated by RefreshV2(NoUpdateAssetOptions)
+Thread 0x16f447000 may have been prematurely finalized
+Unloading 0 Unused Serialized files (Serialized files now loaded: 0)
+Loaded scene 'Temp/__Backupscenes/0.backup'
+	Deserialize:            0.269 ms
+	Integration:            8.883 ms
+	Integration of assets:  0.001 ms
+	Thread Wait Time:       0.007 ms
+	Total Operation Time:   9.160 ms
+Unloading 36 unused Assets / (6.9 KB). Loaded Objects now: 4859.
+Memory consumption went from 309.4 MB to 309.4 MB.
+Total: 14.437166 ms (FindLiveObjects: 0.126500 ms CreateObjectMapping: 0.187459 ms MarkObjects: 14.086209 ms  DeleteObjects: 0.036625 ms)
+
+[Licensing::Client] Successfully resolved entitlement details
+Asset Pipeline Refresh (id=a9e5cd53d1501404393a9a4f518552ae): Total: 0.050 seconds - Initiated by RefreshV2(AllowForceSynchronousImport)
+Asset Pipeline Refresh (id=cf747dbcd0b5c47aa88f3b46e02a98bc): Total: 0.059 seconds - Initiated by RefreshV2(AllowForceSynchronousImport)
+Asset Pipeline Refresh (id=9b217403cb5404e74ae071c7a06e2abc): Total: 0.048 seconds - Initiated by RefreshV2(AllowForceSynchronousImport)
+Asset Pipeline Refresh (id=ec31ad7acbb1b4c2da3080741c1078ae): Total: 0.044 seconds - Initiated by RefreshV2(AllowForceSynchronousImport)
+Asset Pipeline Refresh (id=acaaa23b2e02a4f6f9873c900036c8a9): Total: 0.046 seconds - Initiated by RefreshV2(AllowForceSynchronousImport)
+Asset Pipeline Refresh (id=f506c48eb63774321a911c9cc5438c23): Total: 0.060 seconds - Initiated by RefreshV2(AllowForceSynchronousImport)
+Asset Pipeline Refresh (id=83336b21a7ff346a4a5f58ba1942bb76): Total: 0.046 seconds - Initiated by RefreshV2(AllowForceSynchronousImport)
+2026-06-23 16:15:03.760 Unity[50318:9966907] NSEventModifierFlagFunction specified to -setKeyEquivalentModifierMask: for item <NSMenuItem: 0xa69373660 UI Toolkit Debugger, ke='Command-F5'>, but is only supported for system-provided menu items; will not be used
+Thread 0x16f447000 may have been prematurely finalized
+Reloading assemblies for play mode.
+Reloading assemblies after forced synchronous recompile.
+[Licensing::Client] Successfully resolved entitlement details
+Begin MonoManager ReloadAssembly
+2026-06-23 16:15:13.570 Unity[50318:9966907] NSEventModifierFlagFunction specified to -setKeyEquivalentModifierMask: for item <NSMenuItem: 0xa6389dea0 SDF, ke='Command-F12'>, but is only supported for system-provided menu items; will not be used
+2026-06-23 16:15:13.572 Unity[50318:9966907] NSEventModifierFlagFunction specified to -setKeyEquivalentModifierMask: for item <NSMenuItem: 0xa6389da40 SDF, ke='Command-F12'>, but is only supported for system-provided menu items; will not be used
+Symbol file LoadedFromMemory is not a mono symbol file
+Refreshing native plugins compatible for Editor in 3.25 ms, found 2 plugins.
+Native extension for OSXStandalone target not found
+Native extension for WebGL target not found
+ScheduleIndexationOnStartup MainProcess:True IndexOnStartup:True
+[MODES] ModeService[none].Initialize
+[MODES] ModeService[none].LoadModes
+Mono: successfully reloaded assembly
+- Finished resetting the current domain, in  0.715 seconds
+Domain Reload Profiling: 1077ms
+	BeginReloadAssembly (254ms)
+		DisableScriptedObjects (17ms)
+		CreateAndSetChildDomain (152ms)
+	RebuildCommonClasses (4ms)
+	RebuildNativeTypeToScriptingClass (8ms)
+	initialDomainReloadingComplete (18ms)
+	LoadAllAssembliesAndSetupDomain (78ms)
+		LoadAssemblies (68ms)
+		AnalyzeDomain (6ms)
+			TypeCache.Refresh (3ms)
+	FinalizeReload (715ms)
+		SetupLoadedEditorAssemblies (0ms)
+			BeforeProcessingInitializeOnLoad (36ms)
+			ProcessInitializeOnLoadAttributes (114ms)
+			ProcessInitializeOnLoadMethodAttributes (117ms)
+		AwakeInstancesAfterBackupRestoration (239ms)
+
+Asset Pipeline Refresh (id=e8db6c11b129245e09fce39925614026): Total: 1.191 seconds - Initiated by StopAssetImportingV2(ForceSynchronousImport | ForceDomainReload)
+	(Values over 0.05ms)
+	Summary:
+		Imports: total=0 (actual=0, local cache=0, cache server=0)
+		Asset DB Process Time: managed=0 ms, native=755 ms
+		Asset DB Callback time: managed=12 ms, native=0 ms
+		Scripting: domain reloads=1, domain reload time=421 ms, compile time=1 ms, other=0 ms
+		Project Asset Count: scripts=813, non-scripts=1012
+		Asset File Changes: new=0, changed=0, moved=0, deleted=0
+		Scan Filter Count: 0
+	InvokePackagesCallback: 0.491ms
+	ApplyChangesToAssetFolders: 0.135ms
+	ProcessAssetsWithTransientArtifactChanges: 0.119ms
+	CategorizeAssets: 7.184ms
+	CompileScripts: 0.657ms
+	ImportOutOfDateAssets: 726.143ms (722.504ms without children)
+		UnloadImportedAssets: 0.073ms
+		EnsureUptoDateAssetsAreRegisteredWithGuidPM: 0.147ms
+		ImportSchedulerStart: 3.414ms
+	PostProcessAllAssets: 12.344ms
+		MonoPostProcessAllAssets: 12.342ms
+			SyncVS.PostprocessSyncProject 4.338ms
+			WindowAssetPostprocessingWatcher.OnPostprocessAllAssets 3.479ms
+			AssetPostprocessor.OnPostprocessAllAssets 1.413ms
+			SpeedTree9Postprocessor.OnPostprocessAllAssets 0.345ms
+			ReferencedClipsPostProcessor.OnPostprocessAllAssets 0.150ms
+			AssetDatabaseCallbacks.OnPostprocessAllAssets 0.056ms
+			TerrainToolbarOverlayPostProcessor.OnPostprocessAllAssets 0.053ms
+	UnloadStreamsBegin: 0.741ms
+	GenerateScriptTypeHashes: 0.542ms
+	GenerateScriptTypeSerializationHashes: 1.272ms
+	Untracked: 441.851ms
+
+Loaded scene 'Temp/__Backupscenes/0.backup'
+	Deserialize:            0.238 ms
+	Integration:            29.926 ms
+	Integration of assets:  0.001 ms
+	Thread Wait Time:       0.004 ms
+	Total Operation Time:   30.169 ms
+[Licensing::Client] Successfully resolved entitlement details
+[Licensing::Client] Successfully resolved entitlement details
+[Licensing::Client] Successfully resolved entitlement details
+[Licensing::Client] Successfully resolved entitlement details
+Asset Pipeline Refresh (id=f648982e36c224dd085bcb4474455c0e): Total: 0.058 seconds - Initiated by RefreshV2(NoUpdateAssetOptions)
+Asset Pipeline Refresh (id=f4909fa1758a249ec8fbd6de4946d793): Total: 0.057 seconds - Initiated by RefreshV2(NoUpdateAssetOptions)
+Asset Pipeline Refresh (id=3341c3b5d5aff4808b76c2272fe42825): Total: 0.066 seconds - Initiated by RefreshV2(NoUpdateAssetOptions)
+Asset Pipeline Refresh (id=a20812e7e7c4e488ca2c3bca79587312): Total: 0.051 seconds - Initiated by RefreshV2(NoUpdateAssetOptions)
+Asset Pipeline Refresh (id=8aed991d2688d4bcaa3335e9fda1face): Total: 0.048 seconds - Initiated by RefreshV2(NoUpdateAssetOptions)
+Thread 0x179053000 may have been prematurely finalized
+Unloading 0 Unused Serialized files (Serialized files now loaded: 0)
+Loaded scene 'Temp/__Backupscenes/0.backup'
+	Deserialize:            0.266 ms
+	Integration:            10.489 ms
+	Integration of assets:  0.000 ms
+	Thread Wait Time:       0.004 ms
+	Total Operation Time:   10.759 ms
+Unloading 29 unused Assets / (1.8 KB). Loaded Objects now: 4879.
+Memory consumption went from 311.7 MB to 311.7 MB.
+Total: 15.616333 ms (FindLiveObjects: 0.131041 ms CreateObjectMapping: 0.156417 ms MarkObjects: 15.261000 ms  DeleteObjects: 0.067667 ms)
+
+[Licensing::Client] Successfully resolved entitlement details
+2026-06-23 16:20:00.994 Unity[50318:9966907] NSEventModifierFlagFunction specified to -setKeyEquivalentModifierMask: for item <NSMenuItem: 0xa6389f160 SDF, ke='Command-F12'>, but is only supported for system-provided menu items; will not be used
+2026-06-23 16:20:03.724 Unity[50318:9966907] NSEventModifierFlagFunction specified to -setKeyEquivalentModifierMask: for item <NSMenuItem: 0xa69e93700 SDF, ke='Command-F12'>, but is only supported for system-provided menu items; will not be used
+Asset Pipeline Refresh (id=38ba3b2acf883437fb87edf532be75b8): Total: 0.053 seconds - Initiated by RefreshV2(AllowForceSynchronousImport)
+2026-06-23 16:20:12.988 Unity[50318:9966907] NSEventModifierFlagFunction specified to -setKeyEquivalentModifierMask: for item <NSMenuItem: 0xa69e92c60 SDF, ke='Command-F12'>, but is only supported for system-provided menu items; will not be used
+2026-06-23 16:20:15.397 Unity[50318:9966907] NSEventModifierFlagFunction specified to -setKeyEquivalentModifierMask: for item <NSMenuItem: 0xa693724e0 SDF, ke='Command-F12'>, but is only supported for system-provided menu items; will not be used
+2026-06-23 16:20:17.118 Unity[50318:9966907] NSEventModifierFlagFunction specified to -setKeyEquivalentModifierMask: for item <NSMenuItem: 0xa69e93700 SDF, ke='Command-F12'>, but is only supported for system-provided menu items; will not be used
+Asset Pipeline Refresh (id=4990f9170d1da44fb9d9a0fdbb6779fc): Total: 0.046 seconds - Initiated by RefreshV2(AllowForceSynchronousImport)
+2026-06-23 16:20:24.655 Unity[50318:9966907] NSEventModifierFlagFunction specified to -setKeyEquivalentModifierMask: for item <NSMenuItem: 0xa69e91d60 SDF, ke='Command-F12'>, but is only supported for system-provided menu items; will not be used
+Asset Pipeline Refresh (id=5debeedb651b94bfa912200aebcf4a2f): Total: 0.039 seconds - Initiated by RefreshV2(AllowForceSynchronousImport)
+2026-06-23 16:20:29.084 Unity[50318:9966907] NSEventModifierFlagFunction specified to -setKeyEquivalentModifierMask: for item <NSMenuItem: 0xa69e93980 SDF, ke='Command-F12'>, but is only supported for system-provided menu items; will not be used
+2026-06-23 16:20:32.817 Unity[50318:9966907] NSEventModifierFlagFunction specified to -setKeyEquivalentModifierMask: for item <NSMenuItem: 0xa67cfca00 SDF, ke='Command-F12'>, but is only supported for system-provided menu items; will not be used
+Asset Pipeline Refresh (id=a0d6ca087ac6348e998f528e6a725c56): Total: 0.041 seconds - Initiated by RefreshV2(AllowForceSynchronousImport)
+2026-06-23 16:20:52.878 Unity[50318:9966907] NSEventModifierFlagFunction specified to -setKeyEquivalentModifierMask: for item <NSMenuItem: 0xa6389d400 SDF, ke='Command-F12'>, but is only supported for system-provided menu items; will not be used
+2026-06-23 16:20:55.038 Unity[50318:9966907] NSEventModifierFlagFunction specified to -setKeyEquivalentModifierMask: for item <NSMenuItem: 0xa69e93700 SDF, ke='Command-F12'>, but is only supported for system-provided menu items; will not be used
+Asset Pipeline Refresh (id=9a2e968a5387d48c7b0fd69eb8bf670b): Total: 0.037 seconds - Initiated by RefreshV2(AllowForceSynchronousImport)
+2026-06-23 16:21:04.910 Unity[50318:9966907] NSEventModifierFlagFunction specified to -setKeyEquivalentModifierMask: for item <NSMenuItem: 0xa69e915e0 SDF, ke='Command-F12'>, but is only supported for system-provided menu items; will not be used
+Asset Pipeline Refresh (id=e1e8a5ea45464495aa260a4bff170823): Total: 0.055 seconds - Initiated by RefreshV2(AllowForceSynchronousImport)
+Asset Pipeline Refresh (id=213e1dafa3853452cb08c274876c3de3): Total: 0.045 seconds - Initiated by RefreshV2(AllowForceSynchronousImport)
+2026-06-23 16:24:26.617 Unity[50318:9966907] NSEventModifierFlagFunction specified to -setKeyEquivalentModifierMask: for item <NSMenuItem: 0xa69e917c0 SDF, ke='Command-F12'>, but is only supported for system-provided menu items; will not be used
+2026-06-23 16:24:28.048 Unity[50318:9966907] NSEventModifierFlagFunction specified to -setKeyEquivalentModifierMask: for item <NSMenuItem: 0xa69e93700 SDF, ke='Command-F12'>, but is only supported for system-provided menu items; will not be used
+Asset Pipeline Refresh (id=43488124effa2460188b08453c138496): Total: 0.058 seconds - Initiated by RefreshV2(AllowForceSynchronousImport)
+2026-06-23 16:24:41.009 Unity[50318:9966907] NSEventModifierFlagFunction specified to -setKeyEquivalentModifierMask: for item <NSMenuItem: 0xa66e2dcc0 SDF, ke='Command-F12'>, but is only supported for system-provided menu items; will not be used
+2026-06-23 16:24:42.988 Unity[50318:9966907] NSEventModifierFlagFunction specified to -setKeyEquivalentModifierMask: for item <NSMenuItem: 0xa69e93700 SDF, ke='Command-F12'>, but is only supported for system-provided menu items; will not be used
+Asset Pipeline Refresh (id=cd1c9112c07284feab6e2d704f4653ab): Total: 0.052 seconds - Initiated by RefreshV2(AllowForceSynchronousImport)
+2026-06-23 16:25:00.899 Unity[50318:9966907] NSEventModifierFlagFunction specified to -setKeyEquivalentModifierMask: for item <NSMenuItem: 0xa69bffd40 SDF, ke='Command-F12'>, but is only supported for system-provided menu items; will not be used
+2026-06-23 16:25:02.166 Unity[50318:9966907] NSEventModifierFlagFunction specified to -setKeyEquivalentModifierMask: for item <NSMenuItem: 0xa69bfc1e0 SDF, ke='Command-F12'>, but is only supported for system-provided menu items; will not be used
+[Licensing::Client] Successfully updated the access token
+[Licensing::Module] Successfully updated access token: "VZn_-3KL"... (expires: 2026-06-24T01:24:32Z)
+Asset Pipeline Refresh (id=6aa90900af2534148bcd1f75759f2a30): Total: 0.045 seconds - Initiated by RefreshV2(AllowForceSynchronousImport)
+Asset Pipeline Refresh (id=87df18938c32f48e5825263a0e6a3db0): Total: 0.038 seconds - Initiated by RefreshV2(AllowForceSynchronousImport)
+2026-06-23 16:26:34.455 Unity[50318:9966907] NSEventModifierFlagFunction specified to -setKeyEquivalentModifierMask: for item <NSMenuItem: 0xa67cf1680 SDF, ke='Command-F12'>, but is only supported for system-provided menu items; will not be used
+Importing 'GUID: d354501fe418e4bb282b5e077d5bc16f - Path: Assets/test1.unity' with importer (DefaultImporter)
+Imported 'GUID: d354501fe418e4bb282b5e077d5bc16f' -> (Import Result ID: '1ff5cf8e96e7bf0fd20502160c871633') in 0.003 seconds [static dependencies only]. Details - ImportResultOutputID=4cd49316597f745c76cb05cfedf77542 DependenciesID=77617ecc0f9e6fa464a9e5d2c93603eb StaticDependenciesID=b60b35a6628f75232507abf01039a3ff 
+Asset Pipeline Refresh (id=85c71c09b114f40beb1a15d244d013d2): Total: 0.040 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Asset Pipeline Refresh (id=e312f44ddb432475882e9492b3479cb6): Total: 0.045 seconds - Initiated by RefreshV2(AllowForceSynchronousImport)
+Asset Pipeline Refresh (id=1f5906d864ba84e09a1bbf7ebbb6438d): Total: 0.045 seconds - Initiated by RefreshV2(AllowForceSynchronousImport)
+Thread 0x16f447000 may have been prematurely finalized
+Reloading assemblies for play mode.
+Reloading assemblies after forced synchronous recompile.
+[Licensing::Client] Successfully resolved entitlement details
+Begin MonoManager ReloadAssembly
+2026-06-23 16:27:24.465 Unity[50318:9966907] NSEventModifierFlagFunction specified to -setKeyEquivalentModifierMask: for item <NSMenuItem: 0xa69bffa20 SDF, ke='Command-F12'>, but is only supported for system-provided menu items; will not be used
+2026-06-23 16:27:24.467 Unity[50318:9966907] NSEventModifierFlagFunction specified to -setKeyEquivalentModifierMask: for item <NSMenuItem: 0xa69bff520 SDF, ke='Command-F12'>, but is only supported for system-provided menu items; will not be used
+Symbol file LoadedFromMemory is not a mono symbol file
+Refreshing native plugins compatible for Editor in 2.93 ms, found 2 plugins.
+Native extension for OSXStandalone target not found
+Native extension for WebGL target not found
+ScheduleIndexationOnStartup MainProcess:True IndexOnStartup:True
+[MODES] ModeService[none].Initialize
+[MODES] ModeService[none].LoadModes
+Mono: successfully reloaded assembly
+- Finished resetting the current domain, in  0.790 seconds
+Domain Reload Profiling: 1158ms
+	BeginReloadAssembly (266ms)
+		DisableScriptedObjects (24ms)
+		CreateAndSetChildDomain (160ms)
+	RebuildCommonClasses (4ms)
+	RebuildNativeTypeToScriptingClass (8ms)
+	initialDomainReloadingComplete (18ms)
+	LoadAllAssembliesAndSetupDomain (72ms)
+		LoadAssemblies (68ms)
+		AnalyzeDomain (5ms)
+			TypeCache.Refresh (3ms)
+	FinalizeReload (791ms)
+		SetupLoadedEditorAssemblies (0ms)
+			BeforeProcessingInitializeOnLoad (34ms)
+			ProcessInitializeOnLoadAttributes (112ms)
+			ProcessInitializeOnLoadMethodAttributes (115ms)
+		AwakeInstancesAfterBackupRestoration (234ms)
+
+Asset Pipeline Refresh (id=3efee9ef59acf46539502c5dd6bfae9e): Total: 1.260 seconds - Initiated by StopAssetImportingV2(ForceSynchronousImport | ForceDomainReload)
+	(Values over 0.05ms)
+	Summary:
+		Imports: total=0 (actual=0, local cache=0, cache server=0)
+		Asset DB Process Time: managed=0 ms, native=824 ms
+		Asset DB Callback time: managed=12 ms, native=0 ms
+		Scripting: domain reloads=1, domain reload time=422 ms, compile time=1 ms, other=0 ms
+		Project Asset Count: scripts=813, non-scripts=1013
+		Asset File Changes: new=0, changed=0, moved=0, deleted=0
+		Scan Filter Count: 0
+	InvokePackagesCallback: 0.474ms
+	ApplyChangesToAssetFolders: 0.138ms
+	CategorizeAssets: 6.889ms
+	CompileScripts: 0.683ms
+	ImportOutOfDateAssets: 800.371ms (796.954ms without children)
+		UnloadImportedAssets: 0.069ms
+		EnsureUptoDateAssetsAreRegisteredWithGuidPM: 0.132ms
+		ImportSchedulerStart: 3.212ms
+	PostProcessAllAssets: 12.234ms
+		MonoPostProcessAllAssets: 12.233ms
+			SyncVS.PostprocessSyncProject 4.384ms
+			BuilderAssetPostprocessor.OnPostprocessAllAssets 4.175ms
+			WindowAssetPostprocessingWatcher.OnPostprocessAllAssets 3.242ms
+			AssetPostprocessor.OnPostprocessAllAssets 2.107ms
+			AssetChangedListener.OnPostprocessAllAssets 2.049ms
+			SpriteSlicePostprocessor.OnPostprocessAllAssets 1.508ms
+			RetainedModeAssetPostprocessor.OnPostprocessAllAssets 0.656ms
+			TMPro_TexturePostProcessor.OnPostprocessAllAssets 0.431ms
+			SpriteEditorTexturePostprocessor.OnPostprocessAllAssets 0.383ms
+			SpeedTree9Postprocessor.OnPostprocessAllAssets 0.358ms
+			ArtifactBrowserPostProcessor.OnPostprocessAllAssets 0.355ms
+			TextAssetPostProcessor.OnPostprocessAllAssets 0.327ms
+			UVCSAssetPostprocessor.OnPostprocessAllAssets 0.248ms
+			AudioMixerPostprocessor.OnPostprocessAllAssets 0.207ms
+			ReferencedClipsPostProcessor.OnPostprocessAllAssets 0.142ms
+			StyleCatalogPostProcessor.OnPostprocessAllAssets 0.117ms
+			AssetEvents.OnPostprocessAllAssets 0.103ms
+			SamplePostprocessor.OnPostprocessAllAssets 0.096ms
+			ScenarioDriftAssetsTracker.OnPostprocessAllAssets 0.086ms
+			SpeedTreePostProcessor.OnPostprocessAllAssets 0.078ms
+			ConfigAssetsTracker.OnPostprocessAllAssets 0.072ms
+			AssetDatabaseCallbacks.OnPostprocessAllAssets 0.058ms
+			TerrainToolbarOverlayPostProcessor.OnPostprocessAllAssets 0.055ms
+	GatherAllCurrentPrimaryImportResultRevisions: 0.051ms
+	GenerateScriptTypeHashes: 0.514ms
+	GenerateScriptTypeSerializationHashes: 1.232ms
+	Untracked: 437.627ms
+
+Loaded scene 'Temp/__Backupscenes/0.backup'
+	Deserialize:            0.400 ms
+	Integration:            42.306 ms
+	Integration of assets:  0.001 ms
+	Thread Wait Time:       0.004 ms
+	Total Operation Time:   42.711 ms
+[Licensing::Client] Successfully resolved entitlement details
+[Licensing::Client] Successfully resolved entitlement details
+[NeuroReachClient] Connected to ws://localhost:8765
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /Users/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+NeuroReach.Networking.NeuroReachClient:<Connect>b__12_0 () (at Assets/Scripts/Networking/NeuroReachClient.cs:52)
+NativeWebSocket.WebSocket/<Connect>d__27:MoveNext () (at ./Library/PackageCache/com.endel.nativewebsocket@ea014c9ae534/WebSocket/WebSocket.cs:472)
+System.Runtime.CompilerServices.AsyncMethodBuilderCore/MoveNextRunner:InvokeMoveNext (object)
+System.Threading.ExecutionContext:RunInternal (System.Threading.ExecutionContext,System.Threading.ContextCallback,object,bool)
+System.Threading.ExecutionContext:Run (System.Threading.ExecutionContext,System.Threading.ContextCallback,object,bool)
+System.Runtime.CompilerServices.AsyncMethodBuilderCore/MoveNextRunner:Run ()
+System.Threading.Tasks.SynchronizationContextAwaitTaskContinuation/<>c:<.cctor>b__7_0 (object)
+UnityEngine.UnitySynchronizationContext/WorkRequest:Invoke () (at /Users/bokken/build/output/unity/unity/Runtime/Export/Scripting/UnitySynchronizationContext.cs:156)
+UnityEngine.UnitySynchronizationContext:Exec () (at /Users/bokken/build/output/unity/unity/Runtime/Export/Scripting/UnitySynchronizationContext.cs:84)
+UnityEngine.UnitySynchronizationContext:ExecuteTasks () (at /Users/bokken/build/output/unity/unity/Runtime/Export/Scripting/UnitySynchronizationContext.cs:110)
+
+(Filename: Assets/Scripts/Networking/NeuroReachClient.cs Line: 52)
+
+[Licensing::Client] Successfully resolved entitlement details
+[Licensing::Client] Successfully resolved entitlement details
+Thread 0x17dd8b000 may have been prematurely finalized
+Unloading 0 Unused Serialized files (Serialized files now loaded: 0)
+Loaded scene 'Temp/__Backupscenes/0.backup'
+	Deserialize:            0.338 ms
+	Integration:            8.542 ms
+	Integration of assets:  0.001 ms
+	Thread Wait Time:       0.008 ms
+	Total Operation Time:   8.888 ms
+Unloading 38 unused Assets / (10.7 KB). Loaded Objects now: 5026.
+Memory consumption went from 316.6 MB to 316.6 MB.
+Total: 13.635750 ms (FindLiveObjects: 0.124875 ms CreateObjectMapping: 0.171666 ms MarkObjects: 13.229458 ms  DeleteObjects: 0.109417 ms)
+
+[Licensing::Client] Successfully resolved entitlement details
+2026-06-23 16:27:56.031 Unity[50318:9966907] NSEventModifierFlagFunction specified to -setKeyEquivalentModifierMask: for item <NSMenuItem: 0xa69bfdea0 SDF, ke='Command-F12'>, but is only supported for system-provided menu items; will not be used
+Asset Pipeline Refresh (id=01bac20d281ae4bc1a6df92491684f29): Total: 0.048 seconds - Initiated by RefreshV2(AllowForceSynchronousImport)
+Asset Pipeline Refresh (id=5821e6d0d5cd549088b7fe9035b94f76): Total: 0.059 seconds - Initiated by RefreshV2(AllowForceSynchronousImport)
+Thread 0x16f447000 may have been prematurely finalized
+Reloading assemblies for play mode.
+Reloading assemblies after forced synchronous recompile.
+[Licensing::Client] Successfully resolved entitlement details
+Begin MonoManager ReloadAssembly
+2026-06-23 16:31:41.718 Unity[50318:9966907] NSEventModifierFlagFunction specified to -setKeyEquivalentModifierMask: for item <NSMenuItem: 0xa693b4640 SDF, ke='Command-F12'>, but is only supported for system-provided menu items; will not be used
+2026-06-23 16:31:41.720 Unity[50318:9966907] NSEventModifierFlagFunction specified to -setKeyEquivalentModifierMask: for item <NSMenuItem: 0xa67cf3660 SDF, ke='Command-F12'>, but is only supported for system-provided menu items; will not be used
+Symbol file LoadedFromMemory is not a mono symbol file
+Refreshing native plugins compatible for Editor in 3.02 ms, found 2 plugins.
+Native extension for OSXStandalone target not found
+Native extension for WebGL target not found
+ScheduleIndexationOnStartup MainProcess:True IndexOnStartup:True
+[MODES] ModeService[none].Initialize
+[MODES] ModeService[none].LoadModes
+Mono: successfully reloaded assembly
+- Finished resetting the current domain, in  0.692 seconds
+Domain Reload Profiling: 1070ms
+	BeginReloadAssembly (272ms)
+		DisableScriptedObjects (27ms)
+		CreateAndSetChildDomain (159ms)
+	RebuildCommonClasses (4ms)
+	RebuildNativeTypeToScriptingClass (8ms)
+	initialDomainReloadingComplete (18ms)
+	LoadAllAssembliesAndSetupDomain (75ms)
+		LoadAssemblies (70ms)
+		AnalyzeDomain (6ms)
+			TypeCache.Refresh (4ms)
+	FinalizeReload (693ms)
+		SetupLoadedEditorAssemblies (0ms)
+			BeforeProcessingInitializeOnLoad (35ms)
+			ProcessInitializeOnLoadAttributes (111ms)
+			ProcessInitializeOnLoadMethodAttributes (113ms)
+		AwakeInstancesAfterBackupRestoration (232ms)
+
+Asset Pipeline Refresh (id=88a923b43e97242cf9981b0a073ce3c9): Total: 1.174 seconds - Initiated by StopAssetImportingV2(ForceSynchronousImport | ForceDomainReload)
+	(Values over 0.05ms)
+	Summary:
+		Imports: total=0 (actual=0, local cache=0, cache server=0)
+		Asset DB Process Time: managed=0 ms, native=729 ms
+		Asset DB Callback time: managed=12 ms, native=0 ms
+		Scripting: domain reloads=1, domain reload time=431 ms, compile time=1 ms, other=0 ms
+		Project Asset Count: scripts=813, non-scripts=1013
+		Asset File Changes: new=0, changed=0, moved=0, deleted=0
+		Scan Filter Count: 0
+	InvokePackagesCallback: 0.494ms
+	ApplyChangesToAssetFolders: 0.137ms
+	ProcessAssetsWithTransientArtifactChanges: 0.102ms
+	CategorizeAssets: 7.067ms
+	CompileScripts: 0.693ms
+	ImportOutOfDateAssets: 703.309ms (699.778ms without children)
+		UnloadImportedAssets: 0.067ms
+		EnsureUptoDateAssetsAreRegisteredWithGuidPM: 0.148ms
+		ImportSchedulerStart: 3.312ms
+	PostProcessAllAssets: 12.135ms
+		MonoPostProcessAllAssets: 12.134ms
+			SyncVS.PostprocessSyncProject 4.247ms
+			BuilderAssetPostprocessor.OnPostprocessAllAssets 4.175ms
+			WindowAssetPostprocessingWatcher.OnPostprocessAllAssets 3.412ms
+			AssetPostprocessor.OnPostprocessAllAssets 2.107ms
+			AssetChangedListener.OnPostprocessAllAssets 2.049ms
+			SpriteSlicePostprocessor.OnPostprocessAllAssets 1.508ms
+			RetainedModeAssetPostprocessor.OnPostprocessAllAssets 0.656ms
+			TMPro_TexturePostProcessor.OnPostprocessAllAssets 0.431ms
+			SpriteEditorTexturePostprocessor.OnPostprocessAllAssets 0.383ms
+			ArtifactBrowserPostProcessor.OnPostprocessAllAssets 0.355ms
+			SpeedTree9Postprocessor.OnPostprocessAllAssets 0.332ms
+			TextAssetPostProcessor.OnPostprocessAllAssets 0.327ms
+			UVCSAssetPostprocessor.OnPostprocessAllAssets 0.248ms
+			AudioMixerPostprocessor.OnPostprocessAllAssets 0.207ms
+			ReferencedClipsPostProcessor.OnPostprocessAllAssets 0.142ms
+			StyleCatalogPostProcessor.OnPostprocessAllAssets 0.117ms
+			AssetEvents.OnPostprocessAllAssets 0.103ms
+			SamplePostprocessor.OnPostprocessAllAssets 0.096ms
+			ScenarioDriftAssetsTracker.OnPostprocessAllAssets 0.086ms
+			SpeedTreePostProcessor.OnPostprocessAllAssets 0.078ms
+			ConfigAssetsTracker.OnPostprocessAllAssets 0.072ms
+			AssetDatabaseCallbacks.OnPostprocessAllAssets 0.056ms
+			TerrainToolbarOverlayPostProcessor.OnPostprocessAllAssets 0.051ms
+	GenerateScriptTypeHashes: 0.532ms
+	GenerateScriptTypeSerializationHashes: 1.272ms
+	Untracked: 449.084ms
+
+Loaded scene 'Temp/__Backupscenes/0.backup'
+	Deserialize:            0.332 ms
+	Integration:            30.176 ms
+	Integration of assets:  0.001 ms
+	Thread Wait Time:       0.005 ms
+	Total Operation Time:   30.514 ms
+[Licensing::Client] Successfully resolved entitlement details
+[Licensing::Client] Successfully resolved entitlement details
+[NeuroReachClient] Connected to ws://localhost:8765
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /Users/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+NeuroReach.Networking.NeuroReachClient:<Connect>b__12_0 () (at Assets/Scripts/Networking/NeuroReachClient.cs:52)
+NativeWebSocket.WebSocket/<Connect>d__27:MoveNext () (at ./Library/PackageCache/com.endel.nativewebsocket@ea014c9ae534/WebSocket/WebSocket.cs:472)
+System.Runtime.CompilerServices.AsyncMethodBuilderCore/MoveNextRunner:InvokeMoveNext (object)
+System.Threading.ExecutionContext:RunInternal (System.Threading.ExecutionContext,System.Threading.ContextCallback,object,bool)
+System.Threading.ExecutionContext:Run (System.Threading.ExecutionContext,System.Threading.ContextCallback,object,bool)
+System.Runtime.CompilerServices.AsyncMethodBuilderCore/MoveNextRunner:Run ()
+System.Threading.Tasks.SynchronizationContextAwaitTaskContinuation/<>c:<.cctor>b__7_0 (object)
+UnityEngine.UnitySynchronizationContext/WorkRequest:Invoke () (at /Users/bokken/build/output/unity/unity/Runtime/Export/Scripting/UnitySynchronizationContext.cs:156)
+UnityEngine.UnitySynchronizationContext:Exec () (at /Users/bokken/build/output/unity/unity/Runtime/Export/Scripting/UnitySynchronizationContext.cs:84)
+UnityEngine.UnitySynchronizationContext:ExecuteTasks () (at /Users/bokken/build/output/unity/unity/Runtime/Export/Scripting/UnitySynchronizationContext.cs:110)
+
+(Filename: Assets/Scripts/Networking/NeuroReachClient.cs Line: 52)
+
+[Licensing::Client] Successfully resolved entitlement details
+[Licensing::Client] Successfully resolved entitlement details
+Thread 0x17b6e3000 may have been prematurely finalized
+Unloading 0 Unused Serialized files (Serialized files now loaded: 0)
+Loaded scene 'Temp/__Backupscenes/0.backup'
+	Deserialize:            0.393 ms
+	Integration:            8.670 ms
+	Integration of assets:  0.002 ms
+	Thread Wait Time:       0.008 ms
+	Total Operation Time:   9.073 ms
+Unloading 29 unused Assets / (191.7 KB). Loaded Objects now: 5031.
+Memory consumption went from 315.2 MB to 315.0 MB.
+Total: 13.264916 ms (FindLiveObjects: 0.135334 ms CreateObjectMapping: 0.174584 ms MarkObjects: 12.909209 ms  DeleteObjects: 0.045250 ms)
+
+[Licensing::Client] Successfully resolved entitlement details
+Asset Pipeline Refresh (id=e190fb59bd5194614bdcea7cbe94defa): Total: 0.044 seconds - Initiated by RefreshV2(AllowForceSynchronousImport)
+2026-06-23 16:31:57.381 Unity[50318:9966907] NSEventModifierFlagFunction specified to -setKeyEquivalentModifierMask: for item <NSMenuItem: 0xa693719a0 UI Toolkit Debugger, ke='Command-F5'>, but is only supported for system-provided menu items; will not be used
+Asset Pipeline Refresh (id=8dcdfa7fd9c074cedab031a22f744089): Total: 0.044 seconds - Initiated by RefreshV2(AllowForceSynchronousImport)
+[Licensing::Client] Successfully resolved entitlement details
+Asset Pipeline Refresh (id=537f8caa65ffa46efb7ca7e13308a2f5): Total: 0.052 seconds - Initiated by RefreshV2(AllowForceSynchronousImport)
+2026-06-23 16:40:06.641 Unity[50318:9966907] NSEventModifierFlagFunction specified to -setKeyEquivalentModifierMask: for item <NSMenuItem: 0xa67cf3020 SDF, ke='Command-F12'>, but is only supported for system-provided menu items; will not be used
+2026-06-23 16:40:10.382 Unity[50318:9966907] NSEventModifierFlagFunction specified to -setKeyEquivalentModifierMask: for item <NSMenuItem: 0xa67cf1180 SDF, ke='Command-F12'>, but is only supported for system-provided menu items; will not be used
+Launching external process: /Applications/Unity/Hub/Editor/6000.5.0f1/Unity.app/Contents/Helpers/UnityShaderCompiler
+Launched and connected shader compiler UnityShaderCompiler after 0.02 seconds
+Launching external process: /Applications/Unity/Hub/Editor/6000.5.0f1/Unity.app/Contents/Helpers/UnityShaderCompiler
+Launched and connected shader compiler UnityShaderCompiler after 0.02 seconds
+Launching external process: /Applications/Unity/Hub/Editor/6000.5.0f1/Unity.app/Contents/Helpers/UnityShaderCompiler
+Launched and connected shader compiler UnityShaderCompiler after 0.02 seconds
+Launching external process: /Applications/Unity/Hub/Editor/6000.5.0f1/Unity.app/Contents/Helpers/UnityShaderCompiler
+Launched and connected shader compiler UnityShaderCompiler after 0.02 seconds
+Asset Pipeline Refresh (id=d4df1146adcd94d80bfba80fc4715b15): Total: 0.041 seconds - Initiated by RefreshV2(AllowForceSynchronousImport)
+2026-06-23 16:40:17.138 Unity[50318:9966907] NSEventModifierFlagFunction specified to -setKeyEquivalentModifierMask: for item <NSMenuItem: 0xa67cf0f00 SDF, ke='Command-F12'>, but is only supported for system-provided menu items; will not be used
+Asset Pipeline Refresh (id=ad24fd63feec54596bfabc63005de5fb): Total: 0.060 seconds - Initiated by RefreshV2(AllowForceSynchronousImport)
+Asset Pipeline Refresh (id=66d1728d70b6f41fcb9143c634aedbeb): Total: 0.050 seconds - Initiated by RefreshV2(AllowForceSynchronousImport)
+Asset Pipeline Refresh (id=217bfe38425d1415ab74c109430a3a6e): Total: 0.044 seconds - Initiated by RefreshV2(AllowForceSynchronousImport)
+Asset Pipeline Refresh (id=864a034af724344b7bb4e28678ca0dac): Total: 0.042 seconds - Initiated by RefreshV2(AllowForceSynchronousImport)
+2026-06-23 16:42:02.341 Unity[50318:9966907] NSEventModifierFlagFunction specified to -setKeyEquivalentModifierMask: for item <NSMenuItem: 0xa67cf3520 SDF, ke='Command-F12'>, but is only supported for system-provided menu items; will not be used
+Importing 'GUID: d354501fe418e4bb282b5e077d5bc16f - Path: Assets/test1.unity' with importer (DefaultImporter)
+Imported 'GUID: d354501fe418e4bb282b5e077d5bc16f' -> (Import Result ID: '8db95d629b926df7a65f90a52d0faa08') in 0.002 seconds [static dependencies only]. Details - ImportResultOutputID=4cd49316597f745c76cb05cfedf77542 DependenciesID=42bc9d7bcce3192b39234ea636449a21 StaticDependenciesID=027a60a6c191bf14b023ac03fe84e3b9 
+Asset Pipeline Refresh (id=70151c6ae8b854a1f9c877451dbd9da3): Total: 0.031 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Importing 'GUID: 397c13b30e08142a8b88c37705e8692a - Path: Assets/Garden.unity' with importer (DefaultImporter)
+Imported 'GUID: 397c13b30e08142a8b88c37705e8692a' -> (Import Result ID: '9b31700ef3bb8986d61abc01d051fff7') in 0.001 seconds [static dependencies only]. Details - ImportResultOutputID=0f5c2568779f31f92f9bb9e492da0743 DependenciesID=bb078851338fb15b018fddb7aa029699 StaticDependenciesID=6a3d32c6656596aa12c5764bb32ae77a 
+Asset Pipeline Refresh (id=e2754ec8231474b1fb9b30766a3cf669): Total: 0.026 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Asset Pipeline Refresh (id=042c64ae296844e78b274c9360ffc167): Total: 0.051 seconds - Initiated by RefreshV2(AllowForceSynchronousImport)
+Asset Pipeline Refresh (id=79fc8cdf167334d379a82cdfe4453cbd): Total: 0.043 seconds - Initiated by RefreshV2(AllowForceSynchronousImport)
+Thread 0x17b6e3000 may have been prematurely finalized
+Reloading assemblies for play mode.
+Reloading assemblies after forced synchronous recompile.
+[Licensing::Client] Successfully resolved entitlement details
+Begin MonoManager ReloadAssembly
+2026-06-23 16:43:27.118 Unity[50318:9966907] NSEventModifierFlagFunction specified to -setKeyEquivalentModifierMask: for item <NSMenuItem: 0xa67cf1e00 SDF, ke='Command-F12'>, but is only supported for system-provided menu items; will not be used
+2026-06-23 16:43:27.120 Unity[50318:9966907] NSEventModifierFlagFunction specified to -setKeyEquivalentModifierMask: for item <NSMenuItem: 0xa67cf10e0 SDF, ke='Command-F12'>, but is only supported for system-provided menu items; will not be used
+Symbol file LoadedFromMemory is not a mono symbol file
+Refreshing native plugins compatible for Editor in 3.04 ms, found 2 plugins.
+Native extension for OSXStandalone target not found
+Native extension for WebGL target not found
+ScheduleIndexationOnStartup MainProcess:True IndexOnStartup:True
+[MODES] ModeService[none].Initialize
+[MODES] ModeService[none].LoadModes
+Mono: successfully reloaded assembly
+- Finished resetting the current domain, in  0.707 seconds
+Domain Reload Profiling: 1074ms
+	BeginReloadAssembly (263ms)
+		DisableScriptedObjects (18ms)
+		CreateAndSetChildDomain (160ms)
+	RebuildCommonClasses (4ms)
+	RebuildNativeTypeToScriptingClass (8ms)
+	initialDomainReloadingComplete (18ms)
+	LoadAllAssembliesAndSetupDomain (74ms)
+		LoadAssemblies (69ms)
+		AnalyzeDomain (6ms)
+			TypeCache.Refresh (4ms)
+	FinalizeReload (707ms)
+		SetupLoadedEditorAssemblies (0ms)
+			BeforeProcessingInitializeOnLoad (36ms)
+			ProcessInitializeOnLoadAttributes (116ms)
+			ProcessInitializeOnLoadMethodAttributes (126ms)
+		AwakeInstancesAfterBackupRestoration (228ms)
+
+Asset Pipeline Refresh (id=eaf8d6e01ce134381a6c9ff56f7b3db9): Total: 1.181 seconds - Initiated by StopAssetImportingV2(ForceSynchronousImport | ForceDomainReload)
+	(Values over 0.05ms)
+	Summary:
+		Imports: total=0 (actual=0, local cache=0, cache server=0)
+		Asset DB Process Time: managed=0 ms, native=742 ms
+		Asset DB Callback time: managed=12 ms, native=0 ms
+		Scripting: domain reloads=1, domain reload time=424 ms, compile time=1 ms, other=0 ms
+		Project Asset Count: scripts=813, non-scripts=1014
+		Asset File Changes: new=0, changed=0, moved=0, deleted=0
+		Scan Filter Count: 0
+	InvokePackagesCallback: 0.494ms
+	ApplyChangesToAssetFolders: 0.148ms
+	Collect global state as custom dependencies: 0.053ms
+	CategorizeAssets: 7.898ms
+	CompileScripts: 0.816ms
+	ImportOutOfDateAssets: 716.860ms (713.398ms without children)
+		UnloadImportedAssets: 0.069ms
+		EnsureUptoDateAssetsAreRegisteredWithGuidPM: 0.152ms
+		ImportSchedulerStart: 3.237ms
+	PostProcessAllAssets: 12.374ms
+		MonoPostProcessAllAssets: 12.373ms
+			SyncVS.PostprocessSyncProject 4.236ms
+			WindowAssetPostprocessingWatcher.OnPostprocessAllAssets 3.378ms
+			SpeedTree9Postprocessor.OnPostprocessAllAssets 0.333ms
+			ReferencedClipsPostProcessor.OnPostprocessAllAssets 0.139ms
+			AssetChangedListener.OnPostprocessAllAssets 0.127ms
+			AssetDatabaseCallbacks.OnPostprocessAllAssets 0.056ms
+			TerrainToolbarOverlayPostProcessor.OnPostprocessAllAssets 0.052ms
+	GenerateScriptTypeHashes: 0.634ms
+	GenerateScriptTypeSerializationHashes: 1.536ms
+	Untracked: 440.877ms
+
+Loaded scene 'Temp/__Backupscenes/0.backup'
+	Deserialize:            0.433 ms
+	Integration:            47.619 ms
+	Integration of assets:  0.001 ms
+	Thread Wait Time:       0.006 ms
+	Total Operation Time:   48.059 ms
+[Licensing::Client] Successfully resolved entitlement details
+[Licensing::Client] Successfully resolved entitlement details
+[NeuroReachClient] Connected to ws://localhost:8765
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /Users/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+NeuroReach.Networking.NeuroReachClient:<Connect>b__12_0 () (at Assets/Scripts/Networking/NeuroReachClient.cs:52)
+NativeWebSocket.WebSocket/<Connect>d__27:MoveNext () (at ./Library/PackageCache/com.endel.nativewebsocket@ea014c9ae534/WebSocket/WebSocket.cs:472)
+System.Runtime.CompilerServices.AsyncMethodBuilderCore/MoveNextRunner:InvokeMoveNext (object)
+System.Threading.ExecutionContext:RunInternal (System.Threading.ExecutionContext,System.Threading.ContextCallback,object,bool)
+System.Threading.ExecutionContext:Run (System.Threading.ExecutionContext,System.Threading.ContextCallback,object,bool)
+System.Runtime.CompilerServices.AsyncMethodBuilderCore/MoveNextRunner:Run ()
+System.Threading.Tasks.SynchronizationContextAwaitTaskContinuation/<>c:<.cctor>b__7_0 (object)
+UnityEngine.UnitySynchronizationContext/WorkRequest:Invoke () (at /Users/bokken/build/output/unity/unity/Runtime/Export/Scripting/UnitySynchronizationContext.cs:156)
+UnityEngine.UnitySynchronizationContext:Exec () (at /Users/bokken/build/output/unity/unity/Runtime/Export/Scripting/UnitySynchronizationContext.cs:84)
+UnityEngine.UnitySynchronizationContext:ExecuteTasks () (at /Users/bokken/build/output/unity/unity/Runtime/Export/Scripting/UnitySynchronizationContext.cs:110)
+
+(Filename: Assets/Scripts/Networking/NeuroReachClient.cs Line: 52)
+
+[Licensing::Client] Successfully resolved entitlement details
+[Licensing::Client] Successfully resolved entitlement details
+Thread 0x17905f000 may have been prematurely finalized
+Unloading 0 Unused Serialized files (Serialized files now loaded: 0)
+Loaded scene 'Temp/__Backupscenes/0.backup'
+	Deserialize:            0.540 ms
+	Integration:            11.559 ms
+	Integration of assets:  0.001 ms
+	Thread Wait Time:       0.009 ms
+	Total Operation Time:   12.108 ms
+Unloading 31 unused Assets / (29.2 MB). Loaded Objects now: 5092.
+Memory consumption went from 344.1 MB to 314.8 MB.
+Total: 17.170041 ms (FindLiveObjects: 0.159875 ms CreateObjectMapping: 0.217500 ms MarkObjects: 15.763541 ms  DeleteObjects: 1.029000 ms)
+
+[Licensing::Client] Successfully resolved entitlement details
+Asset Pipeline Refresh (id=bf28ab1d74f6945198b9c01ac0c6e7ed): Total: 0.046 seconds - Initiated by RefreshV2(AllowForceSynchronousImport)
+Asset Pipeline Refresh (id=4b20d67b51aec4117bc627fbf6601a52): Total: 0.043 seconds - Initiated by RefreshV2(AllowForceSynchronousImport)
