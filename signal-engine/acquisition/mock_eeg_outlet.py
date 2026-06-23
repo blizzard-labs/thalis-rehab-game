@@ -47,6 +47,13 @@ class _ErdEvent:
 
 
 @dataclass
+class _SpikeEvent:
+    start_mono: float
+    end_mono: float
+    amplitude_uv: float
+
+
+@dataclass
 class MockSignalConfig:
     """Per-channel synthetic-signal parameters (µV)."""
     noise_std: float = 2.0
@@ -96,6 +103,18 @@ class MockUnicornOutlet:
         self._eeg_labels_in_order: list[str] = [
             self._labels[i] for i in self._eeg_indices
         ]
+        # Independent per-channel phase for mu and beta. Real scalp EEG is not
+        # phase-identical across electrodes; without this, common-average
+        # reference downstream would cancel the (identical) oscillations on
+        # every channel and erase the mu/beta rhythm entirely.
+        self._mu_phase = {
+            lbl: float(self._rng.uniform(0, 2 * math.pi))
+            for lbl in self._eeg_labels_in_order
+        }
+        self._beta_phase = {
+            lbl: float(self._rng.uniform(0, 2 * math.pi))
+            for lbl in self._eeg_labels_in_order
+        }
         self._accel_idx = {
             "x": self._label_to_idx.get("Accelerometer X"),
             "y": self._label_to_idx.get("Accelerometer Y"),
@@ -113,8 +132,15 @@ class MockUnicornOutlet:
         self._outlet: Optional[StreamOutlet] = None
         self._thread: Optional[threading.Thread] = None
         self._running = threading.Event()
+        # Cleared while running; set by stop() to interrupt the pacing sleep
+        # promptly. Must NOT reuse _running for the sleep wait — _running is set
+        # during normal operation, so waiting on it returns instantly and the
+        # generator would free-run at full CPU speed instead of real time.
+        self._sleep_interrupt = threading.Event()
         self._erd_events: list[_ErdEvent] = []
         self._erd_lock = threading.Lock()
+        self._spike_events: list[_SpikeEvent] = []
+        self._spike_lock = threading.Lock()
 
     # ------------------------------------------------------------------
     # Lifecycle
@@ -139,6 +165,7 @@ class MockUnicornOutlet:
             ch.append_child_value("type", "EEG" if label in DEFAULT_EEG_LABELS else "AUX")
 
         self._outlet = StreamOutlet(info, chunk_size=self._block_samples, max_buffered=60)
+        self._sleep_interrupt.clear()
         self._running.set()
         self._thread = threading.Thread(target=self._run, name="MockUnicornOutlet", daemon=True)
         self._thread.start()
@@ -147,6 +174,7 @@ class MockUnicornOutlet:
 
     def stop(self, join_timeout: float = 2.0) -> None:
         self._running.clear()
+        self._sleep_interrupt.set()
         if self._thread is not None:
             self._thread.join(timeout=join_timeout)
             if self._thread.is_alive():
@@ -194,6 +222,29 @@ class MockUnicornOutlet:
         with self._erd_lock:
             self._erd_events.append(event)
 
+    def inject_spike(
+        self,
+        amplitude_uv: float = 200.0,
+        n_samples: int = 25,
+        start_in_s: float = 0.0,
+    ) -> None:
+        """Add a large DC-like amplitude spike to ALL EEG channels.
+
+        The spike of ``amplitude_uv`` is applied for ``n_samples`` (converted to
+        wall-clock duration at the configured sample rate), simulating an
+        electrode-pop / movement artifact for the AmplitudeGate to catch.
+        """
+        now = time.monotonic()
+        start = now + max(0.0, start_in_s)
+        with self._spike_lock:
+            self._spike_events.append(
+                _SpikeEvent(
+                    start_mono=start,
+                    end_mono=start + max(1, int(n_samples)) / self._sample_rate,
+                    amplitude_uv=float(amplitude_uv),
+                )
+            )
+
     # ------------------------------------------------------------------
     # Generator thread
 
@@ -217,9 +268,9 @@ class MockUnicornOutlet:
                 next_deadline = start_mono + (sample_idx / sr)
                 sleep_for = next_deadline - time.perf_counter()
                 if sleep_for > 0:
-                    # Use Event.wait so stop() can interrupt sleep promptly.
-                    interrupted = self._running.wait(timeout=sleep_for)
-                    if not interrupted and not self._running.is_set():
+                    # Wait on the interrupt event (clear during run) so the sleep
+                    # actually paces to real time and stop() can cut it short.
+                    if self._sleep_interrupt.wait(timeout=sleep_for):
                         break
                 # else: behind schedule, loop and catch up without sleeping
         except Exception:
@@ -238,9 +289,7 @@ class MockUnicornOutlet:
 
         # Per-channel attenuation factors for mu and beta, default 1.0.
         active = self._snapshot_active_erd(block_wall_now, block_end_wall)
-
-        mu_wave = np.sin(2 * math.pi * sig.mu_freq * t)
-        beta_wave = np.sin(2 * math.pi * sig.beta_freq * t)
+        spike_uv = self._snapshot_active_spike(block_wall_now, block_end_wall)
 
         for idx, label in zip(self._eeg_indices, self._eeg_labels_in_order):
             mu_scale = 1.0
@@ -250,11 +299,14 @@ class MockUnicornOutlet:
                     mu_scale *= (1.0 - ev.suppression_fraction)
                 if ev.band_lo <= sig.beta_freq <= ev.band_hi:
                     beta_scale *= (1.0 - ev.suppression_fraction)
+            mu_wave = np.sin(2 * math.pi * sig.mu_freq * t + self._mu_phase[label])
+            beta_wave = np.sin(2 * math.pi * sig.beta_freq * t + self._beta_phase[label])
             noise = self._rng.standard_normal(n_samples) * sig.noise_std
             block[idx] = (
                 sig.mu_amp * mu_scale * mu_wave
                 + sig.beta_amp * beta_scale * beta_wave
                 + noise
+                + spike_uv
             ).astype(np.float32)
 
         # IMU: small white noise; accelerometer Z biased to 1.0 g.
@@ -286,3 +338,13 @@ class MockUnicornOutlet:
                 if ev.start_mono <= block_end and ev.end_mono >= block_start:
                     out.setdefault(ev.channel_label, []).append(ev)
         return out
+
+    def _snapshot_active_spike(self, block_start: float, block_end: float) -> float:
+        """Summed amplitude (µV) of spike events overlapping this block."""
+        total = 0.0
+        with self._spike_lock:
+            self._spike_events = [e for e in self._spike_events if e.end_mono > block_start]
+            for ev in self._spike_events:
+                if ev.start_mono <= block_end and ev.end_mono >= block_start:
+                    total += ev.amplitude_uv
+        return total

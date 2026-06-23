@@ -268,6 +268,39 @@ class EEGInlet:
         """Pull up to `max_samples` IMU samples. Returns shape [6, n_samples], float64."""
         return self._pull_subset(self._imu_idx, max_samples, timeout)
 
+    def get_chunk(
+        self,
+        max_samples: int,
+        timeout: Optional[float] = None,
+    ) -> tuple[np.ndarray, np.ndarray]:
+        """Pull EEG and IMU from a SINGLE LSL pull, time-aligned.
+
+        Returns ``(eeg [8, n], imu [6, n])`` sliced from the same samples.
+
+        Use this in a real-time loop instead of calling ``get_eeg_chunk`` and
+        ``get_imu_chunk`` separately: those issue two independent ``pull_chunk``
+        calls on the one underlying inlet, so the second steals samples the
+        first didn't take, leaving GAPS in the EEG stream. Gapped input breaks
+        the stateful causal filter (it assumes contiguous samples) and corrupts
+        every downstream band-power / ERD estimate.
+        """
+        if self._inlet is None:
+            raise RuntimeError("EEGInlet is closed")
+        empty_eeg = np.empty((len(self._eeg_idx), 0), dtype=np.float64)
+        empty_imu = np.empty((len(self._imu_idx), 0), dtype=np.float64)
+        if max_samples <= 0:
+            return empty_eeg, empty_imu
+
+        eff_timeout = self.pull_timeout if timeout is None else timeout
+        samples, _ = self._inlet.pull_chunk(timeout=eff_timeout, max_samples=max_samples)
+        if not samples:
+            return empty_eeg, empty_imu
+
+        arr = np.asarray(samples, dtype=np.float64)  # [n_samples, n_channels]
+        eeg = arr[:, self._eeg_idx].T.copy()
+        imu = arr[:, self._imu_idx].T.copy()
+        return eeg, imu
+
     def get_time_correction(self) -> float:
         """Return the cached LSL clock offset (seconds), refreshing if >5s old."""
         self._refresh_time_correction()

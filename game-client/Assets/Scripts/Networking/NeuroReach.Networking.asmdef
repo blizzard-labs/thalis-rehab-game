@@ -1,0 +1,17 @@
+{
+    "name": "NeuroReach.Networking",
+    "rootNamespace": "NeuroReach.Networking",
+    "references": [
+        "NeuroReach.Core",
+        "endel.nativewebsocket"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

@@ -1,9 +1,9 @@
 # thalis-rehab-game — Development Status & TODOs
 
-_Last updated: 2026-06-21. Scope of this doc: the `signal-engine` Python stack
-(acquisition → preprocessing → features → calibration) and its validation against
-the real g.tec Unicorn Hybrid Black. Game client, classifier, CV, and clinician
-console are tracked at a high level under "Roadmap" only._
+_Last updated: 2026-06-23. Scope of this doc: the `signal-engine` Python stack
+(acquisition → preprocessing → features → calibration → classifier → scoring) and
+its validation against the real g.tec Unicorn Hybrid Black. Game client, CV, and
+clinician console are tracked at a high level under "Roadmap" only._
 
 Reference spec: [`docs/specs.md`](specs.md). Phase prompts: [`docs/prompts/`](prompts/).
 
@@ -21,15 +21,24 @@ Unicorn HW → Unicorn LSL bridge → pylsl
 ```
 
 runs live and meets the MVP latency target. The **Graz-style cued MI calibration
-block** (cue paradigm + marker stream + labeled epoch collection) and the
+block** (cue paradigm + marker stream + labeled epoch collection), the
 **CSP+LDA online classifier** (offline fit on calibration epochs + live decode +
-joblib persistence) are now built and tested against synthetic/mock data.
-**Next major piece: the WebSocket/OSC score server feeding the game**, plus the
-60 s baseline-rest block and per-patient versioned filter persistence (spec
-§6.1/§6.6).
+joblib persistence), and now the **real-time scoring loop** (ring buffer +
+IntentScore fusion engine + threaded `ScoringService`, MODE A blend, EMA
+smoothing), and now the **WebSocket transport** (`NeuroReachWSServer` bridging
+the scoring output queue to game/clinician clients at 20 Hz) are built and
+tested against synthetic/mock data.
+The **Unity game client skeleton** (`game-client/`) now consumes the WebSocket
+score stream: pure C# scoring/garden logic (NUnit-tested in EditMode) plus thin
+MonoBehaviour wrappers (`NeuroReachClient`, `GardenGrowController`,
+`SessionSummaryController`).
+**Next major piece: wire the Unity scenes + run the full live pipeline**
+(Unicorn → signal-engine → WebSocket → Unity), plus the 60 s baseline-rest
+block and per-patient versioned filter persistence (spec §6.1/§6.6).
 
-Test suite: **44 passing, 1 skipped** (39 offline + 5 live; the skip is the
-on-head validation, which requires the cap worn). Run everything with:
+Test suite: **52 passing, 6 skipped** (offline + mock + live; the skips are
+on-head/live validations, which require the cap worn / a live stream). Run
+everything with:
 
 ```bash
 conda run -n eeg python -m pytest signal-engine/tests/ -v
@@ -113,6 +122,78 @@ conda run -n eeg python -m pytest signal-engine/tests/ -v
   unfit save, single-class `ValueError`, `mi_score ∈ [0,100]`, channel-mismatch
   `ValueError`. **8 passing.**
 
+### Scoring — `signal-engine/scoring/`
+- `ring_buffer.py` — `RingBuffer`: fixed-capacity circular EEG buffer.
+  `get_window(n)` returns exactly `[n_channels, n]`, **front zero-padded** so the
+  most recent samples are right-aligned; `n_samples_available()` reports real
+  (non-padded) fill.
+- `intent_score.py` — `IntentScoreEngine.compute(ring_buffer, artifact_clean)`
+  → `IntentScoreResult`. ERD score = C3+C4 mu-ERD averaged, clipped `[0,100]`
+  (ERS→0); classifier score via `OnlineClassifier.mi_score` only when reliable
+  **and** a full `mi_window` of real samples exists (else ERD-only). MODE A
+  blend `0.4·ERD + 0.6·classifier` (spec §8.2), per-session adaptive min-max
+  normalization (priors held for first 10 real points), EMA smoothing
+  (`α=0.15` ≈ τ300 ms @ 20 Hz, spec §8.5). Artifact windows freeze the score
+  (return previous, sub-scores `None`, no EMA/normalization update). ERD is not
+  computed on a not-yet-full buffer (zero-pad would read as bogus ~100% ERD).
+- `scoring_service.py` — `ScoringService` background thread: single combined
+  `EEGInlet.get_chunk` pull → causal filter → CAR → ring buffer; amplitude gate
+  runs on a **separate raw (pre-filter, pre-CAR) buffer** — CAR cancels a
+  common-mode spike and the bandpass attenuates it, so a post-pipeline gate is
+  blind to global artifacts; movement gate on the time-aligned IMU; scoring
+  throttled to `update_rate_hz`; results pushed non-blocking to `output_queue`
+  (drops oldest when full, never blocks the loop).
+- Tests (`test_scoring_service.py`, end-to-end against the mock outlet, band-
+  power-only mode): smoke (≥40 results in 3 s), artifact spike suppression
+  (`inject_spike`), EMA smoothing visible (rise anchored, 100 ms < 80%·500 ms),
+  `stop()` joins < 2 s, full-queue drop-without-block + recent item. **5 passing.**
+
+### Server — `signal-engine/server/`
+- `ws_server.py` — `NeuroReachWSServer` bridges the (synchronous, threaded)
+  `ScoringService.output_queue` to asyncio WebSocket clients. The bridge stays
+  a thread-safe `queue.Queue` (**not** an `asyncio.Queue`, since the producer
+  isn't async): a drain task reads it via `loop.run_in_executor` (blocking
+  `Queue.get` on a worker thread, never the event loop) into a held latest
+  result; a separate task broadcasts that to all clients at `broadcast_hz`
+  (default 20 Hz), decoupled from producer rate. Outbound `intent_score`
+  messages carry `mode` (`band_power_only` vs `csp_lda_blend`) and forward the
+  held clean `intent_score` on artifact frames (Unity shows an indicator).
+  Inbound dispatcher: `ping`→`pong`, `get_status`, `set_mode` (flips the
+  engine's `classifier_reliable` at runtime); unknown commands get a per-client
+  `error` (never broadcast). Graceful client-drop handling (catch
+  `ConnectionClosed`, remove, continue); queue drained regardless of client
+  count. `start()` blocks (event loop in caller thread); `start_background()`
+  runs the loop in a daemon thread for tests; `stop()` shuts down cleanly.
+- Tests (`test_ws_server.py`, mock-driven, module-scoped server fixture via
+  `start_background`): connection accepted, broadcast rate (50–70 in 3 s),
+  message schema (+recent timestamp, `intent_score ∈ [0,100]`), multi-client
+  parity (±3 within one shared window), abrupt-disconnect resilience +
+  reconnect, ping/pong < 200 ms, unknown command, zero-client clean run.
+  **8 passing.**
+
+### Game client — `game-client/` (Unity 2022 LTS, .NET Standard 2.1)
+- Pure C# (NUnit EditMode-tested, no Unity runtime needed):
+  - `Scripts/Scoring/IntentScoreMessage` — Newtonsoft `[JsonProperty]` mapping of
+    the server's snake_case frame; `FromJson` returns null on malformed/empty,
+    `-1` sentinel when `classifier_score` is null/absent.
+  - `Scripts/Scoring/IntentScoreBuffer` — fixed circular buffer (default 600 =
+    30 s @ 20 Hz), `Latest`/`RecentAverage(n)`/`StreakAboveThreshold`; static
+    `Shared` bridges producer↔consumer.
+  - `Scripts/Garden/PlantGrowthModel` — asymmetric grow 0.8/s, wilt 0.3/s; bloom
+    on 3 s dwell above 0.75 with 0.60 off-threshold hysteresis (spec §9.1).
+- Thin MonoBehaviours (not unit-tested): `Networking/NeuroReachClient`
+  (NativeWebSocket, reconnect 5 s ×10, static `ConnectionStatus`),
+  `Garden/GardenGrowController`, `UI/SessionSummaryController` (positive,
+  non-comparative summary per spec §9.3).
+- Assemblies: `NeuroReach.Core` (pure + UI/TMP), `NeuroReach.Networking`
+  (isolates the git NativeWebSocket dep), `NeuroReach.EditModeTests`.
+- Packages in `Packages/manifest.json`: `com.endel.nativewebsocket` (git#upm),
+  `com.unity.nuget.newtonsoft-json` 3.2.1, TMP/uGUI/test-framework.
+- Tests (`Assets/Tests/EditMode/`): message parse/sentinel/malformed, buffer
+  average/streak/wrap/empty, plant grow/wilt/bloom-hysteresis/clamp. **Run in
+  the Unity Test Runner (EditMode) — cannot run headless here.**
+- Scene plan: `Assets/Scenes/README.md` (Calibration → Garden → Summary).
+
 ### Live hardware validation — `signal-engine/tests/test_live_unicorn.py`
 Opt-in (`THALIS_LIVE_UNICORN=1`), gated so CI/mock never runs it.
 - `test_stream_metadata_well_formed` — 250 Hz, 17 channels.
@@ -135,7 +216,8 @@ Opt-in (`THALIS_LIVE_UNICORN=1`), gated so CI/mock never runs it.
 | **On-head signal quality + ERD magnitude** (`test_signal_quality_on_head_TODO`, currently `@skip`) | Validate real µV amplitude (10–100 µV) and 20–40% mu-ERD with contralateral laterality | Needs cap worn + self-paced MI protocol |
 | Wire `test_live_unicorn.py` to use `EEGInlet` instead of the local `_LiveUnicorn` shim | Exercise the production acquisition path end-to-end (needs timestamp access for the latency test) | EEGInlet drops LSL timestamps; add a timestamped pull or keep tapping `_inlet` |
 | ~~Classifier unit/integration tests~~ | ~~CSP/LDA fit on `CalibrationDataset.epochs` + online decode~~ | **done** — `test_classifier.py` (8 tests, synthetic MI vs rest). Real on-head CV accuracy still pending H2. |
-| WebSocket/OSC score-server tests | game-facing score stream, latency budget | server not built |
+| ~~IntentScore fusion + scoring loop tests~~ | ~~ring buffer, ERD/classifier blend, artifact freeze, EMA~~ | **done** — `test_scoring_service.py` (5 tests, mock, band-power-only). |
+| ~~WebSocket transport tests~~ | ~~drain `ScoringService.output_queue` to clients; broadcast rate, schema, multi-client, disconnect, commands~~ | **done** — `test_ws_server.py` (8 tests, mock). OSC variant + full-pipeline latency-to-client budget still open. |
 | ~~Calibration-block orchestration tests~~ | ~~cue paradigm + labeled epoch collection~~ | **done** — `test_calibration.py` (CSP/LDA fit + per-patient versioning still pending, belongs to the classifier piece) |
 | 60 s baseline-rest block + per-patient versioned filter persistence | spec §6.1/§6.6: resting spectral baseline + serialize CSP/LDA per patient/session | orchestrator collects MI trials only; baseline block + disk versioning not built |
 | Offline replay / regression harness | shadow-mode "no regression" before deploy | needs stored raw EEG+pose corpus |
@@ -168,6 +250,25 @@ Opt-in (`THALIS_LIVE_UNICORN=1`), gated so CI/mock never runs it.
   **26 offline passing** (was 21); **31 passing / 1 skipped** with hardware
   (live gated). _Live re-verify on hardware still pending (device was
   unoccupied)._
+
+### Done in this pass (scoring loop)
+- **`EEGInlet.get_chunk(max_samples)`** — pulls EEG **and** IMU from one
+  `pull_chunk`, time-aligned. The real-time loop must use this, not separate
+  `get_eeg_chunk`/`get_imu_chunk` calls: those issue two independent pulls on the
+  single inlet, so the IMU pull steals samples and leaves GAPS in the EEG stream,
+  which breaks the stateful causal filter and corrupted every band-power/ERD
+  estimate (manifested as a spurious ~85% rest ERD before this was found).
+- **MockUnicornOutlet pacing bug fixed.** The generator waited on `_running`
+  (which is *set* during run), so the wait returned instantly and it free-ran at
+  ~270 k samples/s instead of 250 Hz — making any real-time timing test
+  meaningless and stalling `stop()` on push back-pressure. Now waits on a
+  dedicated `_sleep_interrupt` event (clear during run, set by `stop()`).
+- **MockUnicornOutlet per-channel phase.** mu/beta were identical-phase on every
+  EEG channel, so common-average-reference cancelled them completely (no rhythm
+  survived). Each EEG channel now gets independent random mu/beta phase — more
+  realistic and lets CAR'd ERD scoring actually see the rhythm.
+- **`MockUnicornOutlet.inject_spike(amplitude_uv, n_samples, start_in_s)`** — adds
+  a large amplitude artifact on all EEG channels, for the AmplitudeGate test.
 
 ### Still required
 - **`pytest.ini` / markers.** Add a `live` marker so live tests run via
@@ -210,9 +311,17 @@ Opt-in (`THALIS_LIVE_UNICORN=1`), gated so CI/mock never runs it.
 - [~] Calibration block (spec §6): **cued MI orchestration + marker stream + labeled
   epoch collection done** (`signal-engine/calibration/`); still TODO — 60 s baseline-rest
   block, CSP/LDA fit, per-patient versioned filter persistence.
-- [ ] Fusion/scoring service over WebSocket/OSC, EMA-smoothed IntentScore (spec §8).
+- [~] Fusion/scoring service, EMA-smoothed IntentScore (spec §8): **scoring engine +
+  threaded service built** (`signal-engine/scoring/`, MODE A blend, adaptive
+  normalization, artifact freeze, EMA, `output_queue`), and the **WebSocket
+  transport** (`signal-engine/server/ws_server.py`, `NeuroReachWSServer`,
+  20 Hz broadcast + command dispatcher) that delivers the queue to clients.
+  Still TODO — optional OSC transport.
 - [ ] Camera/CV pipeline (MediaPipe pose/hands) as validity gate + kinematic scoring (spec §7).
-- [ ] Unity game client consuming the score stream (spec §11).
+- [~] Unity game client consuming the score stream (spec §11): **skeleton built**
+  (`game-client/`, pure C# scoring/garden logic + EditMode tests, NativeWebSocket
+  client, garden grow controller, session summary). Still TODO — author the three
+  `.unity` scenes, wire `[SerializeField]` refs, run the live end-to-end pipeline.
 - [ ] Clinician console: live signal quality, ERD/LI trends, session history (spec §10).
 - [ ] Full-pipeline latency instrumentation incl. WebSocket→Unity frame (spec §13.2).
 
@@ -272,7 +381,11 @@ signal before the game client exists. Dataset also seeds the offline regression 
 
 ### Session H3 — End-to-end stack + perceptual latency
 **Gate:** Unity game client + WebSocket/OSC server + IntentScore fusion service all built and
-integration-tested with mock signal. CV pipeline may still be absent (use `w_kin=0` Mode A).
+integration-tested with mock signal. **IntentScore fusion service + WebSocket server are done**
+(`signal-engine/scoring/` + `signal-engine/server/`, mock-tested, MODE A), and the **Unity
+client skeleton is built** (`game-client/`, EditMode-tested logic + WebSocket client); remaining
+gate item: author/wire the Unity scenes and run the live end-to-end pipeline. CV pipeline may
+still be absent (use `w_kin=0` Mode A).
 
 | What | How |
 |---|---|

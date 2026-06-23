@@ -236,9 +236,9 @@ Output a short summary and test run instructions. Then update todos.md appropria
 ## Prompt 3 — Online Real-Time Scoring Service
 
 ```
-Working in the neuroreach repo. Python 3.11. This is the main real-time
+This is the main real-time
 loop that integrates all Phase 0 modules and the Phase 1 classifier into
-a continuous IntentScore stream. Assumes all previous tests pass.
+a continuous IntentScore stream. Assumes all previous tests pass. Continue to use conda "eeg" environment and refer to docs/specs.md for final criterion. Note that the headset is not currently streaming data.
 
 Create signal-engine/scoring/ring_buffer.py:
 
@@ -373,17 +373,17 @@ Tests:
   (the service should drop, not block) and the final queue item is recent
   (within 200ms of the test ending).
 
-Output a short summary and test run instructions.
+Output a short summary and test run instructions. Then update todos.md.
 ```
 
 ---
 
 ## Prompt 4 — WebSocket Score Server
 
-```
-Working in the neuroreach repo. Python 3.11. Dependencies: websockets>=12.0,
-asyncio (stdlib). Assumes ScoringService and IntentScoreResult from Prompt 3
-exist.
+Dependencies: websockets>=12.0,
+asyncio (stdlib). Assumes ScoringService and IntentScoreResult from Prompt 3 exist.
+
+Continue to use conda "eeg" environment and refer to docs/specs.md for final criterion. Note that the headset is not currently streaming data.
 
 Create signal-engine/server/ws_server.py:
 
@@ -483,17 +483,19 @@ Tests:
 - Zero-client test: connect no clients, let the server run for 2s,
   assert it doesn't crash or log errors (other than "no clients").
 
-Output a short summary and test run instructions.
-```
+Output a short summary and test run instructions. Then, update todos.md appropriately.
+
 
 ---
 
 ## Prompt 5 — Unity Garden Grow Game
 
 ```
-Working in the neuroreach repo, inside the game-client/ Unity 2022 LTS
+Working in the same repo, inside the game-client/ Unity 2022 LTS
 project (Unity 6 is not the target — stay on 2022 LTS for clinic
 stability). C#, .NET Standard 2.1. Target platform: Windows Standalone.
+
+Continue to use conda "eeg" environment and refer to docs/specs.md for final criterion. Note that the headset is not currently streaming data.
 
 IMPORTANT: you cannot run Unity to test this, so structure all
 non-MonoBehaviour logic as pure C# classes testable with NUnit
@@ -649,6 +651,8 @@ Output a scene-structure README and a summary of all files created.
 Do NOT attempt to set up the Unity project itself (project creation,
 package manager operations) — assume the Unity project already exists
 at game-client/. Focus entirely on the C# scripts and test files.
+
+Finally update todos.md.
 ```
 
 ---
