@@ -1,0 +1,287 @@
+"""WebSocket bridge: ScoringService output -> game / clinician clients.
+
+The ScoringService runs on a synchronous ``threading.Thread`` and publishes
+``IntentScoreResult`` objects onto a thread-safe ``queue.Queue``. This server
+runs in asyncio and must NOT block its event loop on that queue. The bridge is
+therefore the existing ``queue.Queue`` (NOT an ``asyncio.Queue``): a background
+asyncio task drains it via ``loop.run_in_executor`` (a blocking ``get`` runs in
+a thread-pool worker, never on the event loop), stashing the latest result. A
+second task broadcasts the latest result to every connected client at a fixed
+``broadcast_hz``, decoupled from the producer rate.
+
+Outbound (server -> all clients), at ``broadcast_hz``::
+
+    {"type": "intent_score", "intent_score": 72.3, "erd_score": 68.1,
+     "classifier_score": 75.8, "is_artifact": false,
+     "mode": "band_power_only", "timestamp": 1234567890.123}
+
+Inbound (client -> server)::
+
+    {"cmd": "ping"}        -> {"type": "pong", "timestamp": ...}
+    {"cmd": "get_status"}  -> {"type": "status", ...}
+    {"cmd": "set_mode", "mode": "band_power_only" | "csp_lda_blend"}
+
+Unknown commands get a per-client ``{"type": "error", ...}`` reply (never
+broadcast).
+"""
+
+from __future__ import annotations
+
+import asyncio
+import json
+import logging
+import queue
+import threading
+import time
+
+import websockets
+
+logger = logging.getLogger(__name__)
+
+
+class NeuroReachWSServer:
+    """Bridge a ScoringService's output_queue to WebSocket clients."""
+
+    def __init__(
+        self,
+        scoring_service,
+        host: str = "localhost",
+        port: int = 8765,
+        broadcast_hz: float = 20.0,
+    ):
+        self.scoring_service = scoring_service
+        self.host = host
+        self.port = port
+        self.broadcast_hz = float(broadcast_hz)
+
+        self.clients: set = set()
+        self._last_result = None  # most recent IntentScoreResult (held value)
+
+        self._loop: asyncio.AbstractEventLoop | None = None
+        self._thread: threading.Thread | None = None
+        self._server = None
+        self._tasks: list[asyncio.Task] = []
+        self._stop_future: asyncio.Future | None = None
+        self._shutdown = False
+        self._ready = threading.Event()  # set once the listener is accepting
+
+        self._dispatch = {
+            "ping": self._cmd_ping,
+            "get_status": self._cmd_get_status,
+            "set_mode": self._cmd_set_mode,
+        }
+
+    # ------------------------------------------------------------------ lifecycle
+
+    def start(self) -> None:
+        """Start scoring + serve websockets, running the event loop in THIS
+        thread (blocking). For tests use ``start_background``."""
+        self._loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(self._loop)
+        try:
+            self._loop.run_until_complete(self._serve())
+        finally:
+            self._loop.close()
+
+    def start_background(self) -> "NeuroReachWSServer":
+        """Run the event loop in a daemon thread; return once it's accepting."""
+        if self._thread is not None and self._thread.is_alive():
+            raise RuntimeError("server already running")
+        self._ready.clear()
+        self._thread = threading.Thread(
+            target=self._run_loop, name="NeuroReachWSServer", daemon=True
+        )
+        self._thread.start()
+        if not self._ready.wait(timeout=5.0):
+            raise RuntimeError("WS server did not come up within 5s")
+        return self
+
+    def _run_loop(self) -> None:
+        self._loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(self._loop)
+        try:
+            self._loop.run_until_complete(self._serve())
+        finally:
+            self._loop.close()
+
+    async def _serve(self) -> None:
+        self._shutdown = False
+        self._stop_future = self._loop.create_future()
+
+        # Start the synchronous scoring thread (the producer of output_queue).
+        self.scoring_service.start()
+
+        self._server = await websockets.serve(self._handler, self.host, self.port)
+        self._tasks = [
+            asyncio.ensure_future(self._drain_loop()),
+            asyncio.ensure_future(self._broadcast_loop()),
+        ]
+        logger.info("NeuroReachWSServer listening on ws://%s:%d", self.host, self.port)
+        self._ready.set()
+
+        try:
+            await self._stop_future  # blocks until stop() fires
+        finally:
+            self._shutdown = True
+            for t in self._tasks:
+                t.cancel()
+            self._server.close()
+            await self._server.wait_closed()
+            for ws in list(self.clients):
+                try:
+                    await ws.close()
+                except Exception:  # noqa: BLE001 - best-effort cleanup
+                    pass
+            self.clients.clear()
+            logger.info("NeuroReachWSServer stopped")
+
+    def stop(self) -> None:
+        """Stop scoring, close connections, stop the event loop (thread-safe)."""
+        self.scoring_service.stop()
+        if self._loop is not None and not self._loop.is_closed():
+            self._loop.call_soon_threadsafe(self._trigger_stop)
+        if self._thread is not None:
+            self._thread.join(timeout=5.0)
+            self._thread = None
+
+    def _trigger_stop(self) -> None:
+        if self._stop_future is not None and not self._stop_future.done():
+            self._stop_future.set_result(None)
+
+    # ------------------------------------------------------------------ queue bridge
+
+    def _blocking_get(self):
+        """Blocking queue read; runs in an executor thread, never the loop."""
+        try:
+            return self.scoring_service.output_queue.get(timeout=0.2)
+        except queue.Empty:
+            return None
+
+    async def _drain_loop(self) -> None:
+        """Continuously pull from the thread-safe queue into ``_last_result``.
+
+        Uses ``run_in_executor`` so the blocking ``Queue.get`` never stalls the
+        event loop. Drains regardless of client count, so the queue can't back
+        up — the ScoringService keeps running no matter who's connected.
+        """
+        loop = asyncio.get_running_loop()
+        try:
+            while not self._shutdown:
+                result = await loop.run_in_executor(None, self._blocking_get)
+                if result is not None:
+                    self._last_result = result
+        except asyncio.CancelledError:
+            pass
+
+    async def _broadcast_loop(self) -> None:
+        interval = 1.0 / self.broadcast_hz
+        try:
+            while not self._shutdown:
+                await asyncio.sleep(interval)
+                if self._last_result is None or not self.clients:
+                    continue  # nothing to send / nobody listening -> keep ticking
+                payload = json.dumps(self._format(self._last_result))
+                await self._broadcast(payload)
+        except asyncio.CancelledError:
+            pass
+
+    async def _broadcast(self, payload: str) -> None:
+        for ws in list(self.clients):
+            try:
+                await ws.send(payload)
+            except websockets.exceptions.ConnectionClosed:
+                self.clients.discard(ws)  # client vanished mid-broadcast; skip on
+
+    # ------------------------------------------------------------------ formatting
+
+    def _current_mode(self) -> str:
+        eng = self.scoring_service.engine
+        if eng.online_classifier is not None and eng.classifier_reliable:
+            return "csp_lda_blend"
+        return "band_power_only"
+
+    def _format(self, result) -> dict:
+        # On artifact frames intent_score holds the last clean value (set by the
+        # engine), so we forward it as-is; Unity reads is_artifact for the UI.
+        return {
+            "type": "intent_score",
+            "intent_score": float(result.intent_score),
+            "erd_score": result.erd_score,
+            "classifier_score": result.classifier_score,
+            "is_artifact": bool(result.is_artifact),
+            "mode": self._current_mode(),
+            "timestamp": result.timestamp,
+        }
+
+    # ------------------------------------------------------------------ connections
+
+    async def _handler(self, websocket) -> None:
+        self.clients.add(websocket)
+        addr = websocket.remote_address
+        logger.info("client connected %s (clients=%d)", addr, len(self.clients))
+        try:
+            async for raw in websocket:
+                await self._handle_message(websocket, raw)
+        except websockets.exceptions.ConnectionClosed:
+            pass
+        finally:
+            self.clients.discard(websocket)
+            logger.info("client disconnected %s (clients=%d)", addr, len(self.clients))
+
+    async def _handle_message(self, websocket, raw) -> None:
+        try:
+            data = json.loads(raw)
+        except (ValueError, TypeError):
+            await self._send(websocket, {"type": "error", "message": "invalid json"})
+            return
+        cmd = data.get("cmd") if isinstance(data, dict) else None
+        handler = self._dispatch.get(cmd)
+        if handler is None:
+            await self._send(
+                websocket, {"type": "error", "message": f"unknown command: {cmd}"}
+            )
+            return
+        await handler(websocket, data)
+
+    async def _send(self, websocket, obj: dict) -> None:
+        try:
+            await websocket.send(json.dumps(obj))
+        except websockets.exceptions.ConnectionClosed:
+            self.clients.discard(websocket)
+
+    # ------------------------------------------------------------------ commands
+
+    async def _cmd_ping(self, websocket, data) -> None:
+        await self._send(websocket, {"type": "pong", "timestamp": time.time()})
+
+    async def _cmd_get_status(self, websocket, data) -> None:
+        await self._send(websocket, self._status_payload())
+
+    async def _cmd_set_mode(self, websocket, data) -> None:
+        mode = data.get("mode")
+        eng = self.scoring_service.engine
+        if mode == "csp_lda_blend":
+            if eng.online_classifier is None:
+                await self._send(
+                    websocket,
+                    {"type": "error", "message": "no classifier available for csp_lda_blend"},
+                )
+                return
+            eng.classifier_reliable = True
+        elif mode == "band_power_only":
+            eng.classifier_reliable = False
+        else:
+            await self._send(
+                websocket, {"type": "error", "message": f"invalid mode: {mode}"}
+            )
+            return
+        await self._send(websocket, self._status_payload())
+
+    def _status_payload(self) -> dict:
+        return {
+            "type": "status",
+            "mode": self._current_mode(),
+            "clients": len(self.clients),
+            "broadcast_hz": self.broadcast_hz,
+            "timestamp": time.time(),
+        }

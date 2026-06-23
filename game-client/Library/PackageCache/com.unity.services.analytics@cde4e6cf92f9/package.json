@@ -1,0 +1,51 @@
+{
+  "name": "com.unity.services.analytics",
+  "displayName": "Analytics",
+  "version": "6.3.0",
+  "unity": "2022.3",
+  "description": "The Unity Analytics package automatically collects core events and user properties when someone uses your game or application, and enables you to track specific in-game actions your user performs by defining custom events. The data collected from this package is surfaced in the Unity dashboard where you can use it to gather user insights, segment your player base and make informed decisions around the optimization of your game.",
+  "dependencies": {
+    "com.unity.ugui": "1.0.0",
+    "com.unity.modules.jsonserialize": "1.0.0",
+    "com.unity.services.core": "1.16.0"
+  },
+  "samples": [
+    {
+      "displayName": "Standard Events",
+      "description": "Example of using the predefined standardized products, including a demo scene",
+      "path": "Samples~/StandardEvents"
+    }
+  ],
+  "_upm": {
+    "gameService": {
+      "genericDashboardUrl": "https://cloud.unity.com/analytics",
+      "projectDashboardUrl": "https://cloud.unity.com/home/organizations/{0}/projects/{1}/environments/default/analytics/v2/about",
+      "projectDashboardUrlType": "OrganizationKeyAndProjectGuid",
+      "configurePath": "Project/Services/Analytics - Gaming Services"
+    },
+    "supportedPlatforms": [
+      "Android",
+      "iOS",
+      "Linux",
+      "Mac",
+      "PC",
+      "Windows 8.1 Universal",
+      "Windows 10 Universal",
+      "WebGL"
+    ],
+    "changelog": "### Changed\n\n* The standard event `platform` parameter has been extended to report additional platforms:\n  * LinuxEditor and LinuxPlayer are reported as LINUX_CLIENT instead of PC_CLIENT\n  * PS5 is reported PS5 instead of UNKNOWN\n  * VisionOS is reported VISION_OS instead of UNKNOWN\n  * Switch2 is reported SWITCH2 instead of UNKNOWN (in Unity 6.0 and newer)\n\n### Fixed\n\n* The Analytics SDK now functions correctly in the editor when entering/leaving Play Mode with domain reload disabled\n* The Analytics Debug Panel now correctly displays recorded events if opened after entering Play Mode"
+  },
+  "relatedPackages": {
+    "com.unity.services.analytics.tests": "6.3.0"
+  },
+  "upmCi": {
+    "footprint": "522ba38b6eb89f1d69166341f26acb9a79e33dba"
+  },
+  "documentationUrl": "https://docs.unity3d.com/Packages/com.unity.services.analytics@6.3/manual/index.html",
+  "repository": {
+    "url": "https://github.cds.internal.unity3d.com/unity/operate-services-sdk.git",
+    "type": "git",
+    "revision": "ec4175759cbb48849d7a869beb16de4439620aab"
+  },
+  "_fingerprint": "cde4e6cf92f9fcb43ce29d380df0e9c0b9428e6c"
+}

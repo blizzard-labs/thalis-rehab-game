@@ -1,0 +1,31 @@
+generatorName: csharp-unity
+inputSpec: ./com.unity.services.core/Editor/Core/Environments/ReleasesClient/routes/unity/v1/routes.yaml
+outputDir: .
+packageName: com.unity.services.core.live_releases_api
+additionalProperties:
+    packageVersion: "1.0.0"
+    unityPackageNamespace: "Unity.Services.Core.Environments.ReleasesClient"
+    unityServiceName: "Releases"
+    unityPackageDescription: Releases API.
+    useUnityAuthentication: false
+    usePhpStyleQueryParams: false
+    internalAccessOnly: [services, apis, http, jsonobject, models]
+    releaseDate: 2026-03-30
+    generateMarkdownDocumentation: false
+    createClientInstances: false
+    outputFormat: code-only
+x-recipeEngine:
+    trackedDir: "./Packages/Public/com.unity.services.core/Editor/Core/Environments/ReleasesClient"
+    externalSpecSource:
+        repository: https://github.com/Unity-Technologies/unity-services-gateway
+        branch: master
+        sourcePath: "config/internal/docs"
+        outputPath: "com.unity.services.core/Editor/Core/Environments/ReleasesClient"
+    moveGeneratorFiles: false
+    preProcessCommands:
+        - /bin/bash -c "pushd ../Editor/Core/Environments/ReleasesClient/ ; find . -type f ! -name '*.meta' -delete ; popd"
+    postProcessCommands:
+        - cp -r ./com.unity.services.core.live_releases_api/Runtime/* ../Editor/Core/Environments/ReleasesClient
+        - rm -r ./com.unity.services.core.live_releases_api || true
+        - rm -r ./com.unity.services.core || true
+        - echo "Done generating package, nothing else to do here."
