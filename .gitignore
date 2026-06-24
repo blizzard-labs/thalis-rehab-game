@@ -1,0 +1,14 @@
+venv/
+.venv/
+env/
+__pycache__/
+dist/
+build/
+.pytest_cache/
+.graphify/
+graphify-out/
+.graphify_*.json
+.graphify_python
+.claude/
+CLAUDE.md
+docs/prompts/

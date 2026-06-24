@@ -1198,3 +1198,17 @@ Total: 16.583500 ms (FindLiveObjects: 0.166458 ms CreateObjectMapping: 0.197500 
 [Licensing::Client] Successfully resolved entitlement details
 Asset Pipeline Refresh (id=ba63cfb3b33f646be9d8c799006ec2aa): Total: 0.070 seconds - Initiated by RefreshV2(AllowForceSynchronousImport)
 [Licensing::Client] Successfully resolved entitlement details
+Scanning for USB devices : 3.108ms
+Scanning for USB devices : 11.244ms
+Scanning for USB devices : 0.406ms
+Scanning for USB devices : 0.630ms
+Scanning for USB devices : 3.134ms
+Scanning for USB devices : 1.629ms
+Scanning for USB devices : 0.702ms
+Scanning for USB devices : 0.557ms
+Scanning for USB devices : 0.273ms
+Scanning for USB devices : 0.281ms
+Scanning for USB devices : 0.106ms
+Scanning for USB devices : 0.085ms
+Scanning for USB devices : 0.130ms
+Asset Pipeline Refresh (id=642c7f69f603e4c2eab13edc39bdb65e): Total: 0.078 seconds - Initiated by RefreshV2(AllowForceSynchronousImport)
