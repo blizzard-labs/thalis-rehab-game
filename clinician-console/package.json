@@ -1,0 +1,34 @@
+{
+  "name": "neuroreach-clinician-console",
+  "version": "0.0.1",
+  "private": true,
+  "description": "NeuroReach clinician console (Electron) — V2-0a live monitor prototype",
+  "main": "dist-main/main.js",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "build:main": "tsc -p tsconfig.main.json",
+    "build:renderer": "vite build",
+    "dev:renderer": "vite",
+    "dev": "node scripts/dev.mjs"
+  },
+  "devDependencies": {
+    "@testing-library/react": "^16.0.0",
+    "@testing-library/jest-dom": "^6.4.0",
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "@types/ws": "^8.5.0",
+    "@vitejs/plugin-react": "^4.3.0",
+    "electron": "^31.0.0",
+    "jsdom": "^24.0.0",
+    "typescript": "^5.5.0",
+    "vite": "^5.4.0",
+    "vitest": "^2.0.0",
+    "ws": "^8.18.0"
+  },
+  "dependencies": {
+    "react": "^18.3.0",
+    "react-dom": "^18.3.0"
+  }
+}
