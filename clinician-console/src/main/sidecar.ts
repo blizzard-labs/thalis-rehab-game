@@ -15,6 +15,22 @@ export type SidecarOptions = {
   probeIntervalMs?: number;
 };
 
+// `conda run` forks the real python server as a grandchild, so signalling the
+// conda wrapper alone orphans the server. Spawning detached makes the child a
+// process-group leader; signalling the negative pid takes down the whole tree.
+function killTree(child: ChildProcess, signal: NodeJS.Signals): void {
+  if (child.pid === undefined) return;
+  try {
+    process.kill(-child.pid, signal);
+  } catch {
+    try {
+      child.kill(signal);
+    } catch {
+      /* already gone */
+    }
+  }
+}
+
 function probePort(port: number, timeoutMs: number): Promise<boolean> {
   return new Promise((resolve) => {
     const sock = connect({ port, host: "127.0.0.1" });
@@ -60,6 +76,7 @@ export class SidecarSupervisor extends EventEmitter {
       cwd: this.opts.cwd,
       env: { ...process.env, PORT: String(this.opts.readyPort) },
       stdio: ["ignore", "pipe", "pipe"],
+      detached: true, // own process group so killTree() reaches conda's grandchild
     });
     this.child = child;
     child.stdout?.on("data", (b) => process.stdout.write(`[sidecar] ${b}`));
@@ -101,7 +118,7 @@ export class SidecarSupervisor extends EventEmitter {
           clearInterval(this.readyTimer);
           this.readyTimer = null;
         }
-        this.child?.kill("SIGTERM");
+        if (this.child) killTree(this.child, "SIGTERM");
       }
     }, this.probeIntervalMs);
   }
@@ -119,9 +136,9 @@ export class SidecarSupervisor extends EventEmitter {
     }
     return new Promise((resolve) => {
       child.once("exit", () => resolve());
-      child.kill("SIGTERM");
+      killTree(child, "SIGTERM");
       setTimeout(() => {
-        if (this.child) this.child.kill("SIGKILL");
+        if (this.child) killTree(this.child, "SIGKILL");
       }, 3000);
     });
   }
