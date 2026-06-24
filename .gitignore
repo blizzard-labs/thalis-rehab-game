@@ -9,4 +9,5 @@ graphify-out/
 .graphify_python
 .claude/
 CLAUDE.md
-docs/prompts/
+archive/
+.vscode/
