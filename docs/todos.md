@@ -19,6 +19,24 @@ Phase prompts: [`docs/prompts/`](prompts/).
 > under "Roadmap" is **superseded** by specsv2 §15 phases V2-0…V2-4. `game-client/`
 > will be deleted; `patient-web/` + the Electron `clinician-console/` replace it.
 
+> **V2-0a — Clinician console prototype (C3 live monitor) — DONE (2026-06-24):**
+> Electron app `clinician-console/` spawns + supervises the Python sidecar
+> (`conda run -n eeg python signal-engine/run_ws_server.py`, mock EEG). React+Vite
+> renderer shows the live IntentScore (wireframe **C3**): status tiles (signal/mode/
+> classifier/fatigue), big score, ERD sub-score, rolling trace, connection + sidecar
+> badges. Pure logic (parser, store, WS client, supervisor) is decoupled and unit-
+> tested (Vitest, 21 tests); a Node integration test boots the **real** sidecar and
+> asserts a well-formed, non-flat score rising during virtual-MI bursts. Verified
+> end-to-end: Electron-spawned sidecar streamed 154 frames @ ~20 Hz, score 1→89,
+> teardown leaves no orphan process. Spec/plan: `docs/superpowers/specs/2026-06-24-
+> clinician-console-prototype-design.md`, `docs/superpowers/plans/2026-06-24-
+> clinician-console-prototype.md`.
+> **Gaps / next (V2-0b+):** LAN HTTPS/WSS server + session-code pairing + QR;
+> control channel (pause/rest/end wired to the engine); PyInstaller-frozen sidecar;
+> console screens C1/C2/C4/C5; WebRTC patient camera → aiortc; electron-builder
+> one-click installer + cert provisioning. The patient `getUserMedia` secure-context
+> requirement (specsv2 §12.3) is still the key open risk before camera work.
+
 ---
 
 ## 1. Current phase
