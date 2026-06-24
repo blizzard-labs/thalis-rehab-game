@@ -438,6 +438,7 @@
 "Assets/Tests/EditMode/TestIntentScoreBuffer.cs"
 "Assets/Tests/EditMode/TestIntentScoreMessage.cs"
 "Assets/Tests/EditMode/TestPlantGrowthModel.cs"
+"Assets/Tests/EditMode/TestSessionStats.cs"
 -langversion:9.0
 /deterministic
 /optimize+

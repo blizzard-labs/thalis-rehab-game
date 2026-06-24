@@ -52,11 +52,16 @@
     <Analyzer Include="/Applications/Unity/Hub/Editor/6000.5.0f1/Unity.app/Contents/Resources/Scripting/BCLExtensions/TargetingPacks/netstandard2.1/analyzers/dotnet/roslyn4.0/cs/System.Text.Json.SourceGeneration.dll" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Assets/Scripts/UI/AppScenes.cs" />
     <Compile Include="Assets/Scripts/Scoring/IntentScoreBuffer.cs" />
+    <Compile Include="Assets/Scripts/UI/CalibrationController.cs" />
     <Compile Include="Assets/Scripts/UI/SessionSummaryController.cs" />
+    <Compile Include="Assets/Scripts/UI/SummaryView.cs" />
     <Compile Include="Assets/Scripts/Garden/PlantGrowthModel.cs" />
     <Compile Include="Assets/Scripts/Scoring/IntentScoreMessage.cs" />
+    <Compile Include="Assets/Scripts/Garden/SessionEndTrigger.cs" />
     <Compile Include="Assets/Scripts/Garden/GardenGrowController.cs" />
+    <Compile Include="Assets/Scripts/UI/SessionStats.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Assets/Scripts/NeuroReach.Core.asmdef" />

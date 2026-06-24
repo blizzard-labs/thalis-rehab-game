@@ -1,5 +1,5 @@
 ﻿<Solution>
-  <Project Path="NeuroReach.EditModeTests.csproj" />
   <Project Path="NeuroReach.Core.csproj" />
+  <Project Path="NeuroReach.EditModeTests.csproj" />
   <Project Path="NeuroReach.Networking.csproj" />
 </Solution>

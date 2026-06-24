@@ -442,9 +442,14 @@
 -analyzer:"/Applications/Unity/Hub/Editor/6000.5.0f1/Unity.app/Contents/Resources/Scripting/BCLExtensions/TargetingPacks/netstandard2.1/analyzers/dotnet/roslyn4.0/cs/System.Text.Json.SourceGeneration.dll"
 "Assets/Scripts/Garden/GardenGrowController.cs"
 "Assets/Scripts/Garden/PlantGrowthModel.cs"
+"Assets/Scripts/Garden/SessionEndTrigger.cs"
 "Assets/Scripts/Scoring/IntentScoreBuffer.cs"
 "Assets/Scripts/Scoring/IntentScoreMessage.cs"
+"Assets/Scripts/UI/AppScenes.cs"
+"Assets/Scripts/UI/CalibrationController.cs"
+"Assets/Scripts/UI/SessionStats.cs"
 "Assets/Scripts/UI/SessionSummaryController.cs"
+"Assets/Scripts/UI/SummaryView.cs"
 -langversion:9.0
 /deterministic
 /optimize+

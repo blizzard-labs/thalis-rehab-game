@@ -30,13 +30,32 @@ namespace NeuroReach.Networking
         /// <summary>Human-readable status the UI can poll each frame.</summary>
         public static string ConnectionStatus { get; private set; } = "Idle";
 
+        // One socket for the whole session: this object persists across the
+        // Calibration → Garden → Summary scene loads, so each scene must NOT spawn
+        // its own client (Scenes/README.md cross-cutting notes). Duplicates that
+        // appear when a later scene also carries a NeuroReachClient self-destroy.
+        private static NeuroReachClient _instance;
+
         private WebSocket _ws;
         private int _reconnectAttempts;
         private bool _intentionalClose;
         private Coroutine _reconnectRoutine;
 
+        private void Awake()
+        {
+            if (_instance != null && _instance != this)
+            {
+                Destroy(gameObject);
+                return;
+            }
+            _instance = this;
+            DontDestroyOnLoad(gameObject);
+        }
+
         private async void Start()
         {
+            // Guard against the duplicate's deferred-destroy still running Start().
+            if (_instance != this) return;
             await Connect();
         }
 
@@ -125,6 +144,7 @@ namespace NeuroReach.Networking
 
         private async void OnDestroy()
         {
+            if (_instance == this) _instance = null;
             _intentionalClose = true;
             if (_ws != null)
                 await _ws.Close();

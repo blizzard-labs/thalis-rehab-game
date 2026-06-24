@@ -52,6 +52,7 @@
     <Analyzer Include="/Applications/Unity/Hub/Editor/6000.5.0f1/Unity.app/Contents/Resources/Scripting/BCLExtensions/TargetingPacks/netstandard2.1/analyzers/dotnet/roslyn4.0/cs/System.Text.Json.SourceGeneration.dll" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Assets/Tests/EditMode/TestSessionStats.cs" />
     <Compile Include="Assets/Tests/EditMode/TestIntentScoreMessage.cs" />
     <Compile Include="Assets/Tests/EditMode/TestPlantGrowthModel.cs" />
     <Compile Include="Assets/Tests/EditMode/TestIntentScoreBuffer.cs" />

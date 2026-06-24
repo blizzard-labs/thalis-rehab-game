@@ -69,19 +69,16 @@ namespace NeuroReach.UI
         /// <summary>Populate the summary card. Language stays positive and non-comparative.</summary>
         public void ShowSummary()
         {
-            int minutes = Mathf.Max(0, Mathf.RoundToInt(TotalActiveSeconds / 60f));
-            int streakSecs = Mathf.RoundToInt(BestStreakSeconds);
-
-            if (focusLine != null)
-                focusLine.text = minutes == 1
-                    ? "You focused for 1 minute"
-                    : $"You focused for {minutes} minutes";
-
-            if (streakLine != null)
-                streakLine.text = $"Your best streak was {streakSecs} seconds";
-
-            if (praiseLine != null)
-                praiseLine.text = "Great session!";
+            if (focusLine != null) focusLine.text = SessionStats.FocusLine(TotalActiveSeconds);
+            if (streakLine != null) streakLine.text = SessionStats.StreakLine(BestStreakSeconds);
+            if (praiseLine != null) praiseLine.text = SessionStats.PraiseLine();
         }
+
+        /// <summary>
+        /// Copy the running totals into the static <see cref="SessionStats"/> snapshot
+        /// so they survive the load into SummaryScene. Called by SessionEndTrigger.
+        /// </summary>
+        public void CaptureToSessionStats() =>
+            SessionStats.Capture(TotalActiveSeconds, BestStreakSeconds, TrialsCompleted);
     }
 }
