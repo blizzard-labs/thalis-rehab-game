@@ -1,1 +1,0 @@
-<span  aria-hidden="true">📝</span> **How-to guide**:
