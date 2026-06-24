@@ -5,7 +5,19 @@ _Last updated: 2026-06-23. Scope of this doc: the `signal-engine` Python stack
 its validation against the real g.tec Unicorn Hybrid Black. Game client, CV, and
 clinician console are tracked at a high level under "Roadmap" only._
 
-Reference spec: [`docs/specs.md`](specs.md). Phase prompts: [`docs/prompts/`](prompts/).
+Reference spec: [`docs/specsv1.md`](specsv1.md) (renamed from specs.md).
+Phase prompts: [`docs/prompts/`](prompts/).
+
+> **v2 architecture pivot (2026-06-24):** see [`docs/specsv2.md`](specsv2.md). The
+> signal-engine core below is **unchanged**, but the delivery layer is being
+> rearchitected: patient client moves **Unity → React web app** (served over the
+> clinic LAN by the console, paired via session code); clinician console becomes an
+> **Electron app** wrapping the Python signal-engine as a **PyInstaller sidecar**
+> (one-click installer, bundles Unicorn software pending §14.2 licensing); camera
+> relocates to the **patient device**, streamed back via **WebRTC → aiortc →
+> MediaPipe** on the clinic PC (vision still clinician-side). The Unity work tracked
+> under "Roadmap" is **superseded** by specsv2 §15 phases V2-0…V2-4. `game-client/`
+> will be deleted; `patient-web/` + the Electron `clinician-console/` replace it.
 
 ---
 
