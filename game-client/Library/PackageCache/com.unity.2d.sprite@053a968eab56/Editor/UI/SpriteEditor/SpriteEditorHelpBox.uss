@@ -1,6 +1,0 @@
-.sprite-editor-hint-popup{
-    position: absolute;
-    top: 30px;
-    left:10px;
-    max-width: 200px;
-}
