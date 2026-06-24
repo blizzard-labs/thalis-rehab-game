@@ -6,9 +6,14 @@ export type StoreState = {
   signalText: "Good" | "Artifact" | "—";
 };
 
+const EMPTY_STATE: StoreState = { latest: null, buffer: [], signalText: "—" };
+
 export class ScoreStore {
   private buffer: ScoreFrame[] = [];
   private subscribers = new Set<(s: StoreState) => void>();
+  // Cached immutable snapshot — must keep a stable reference between pushes so
+  // React's useSyncExternalStore does not re-render in a loop.
+  private snapshot: StoreState = EMPTY_STATE;
 
   constructor(private capacity = 100) {}
 
@@ -17,15 +22,16 @@ export class ScoreStore {
     if (this.buffer.length > this.capacity) {
       this.buffer.splice(0, this.buffer.length - this.capacity);
     }
-    const state = this.getState();
-    for (const cb of this.subscribers) cb(state);
+    this.snapshot = {
+      latest: frame,
+      buffer: [...this.buffer],
+      signalText: frame.isArtifact ? "Artifact" : "Good",
+    };
+    for (const cb of this.subscribers) cb(this.snapshot);
   }
 
   getState(): StoreState {
-    const latest = this.buffer.length ? this.buffer[this.buffer.length - 1] : null;
-    let signalText: StoreState["signalText"] = "—";
-    if (latest) signalText = latest.isArtifact ? "Artifact" : "Good";
-    return { latest, buffer: [...this.buffer], signalText };
+    return this.snapshot;
   }
 
   subscribe(cb: (s: StoreState) => void): () => void {
