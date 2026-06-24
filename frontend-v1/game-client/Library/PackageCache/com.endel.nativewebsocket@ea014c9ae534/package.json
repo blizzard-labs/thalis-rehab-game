@@ -1,0 +1,32 @@
+{
+  "name": "com.endel.nativewebsocket",
+  "version": "1.1.6",
+  "description": "WebSocket client for Unity - with no external dependencies (WebGL, Native, Android, iOS, UWP).",
+  "license": "Apache 2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/endel/NativeWebSocket.git"
+  },
+  "author": {
+    "name": "Endel Dreyer",
+    "email": "endel.dreyer@gmail.com",
+    "url": "https://github.com/endel/NativeWebSocket"
+  },
+  "keywords": [
+    "websocket",
+    "websockets",
+    "native websocket",
+    "native websockets"
+  ],
+  "displayName": "Native WebSockets",
+  "unity": "2019.1",
+  "dependencies": {},
+  "samples": [
+    {
+      "displayName": "Example",
+      "description": "WebSocket Example",
+      "path": "Samples~/WebSocketExample"
+    }
+  ],
+  "_fingerprint": "ea014c9ae534d56111962d96f89f8a046e302dc9"
+}
