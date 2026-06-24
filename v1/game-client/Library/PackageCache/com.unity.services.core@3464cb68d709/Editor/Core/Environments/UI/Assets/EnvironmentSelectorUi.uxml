@@ -1,0 +1,50 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xmlns="UnityEngine.UIElements" editor-extension-mode="True">
+    <Style src="project://database/Packages/com.unity.services.core/Editor/Core/Environments/UI/Assets/EnvironmentSelectorUi.uss" />
+    <Style src="project://database/Packages/com.unity.services.core/Editor/Core/Environments/UI/Assets/EnvironmentDropdown.uss" />
+    <ui:VisualElement name="Title" class="project-settings-title-container">
+        <ui:Label name="Title Text" text="Environment Selector" class="title" />
+        <ui:VisualElement name="Manage Environments Container" class="link-container manage-environments-container">
+            <ui:Label name="Manage Environments Text" text="Manage environments" class="link-button" />
+            <ui:VisualElement class="external-link-icon"/>
+        </ui:VisualElement>
+    </ui:VisualElement>
+    <ui:VisualElement name="Description Section" class="section-container">
+        <ui:Label name="Description" text="Set which environment to use during runtime initialization and service interaction in the editor" class="label-container description-label" />
+    </ui:VisualElement>
+    <ui:VisualElement name="Environment Dropdown Section" class="section-container">
+        <!--Dropdown is added via UXML in 2021.3+-->
+    </ui:VisualElement>
+    <ui:VisualElement name="Fetching Environments Section" class="section-container">
+        <ui:Label name="Fetching message" text="Fetching environments..." class="label" />
+    </ui:VisualElement>
+    <ui:VisualElement name="Default Environment Section" class="section-container">
+        <ui:HelpBox message-type="Warning" text="Deploying directly to your Production environment could negatively impact your users. It is a safer workflow to only connect to development environments when working in the editor." class="no-margin"/>
+    </ui:VisualElement>
+    <ui:VisualElement name="Release Pointers Section">
+        <ui:VisualElement name="Release Pointers Title" class="project-settings-title-container">
+            <ui:Label name="Title Text" text="Release Pointer Selector" class="title" />
+            <ui:VisualElement name="Manage Release Pointers Container" class="link-container manage-environments-container">
+                <ui:Label name="Manage Release Pointers Text" text="Manage release pointers" class="link-button" />
+                <ui:VisualElement class="external-link-icon"/>
+            </ui:VisualElement>
+        </ui:VisualElement>
+        <ui:VisualElement name="Use Live Releases Section" class="section-container">
+            <ui:Toggle label="Use Live Releases" name="UseLiveReleasesToggle" />
+        </ui:VisualElement>
+        <ui:VisualElement name="Release Pointer Dropdown Section" class="section-container">
+            <!--Dropdown is added via UXML in 2021.3+-->
+        </ui:VisualElement>
+        <ui:VisualElement name="Fetching Release Pointers Section" class="section-container">
+            <ui:Label name="Fetching message" text="Fetching release pointers..." class="label" />
+        </ui:VisualElement>
+        <ui:VisualElement name="Default Release Pointer Section" class="section-container">
+            <ui:HelpBox message-type="Warning" text="No release pointer is selected for runtime." class="no-margin"/>
+        </ui:VisualElement>
+        <ui:VisualElement name="Release Pointer Target Section" class="section-container">
+            <ui:HelpBox name="ReleasePointerTargetInfo" message-type="Info" text="" class="no-margin"/>
+        </ui:VisualElement>
+        <ui:VisualElement name="Release Pointer Unassigned Section" class="section-container">
+            <ui:HelpBox name="ReleasePointerUnassignedWarning" message-type="Warning" text="This pointer is not currently pointing at any release. Use 'Manage release pointers' above to assign one." class="no-margin"/>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>
