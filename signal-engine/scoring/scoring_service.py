@@ -27,8 +27,12 @@ from preprocessing.filters import CausalFilterChain
 from preprocessing.spatial import common_average_reference
 from scoring.intent_score import IntentScoreEngine, IntentScoreResult
 from scoring.ring_buffer import RingBuffer
+from scoring.signal_quality import compute_channel_quality, extract_trace
 
 logger = logging.getLogger(__name__)
+
+# MI channels the clinician inspects on the C2 setup screen (specsv2 wireframe).
+TRACE_CHANNELS = ("C3", "Cz", "C4")
 
 
 class ScoringService:
@@ -64,6 +68,16 @@ class ScoringService:
         self._thread: threading.Thread | None = None
         self._stop = threading.Event()
         self._last_score_time = 0.0
+
+        # Latest per-channel contact-quality snapshot for the console C2 setup
+        # screen. Single writer (the loop), many readers; the dict is replaced
+        # wholesale each tick so a reader always sees a consistent object.
+        self._latest_quality: dict | None = None
+
+    def latest_quality(self) -> dict | None:
+        """Most recent contact-quality + MI-trace snapshot, or ``None`` until
+        the first scoring tick. See ``scoring.signal_quality``."""
+        return self._latest_quality
 
     # ------------------------------------------------------------------ lifecycle
 
@@ -126,8 +140,24 @@ class ScoringService:
 
                 result = self.engine.compute(self.ring_buffer, artifact_clean)
                 self._publish(result)
+                self._update_quality(gate_window)
         except Exception:
             logger.exception("ScoringService loop crashed")
+
+    def _update_quality(self, gate_window) -> None:
+        """Refresh the contact-quality + MI-trace snapshot from the raw window.
+
+        Contact problems are amplitude-domain and live in the RAW (pre-filter,
+        pre-CAR) signal — the same window the AmplitudeGate uses — so we derive
+        both the per-channel verdict and the live trace from it.
+        """
+        labels = self.engine.eeg_channel_labels
+        self._latest_quality = {
+            "fs": self.fs,
+            "channels": compute_channel_quality(gate_window, labels),
+            "trace": extract_trace(gate_window, labels, list(TRACE_CHANNELS)),
+            "timestamp": time.time(),
+        }
 
     # ------------------------------------------------------------------ helpers
 

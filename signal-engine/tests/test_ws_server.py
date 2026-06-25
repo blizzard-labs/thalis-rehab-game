@@ -92,8 +92,8 @@ def test_broadcast_rate(ws_server):
 
 def test_message_schema(ws_server):
     with connect(URI) as ws:
-        raw = ws.recv(timeout=2.0)
-    data = json.loads(raw)
+        data = _recv_type(ws, "intent_score", timeout_s=2.0)
+    assert data is not None, "no intent_score frame received"
     for key in ("type", "intent_score", "erd_score", "is_artifact", "mode", "timestamp"):
         assert key in data, f"missing key: {key}"
     assert data["type"] == "intent_score"
@@ -174,3 +174,18 @@ def test_zero_clients_runs_clean(ws_server):
     time.sleep(2.0)
     with connect(URI) as ws:
         assert ws.recv(timeout=2.0) is not None
+
+
+def test_eeg_quality_broadcast(ws_server):
+    """Server broadcasts a separate eeg_quality frame (console C2 setup):
+    per-channel contact verdicts + MI-channel trace, distinct from the score."""
+    with connect(URI) as ws:
+        data = _recv_type(ws, "eeg_quality", timeout_s=3.0)
+    assert data is not None, "no eeg_quality frame received"
+    assert data["type"] == "eeg_quality"
+    assert isinstance(data["channels"], list) and len(data["channels"]) == 8
+    for c in data["channels"]:
+        assert set(c.keys()) >= {"label", "quality", "p2p"}
+        assert c["quality"] in ("good", "check", "poor")
+    assert "C3" in data["trace"] and len(data["trace"]["C3"]) > 0
+    assert isinstance(data["timestamp"], float)

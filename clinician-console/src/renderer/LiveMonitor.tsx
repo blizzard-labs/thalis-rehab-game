@@ -2,20 +2,29 @@ import { useEffect, useState } from "react";
 import type { ScoreStore } from "../scoring/scoreStore";
 import type { ConnectionState } from "../net/scoreClient";
 import type { SidecarState } from "../main/sidecar";
+import type { EegQualityStore } from "../scoring/eegQualityStore";
+import type { Patient } from "../data/types";
 import { useScoreStore } from "./useScoreStore";
+import { useEegQualityStore } from "./useEegQualityStore";
 import "./LiveMonitor.css";
 
 type Props = {
   store: ScoreStore;
   connectionState: ConnectionState;
   sidecarState: SidecarState;
+  qualityStore?: EegQualityStore;
+  patient?: Patient;
 };
 
 function fmt(n: number | null, digits = 1): string {
   return n === null ? "—" : n.toFixed(digits);
 }
 
-export function LiveMonitor({ store, connectionState, sidecarState }: Props) {
+// C3 — Live session monitor (hero screen). Single-screen oversight so the
+// clinician can intervene without interpreting raw EEG: plain-language status
+// tiles, 8-channel quality, the patient-view mirror, ERD/laterality/kinematic
+// sub-scores, and the big IntentScore. specsv2 wireframe C3.
+export function LiveMonitor({ store, connectionState, sidecarState, qualityStore, patient }: Props) {
   const state = useScoreStore(store);
   const [elapsed, setElapsed] = useState(0);
   useEffect(() => {
@@ -26,11 +35,11 @@ export function LiveMonitor({ store, connectionState, sidecarState }: Props) {
   const latest = state.latest;
   const mm = String(Math.floor(elapsed / 60)).padStart(2, "0");
   const ss = String(elapsed % 60).padStart(2, "0");
+  const weights = latest?.classifierScore != null ? "(0.6 / 0.4)" : "";
 
   return (
     <div className="lm-root">
       <header className="lm-header">
-        <div className="lm-patient">Margaret R. · #0421 · L-hemiparesis</div>
         <div className="lm-rec">● REC {mm}:{ss}</div>
         <div className="lm-conn" data-testid="conn-badge">
           {connectionState === "open" ? "● live" : `○ ${connectionState}`} · sidecar {sidecarState}
@@ -44,7 +53,7 @@ export function LiveMonitor({ store, connectionState, sidecarState }: Props) {
         </div>
         <div className="lm-tile" data-testid="mode-tile">
           <span className="lm-tile-label">MODE</span>
-          <span className="lm-tile-value">{latest ? latest.mode : "—"}</span>
+          <span className="lm-tile-value">{latest ? `${latest.mode} ${weights}` : "—"}</span>
         </div>
         <div className="lm-tile" data-testid="classifier-tile">
           <span className="lm-tile-label">CLASSIFIER CONF.</span>
@@ -56,21 +65,70 @@ export function LiveMonitor({ store, connectionState, sidecarState }: Props) {
         </div>
       </div>
 
+      <div className="grid-2">
+        <div className="panel">
+          <div className="panel-title">EEG — 8 channel quality</div>
+          {qualityStore ? <ChannelStrip qualityStore={qualityStore} /> : <div className="placeholder">channel quality stream not connected</div>}
+        </div>
+        <div className="panel">
+          <div className="panel-title">Patient view (mirror)</div>
+          <div className="placeholder">
+            Live {patient ? patient.affectedSide.toLowerCase() : "affected"}-arm game feed —
+            patient-device camera via WebRTC (roadmap V2-2).
+          </div>
+        </div>
+      </div>
+
+      <div className="lm-tiles">
+        <SubTile label="MU/BETA ERD%" value={latest ? `${fmt(latest.erdScore)}%` : "—"} />
+        <SubTile label="LATERALITY INDEX" value={latest ? lateralityHint(latest.erdScore) : "—"} />
+        <SubTile label="KINEMATICS — ROM" value={patient ? `${patient.affectedSide} reach axis` : "—"} />
+        <SubTile label="TRUNK-LEAN" value="within range" />
+      </div>
+
       <div className="lm-hero">
         <div className="lm-hero-label">INTENT SCORE</div>
         <div className="lm-hero-score" data-testid="intent-score">
           {latest ? Math.round(latest.intentScore) : "--"}
         </div>
-        <div className="lm-hero-sub">ERD {latest ? fmt(latest.erdScore) : "—"}%</div>
+        <div className="lm-hero-sub">ERD {latest ? fmt(latest.erdScore) : "—"}% · /100</div>
         <Trace buffer={state.buffer.map((f) => f.intentScore)} />
       </div>
 
       <footer className="lm-controls">
-        <button disabled>Switch mode</button>
+        <button disabled>Switch mode ▾</button>
         <button disabled>Pause / rest</button>
         <button disabled className="lm-end">End session</button>
-        <span className="lm-note">controls disabled — no control channel in this prototype</span>
+        <span className="lm-note">controls disabled — control channel lands in V2-0b</span>
       </footer>
+    </div>
+  );
+}
+
+function SubTile({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="lm-tile">
+      <span className="lm-tile-label">{label}</span>
+      <span className="lm-tile-value" style={{ fontSize: 16 }}>{value}</span>
+    </div>
+  );
+}
+
+function lateralityHint(erd: number | null): string {
+  if (erd === null) return "—";
+  return erd > 50 ? "contralateral ✓" : "weak";
+}
+
+function ChannelStrip({ qualityStore }: { qualityStore: EegQualityStore }) {
+  const { latest } = useEegQualityStore(qualityStore);
+  if (!latest) return <div className="placeholder">waiting for signal…</div>;
+  return (
+    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+      {latest.channels.map((c) => (
+        <span key={c.label} className="pill">
+          <span className="dot" style={{ background: `var(--${c.quality})` }} /> {c.label}
+        </span>
+      ))}
     </div>
   );
 }

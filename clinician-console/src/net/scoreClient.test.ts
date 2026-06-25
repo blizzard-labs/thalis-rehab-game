@@ -28,6 +28,20 @@ describe("createScoreClient", () => {
     expect(onFrame).toHaveBeenCalledWith(expect.objectContaining({ intentScore: 42 }));
   });
 
+  it("routes eeg_quality frames to onQuality, not onFrame", () => {
+    const sock = makeFakeSocket();
+    const onFrame = vi.fn();
+    const onQuality = vi.fn();
+    const c = createScoreClient({ url: "ws://x", createSocket: () => sock, onFrame, onQuality, onState: vi.fn() });
+    c.connect();
+    sock.emitOpen();
+    sock.emitMessage(
+      JSON.stringify({ type: "eeg_quality", fs: 250, channels: [{ label: "C3", quality: "good", p2p: 5 }], trace: { C3: [1] }, timestamp: 2 }),
+    );
+    expect(onQuality).toHaveBeenCalledWith(expect.objectContaining({ fs: 250 }));
+    expect(onFrame).not.toHaveBeenCalled();
+  });
+
   it("counts malformed frames without crashing", () => {
     const sock = makeFakeSocket();
     const c = createScoreClient({ url: "ws://x", createSocket: () => sock, onFrame: vi.fn(), onState: vi.fn() });

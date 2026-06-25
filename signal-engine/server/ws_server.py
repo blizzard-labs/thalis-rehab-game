@@ -48,11 +48,15 @@ class NeuroReachWSServer:
         host: str = "localhost",
         port: int = 8765,
         broadcast_hz: float = 20.0,
+        quality_hz: float = 5.0,
     ):
         self.scoring_service = scoring_service
         self.host = host
         self.port = port
         self.broadcast_hz = float(broadcast_hz)
+        # Contact-quality / live-trace frames for the console C2 setup screen go
+        # out on their own slower cadence; the score-frame contract is untouched.
+        self.quality_hz = float(quality_hz)
 
         self.clients: set = set()
         self._last_result = None  # most recent IntentScoreResult (held value)
@@ -115,6 +119,7 @@ class NeuroReachWSServer:
         self._tasks = [
             asyncio.ensure_future(self._drain_loop()),
             asyncio.ensure_future(self._broadcast_loop()),
+            asyncio.ensure_future(self._quality_loop()),
         ]
         logger.info("NeuroReachWSServer listening on ws://%s:%d", self.host, self.port)
         self._ready.set()
@@ -181,6 +186,24 @@ class NeuroReachWSServer:
                 if self._last_result is None or not self.clients:
                     continue  # nothing to send / nobody listening -> keep ticking
                 payload = json.dumps(self._format(self._last_result))
+                await self._broadcast(payload)
+        except asyncio.CancelledError:
+            pass
+
+    async def _quality_loop(self) -> None:
+        """Broadcast the contact-quality + MI-trace snapshot for the C2 setup
+        screen, on its own slower cadence and as a distinct message type so the
+        20 Hz score-frame contract stays byte-for-byte unchanged."""
+        interval = 1.0 / self.quality_hz
+        try:
+            while not self._shutdown:
+                await asyncio.sleep(interval)
+                if not self.clients:
+                    continue
+                snap = self.scoring_service.latest_quality()
+                if snap is None:
+                    continue
+                payload = json.dumps({"type": "eeg_quality", **snap})
                 await self._broadcast(payload)
         except asyncio.CancelledError:
             pass

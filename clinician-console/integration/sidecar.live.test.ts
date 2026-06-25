@@ -4,6 +4,7 @@ import { connect } from "node:net";
 import { join } from "node:path";
 import WebSocket from "ws";
 import { parseIntentScoreMessage, type ScoreFrame } from "../src/scoring/intentScoreMessage";
+import { parseEegQualityMessage, type EegQualityFrame } from "../src/scoring/eegQualityMessage";
 
 const REPO_ROOT = join(__dirname, "..", "..");
 const PORT = 8765;
@@ -122,5 +123,28 @@ d("live sidecar (mock EEG)", () => {
     const spread = Math.max(...scores) - Math.min(...scores);
     expect(spread).toBeGreaterThan(15); // virtual-MI bursts move the score
     expect(Math.max(...scores)).toBeGreaterThan(40); // a burst clears a real floor
+  });
+
+  it("broadcasts eeg_quality frames (C2 setup) on the same socket", async () => {
+    const ws = new WebSocket(`ws://localhost:${PORT}`);
+    const quality: EegQualityFrame[] = [];
+    await new Promise<void>((resolve, reject) => {
+      const timer = setTimeout(resolve, 5000);
+      ws.on("message", (data) => {
+        const q = parseEegQualityMessage(data.toString());
+        if (q.ok) quality.push(q.frame);
+      });
+      ws.on("error", (e) => {
+        clearTimeout(timer);
+        reject(e);
+      });
+    });
+    ws.close();
+
+    expect(quality.length).toBeGreaterThan(5); // ~5 Hz * 5 s
+    const f = quality[quality.length - 1];
+    expect(f.channels.length).toBe(8); // full Unicorn montage
+    expect(f.channels.every((c) => ["good", "check", "poor"].includes(c.quality))).toBe(true);
+    expect((f.trace.C3?.length ?? 0)).toBeGreaterThan(0); // MI trace present
   });
 });

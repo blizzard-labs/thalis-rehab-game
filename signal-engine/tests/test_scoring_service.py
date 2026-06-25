@@ -240,3 +240,29 @@ def test_full_queue_drops_without_blocking(mock_outlet):
     assert end - item.timestamp < 0.2, (
         f"retained item is stale by {end - item.timestamp:.3f}s"
     )
+
+
+def test_latest_quality_snapshot_after_run(mock_outlet):
+    """ScoringService exposes a per-channel contact-quality + trace snapshot
+    for the console C2 setup screen (one entry per EEG channel, MI traces)."""
+    service, _q, inlet = make_scoring_service(mock_outlet)
+    try:
+        service.start()
+        deadline = time.monotonic() + 3.0
+        snap = None
+        while time.monotonic() < deadline:
+            snap = service.latest_quality()
+            if snap is not None:
+                break
+            time.sleep(0.05)
+        assert snap is not None, "no quality snapshot produced"
+        assert snap["fs"] == FS
+        labels = [c["label"] for c in snap["channels"]]
+        assert labels == inlet.eeg_labels
+        for c in snap["channels"]:
+            assert c["quality"] in ("good", "check", "poor")
+        assert "C3" in snap["trace"] and len(snap["trace"]["C3"]) > 0
+        assert set(snap["trace"].keys()) <= {"C3", "Cz", "C4"}
+    finally:
+        service.stop()
+        inlet.close()

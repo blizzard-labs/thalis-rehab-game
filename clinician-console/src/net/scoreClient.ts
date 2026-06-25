@@ -1,4 +1,5 @@
 import { parseIntentScoreMessage, type ScoreFrame } from "../scoring/intentScoreMessage";
+import { parseEegQualityMessage, type EegQualityFrame } from "../scoring/eegQualityMessage";
 
 export type ConnectionState = "connecting" | "open" | "reconnecting" | "closed";
 
@@ -14,6 +15,8 @@ export type ScoreClientOptions = {
   url: string;
   createSocket: (url: string) => WsLike;
   onFrame: (f: ScoreFrame) => void;
+  /** Optional: contact-quality / trace frames for the C2 setup screen. */
+  onQuality?: (f: EegQualityFrame) => void;
   onState: (s: ConnectionState) => void;
   backoffBaseMs?: number;
   backoffMaxMs?: number;
@@ -39,9 +42,18 @@ export function createScoreClient(opts: ScoreClientOptions) {
       opts.onState("open");
     };
     s.onmessage = (ev) => {
-      const r = parseIntentScoreMessage(String(ev.data));
-      if (r.ok) opts.onFrame(r.frame);
-      else dropped += 1;
+      const raw = String(ev.data);
+      const r = parseIntentScoreMessage(raw);
+      if (r.ok) {
+        opts.onFrame(r.frame);
+        return;
+      }
+      const q = parseEegQualityMessage(raw);
+      if (q.ok) {
+        opts.onQuality?.(q.frame);
+        return;
+      }
+      dropped += 1;
     };
     s.onerror = () => {
       /* close handler drives reconnect */

@@ -37,6 +37,34 @@ Phase prompts: [`docs/prompts/`](prompts/).
 > one-click installer + cert provisioning. The patient `getUserMedia` secure-context
 > requirement (specsv2 §12.3) is still the key open risk before camera work.
 
+> **V2-0b — Full clinician console (screens C1–C5) — DONE (2026-06-24):**
+> Completed the console to all five wireframe screens, decoupled and Vitest-tested.
+> - **C1 Patient roster** (`Roster.tsx`) — searchable worklist, affected side /
+>   mode / last-session / trend, opens the patient workspace.
+> - **C2 Setup & signal-quality** (`Setup.tsx`) — electrode-contact map + live
+>   C3/Cz/C4 trace driven by a **new real signal**: the sidecar now broadcasts an
+>   `eeg_quality` frame (per-channel good/check/poor + MI trace) at 5 Hz, on its own
+>   message type so the 20 Hz `intent_score` contract is byte-for-byte unchanged
+>   (`signal-engine/scoring/signal_quality.py`, `ScoringService.latest_quality()`,
+>   `ws_server._quality_loop`). Camera rest-pose is a placeholder (WebRTC = V2-2).
+> - **C3 Live monitor** — extended with the 8-channel quality strip, patient-view
+>   mirror placeholder, ERD/laterality/kinematics sub-tiles.
+> - **C4 History & Trends** (`HistoryTrends.tsx`) — KPI tiles (classifier acc, peak
+>   ERD, elbow ROM, game level) + proxy-vs-clinical SVG chart; **Assessments**
+>   (`Assessments.tsx`) — clinical-scales table, add-score, CSV export.
+> - **C5 Protocol editor** (`ProtocolEditor.tsx`) — mode/weight, reach axis, trial
+>   structure, layout side, enabled mini-games, calibration auto-switch note.
+> - Shell: `App.tsx` view-state router (roster → setup → tabbed workspace), in-memory
+>   `PatientStore` seeded to the wireframe roster (no persistence — prototype choice).
+> - **Tests:** 64 console unit tests (Vitest) + 2 live integration tests (real sidecar
+>   asserts both `intent_score` and `eeg_quality` frames); signal-engine **59 passed,
+>   6 skipped** (on-head). Full typecheck + renderer/main builds clean.
+> **Gaps / next unchanged from V2-0b+ list above**, minus the console screens (done):
+> control channel (Switch mode / Pause / End still disabled — no engine command path),
+> LAN server + pairing + QR, WebRTC camera, PyInstaller freeze, installer/cert. Console
+> data is mock/in-memory — real persistence needs the sidecar FastAPI+SQLite layer
+> (specsv2 §11), not yet built.
+
 ---
 
 ## 1. Current phase

@@ -1,0 +1,144 @@
+/* Shared clinician-console theme. Dark clinical palette established by the
+   V2-0a LiveMonitor prototype, extended to the full C1–C5 screen set. */
+:root {
+  --bg: #1b2433;
+  --panel: #243047;
+  --panel-2: #2b3950;
+  --border: #3a4760;
+  --text: #e6edf6;
+  --muted: #aab6c6;
+  --muted-2: #8595a8;
+  --accent: #f1b06f;
+  --accent-strong: #e89a52;
+  --danger: #e06a5a;
+  --danger-bg: #7a3b34;
+  --good: #5fbf8f;
+  --check: #e8c25a;
+  --poor: #e06a5a;
+}
+
+* { box-sizing: border-box; }
+
+body { margin: 0; }
+
+.app-root {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--text);
+  background: var(--bg);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---- top app bar ---- */
+.app-bar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 24px;
+  background: #161e2b;
+  border-bottom: 1px solid var(--border);
+}
+.app-title { font-size: 18px; font-weight: 700; }
+.app-bar .spacer { flex: 1; }
+.app-meta { color: var(--muted); font-size: 13px; }
+.app-badge {
+  font-size: 12px;
+  color: var(--good);
+  border: 1px solid #2f4a3d;
+  background: #1d2c25;
+  border-radius: 999px;
+  padding: 3px 10px;
+}
+.link-btn {
+  background: none;
+  border: none;
+  color: var(--accent);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0;
+}
+
+/* ---- buttons ---- */
+.btn {
+  padding: 9px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--panel-2);
+  color: var(--text);
+  cursor: pointer;
+  font-size: 14px;
+}
+.btn:hover { background: #32425e; }
+.btn-primary { background: var(--accent-strong); border-color: var(--accent); color: #20140a; font-weight: 600; }
+.btn-primary:hover { background: var(--accent); }
+.btn-danger { background: var(--danger-bg); border-color: #944b42; }
+.btn:disabled { opacity: 0.5; cursor: default; }
+
+/* ---- content + panels ---- */
+.content { padding: 22px 24px; display: flex; flex-direction: column; gap: 18px; flex: 1; }
+.panel { background: var(--panel); border-radius: 12px; padding: 18px; }
+.panel-title { font-size: 12px; letter-spacing: 0.06em; color: var(--muted-2); text-transform: uppercase; margin-bottom: 12px; }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.placeholder { color: var(--muted-2); font-size: 13px; border: 1px dashed var(--border); border-radius: 8px; padding: 18px; text-align: center; }
+
+/* ---- roster (C1) ---- */
+.roster-tools { display: flex; gap: 12px; align-items: center; }
+.input {
+  background: #1a2333; border: 1px solid var(--border); border-radius: 8px;
+  color: var(--text); padding: 9px 12px; font-size: 14px; width: 320px;
+}
+.table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.table th { text-align: left; color: var(--muted-2); font-weight: 500; font-size: 12px; padding: 10px 12px; border-bottom: 1px solid var(--border); }
+.table td { padding: 12px; border-bottom: 1px solid #2a3650; }
+.table tbody tr { cursor: pointer; }
+.table tbody tr:hover { background: #283755; }
+.pill { font-size: 12px; border-radius: 999px; padding: 2px 10px; border: 1px solid var(--border); color: var(--muted); }
+.pill.mode { background: #25344e; }
+.trend { font-size: 13px; }
+.trend.improving { color: var(--good); }
+.trend.steady { color: var(--muted); }
+.trend.check-in { color: var(--check); }
+
+/* ---- patient workspace header + tabs ---- */
+.ws-header { padding: 16px 24px; background: #1e293b; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 16px; }
+.ws-bio { font-size: 16px; font-weight: 600; }
+.ws-sub { color: var(--muted); font-size: 13px; }
+.ws-rec { color: var(--danger); font-weight: 600; font-size: 14px; }
+.tabs { display: flex; gap: 4px; padding: 0 24px; background: #1e293b; border-bottom: 1px solid var(--border); }
+.tab { padding: 12px 16px; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; font-size: 14px; background: none; border-top: none; border-left: none; border-right: none; }
+.tab.active { color: var(--text); border-bottom-color: var(--accent); }
+
+/* ---- KPI tiles (C4) ---- */
+.kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+.kpi { background: var(--panel); border-radius: 10px; padding: 16px; }
+.kpi-label { font-size: 11px; letter-spacing: 0.05em; color: var(--muted-2); text-transform: uppercase; }
+.kpi-value { font-size: 30px; font-weight: 700; margin-top: 6px; }
+.kpi-delta { font-size: 13px; margin-top: 4px; color: var(--good); }
+.kpi-delta.flat { color: var(--muted); }
+
+/* ---- electrode map (C2) ---- */
+.electrode-map { position: relative; width: 240px; height: 240px; margin: 0 auto; }
+.electrode { position: absolute; width: 34px; height: 34px; border-radius: 50%; transform: translate(-50%, -50%); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; color: #11161f; border: 2px solid rgba(0,0,0,0.25); }
+.electrode.good { background: var(--good); }
+.electrode.check { background: var(--check); }
+.electrode.poor { background: var(--poor); color: #fff; }
+.legend { display: flex; gap: 16px; justify-content: center; margin-top: 12px; font-size: 12px; color: var(--muted); }
+.legend .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+.alert { background: #3a2f1d; border: 1px solid #6b552c; color: #e8c25a; border-radius: 8px; padding: 10px 14px; font-size: 13px; }
+.step-label { color: var(--muted); font-size: 13px; }
+
+/* ---- forms (C5) ---- */
+.form-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #2a3650; gap: 16px; }
+.form-row:last-child { border-bottom: none; }
+.form-label { color: var(--muted); font-size: 14px; }
+.seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.seg button { background: var(--panel-2); color: var(--muted); border: none; padding: 7px 14px; cursor: pointer; font-size: 13px; }
+.seg button.active { background: var(--accent-strong); color: #20140a; font-weight: 600; }
+.num-input { width: 80px; background: #1a2333; border: 1px solid var(--border); border-radius: 6px; color: var(--text); padding: 6px 8px; font-size: 14px; }
+.slider { width: 220px; }
+.chk { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 13px; margin-right: 14px; }
+.tag-list { display: flex; flex-wrap: wrap; gap: 10px; }
+
+/* ---- chart ---- */
+.chart { width: 100%; height: 220px; }
