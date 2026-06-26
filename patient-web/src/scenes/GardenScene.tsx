@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { PlantGrowthModel } from "../garden/PlantGrowthModel";
 import type { SessionStats } from "../session/SessionStats";
 import { createScoreClient, type WsLike, type ConnectionState } from "../net/scoreClient";
+import { ScoreStore } from "../scoring/scoreStore";
 import { config } from "../config";
 
 const prefersReducedMotion = () =>
@@ -26,7 +27,7 @@ export function GardenScene({
   const [conn, setConn] = useState<ConnectionState>("connecting");
 
   const plant = useRef(new PlantGrowthModel());
-  const latestScore = useRef(0);
+  const store = useRef(new ScoreStore());
   const lastTs = useRef<number | null>(null);
   const createSocketRef = useRef(createSocket);
   createSocketRef.current = createSocket;
@@ -37,7 +38,7 @@ export function GardenScene({
     const client = createScoreClient({
       url: config.wsUrl,
       createSocket: socketFactory,
-      onFrame: (f) => { latestScore.current = f.intentScore; },
+      onFrame: (f) => { store.current.push(f); },
       onState: setConn,
     });
     client.connect();
@@ -46,7 +47,8 @@ export function GardenScene({
     const tick = (ts: number) => {
       const dt = lastTs.current === null ? 0 : (ts - lastTs.current) / 1000;
       lastTs.current = ts;
-      const s = latestScore.current;
+      const latest = store.current.latest();
+      const s = latest ? latest.intentScore : 0;
       plant.current.update(s / 100, dt);
       const isEngaged = s >= engagementThreshold;
       stats.accumulate(dt, isEngaged);
