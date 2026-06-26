@@ -17,7 +17,7 @@ export function SummaryScene({ stats, onRestart }: { stats: SessionStats; onRest
           <div className="summary-label">best streak (s)</div>
         </div>
       </div>
-      <p className="summary-line">This week you're playing at a higher level than last week ✓</p>
+      <p className="summary-line">You kept the garden growing today ✓</p>
       <div className="summary-story">Lighthouse story progress — 1 more piece required</div>
       {onRestart && (
         <button type="button" className="big-button" onClick={onRestart}>

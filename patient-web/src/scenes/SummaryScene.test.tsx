@@ -11,5 +11,6 @@ describe("SummaryScene", () => {
     expect(screen.getByText(/great work today/i)).toBeInTheDocument();
     expect(screen.getByText("18")).toBeInTheDocument(); // minutes tile
     expect(screen.queryByText(/%/)).toBeNull();
+    expect(screen.queryByText(/than last week/i)).toBeNull();
   });
 });
