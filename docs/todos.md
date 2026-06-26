@@ -65,41 +65,55 @@ Phase prompts: [`docs/prompts/`](prompts/).
 > data is mock/in-memory — real persistence needs the sidecar FastAPI+SQLite layer
 > (specsv2 §11), not yet built.
 
-> **V2-1 — Patient web prototype (Garden Grow, P1/P2/P3/P6) — DONE (2026-06-27):**
-> `patient-web/` (Vite + React + TypeScript) scaffolded as an independent package.
-> Implements the four MVP patient scenes from specsv2 §5:
-> - **P1 Welcome** (`WelcomeScene.tsx`) — entry point, "Begin Session" CTA.
-> - **P2 Calibration** (`CalibrationScene.tsx`) — client-timed 30 s rest countdown
->   with animated ring; **cosmetic only** — no marker bridge to browser yet (LSL
->   marker stream is Python-side; no spec mechanism exists to forward markers to the
->   web client in V2-1).
-> - **P3 Garden Grow** (`GardenScene.tsx`) — live plant driven by IntentScore;
->   SVG/CSS rendering (PixiJS deferred per §6 render-choice). Growth ring and bloom
->   state update in real time from the mock-EEG sidecar.
-> - **P6 Summary** (`SummaryScene.tsx`) — positive post-session summary (engaged %, peak
->   score, time, bloom achieved) matching the non-comparative spec §9.3 tone.
+> **V2-1 — Patient web prototype (Garden Grow, P1/P2/P3/P6) — DONE & MERGED to `main` (2026-06-27):**
+> `patient-web/` (Vite + React + TypeScript) scaffolded as an independent package,
+> built task-by-task under TDD (subagent-driven). Merged via no-ff commit `80bf3610`;
+> branch `feat/patient-web-prototype` deleted. Implements the four EEG-only patient
+> scenes from specsv2 §9 (the camera-dependent P4/P5 are deferred to V2-2):
+> - **P1 Welcome** (`WelcomeScene.tsx`) — warm greeting "Hi {firstName} — ready to
+>   play?" + one large "Let's begin" button; profile from `config.ts` seed.
+> - **P2 Calibration** (`CalibrationScene.tsx`) — client-timed **Graz cue sequencer**
+>   (fixation 2 s → cue 1.25 s → imagine 4 s → rest 2–3 s, "trial N of 20",
+>   "Imagine opening your {side} hand"); **cosmetic only** — no marker bridge to the
+>   browser yet (LSL marker stream is Python-side; no spec mechanism forwards markers
+>   to the web client in V2-1).
+> - **P3 Garden Grow** (`GardenScene.tsx`) — live SVG/CSS flower (height = growth,
+>   bloom petals) + vertical intent bar + plain-language colorblind-safe status pill
+>   ("Good focus" / "Keep imagining…") + connection badge, driven each `rAF` from the
+>   mock-EEG sidecar via `ScoreStore` → `PlantGrowthModel`. Honors
+>   `prefers-reduced-motion`; no strobe. PixiJS deferred (§6 render-choice).
+> - **P6 Summary** (`SummaryScene.tsx`) — warm recap: minutes played + best streak
+>   tiles, **non-comparative** copy ("You kept the garden growing today"), lighthouse
+>   placeholder. No PHI, no raw % / grade (spec §9.3).
 > - **Logic layer (fully unit-tested, Vitest):**
->   `intentScoreMessage` parser, `scoreStore` (Zustand-free reactive store),
->   `scoreClient` (WebSocket adapter), `PlantGrowthModel` (TypeScript port of the C#
->   state machine: 0.8/s grow, 0.3/s wilt, 3 s dwell bloom, 0.60 hysteresis),
->   `SessionStats` (engaged-time accumulator + peak tracking).
-> - **App router** (`App.tsx`) — scene-state machine driven by session lifecycle events
+>   `intentScoreMessage` parser (**byte-identical to the console parser** — shared
+>   `ScoreFrame` contract), `scoreStore` (circular buffer; latest/recentAverage/streak;
+>   wired into Garden as the frame source), `scoreClient` (WS adapter w/ reconnect +
+>   exponential backoff, injectable socket/scheduler), `PlantGrowthModel` (verbatim C#
+>   port: 0.8/s grow, 0.3/s wilt, 3 s dwell bloom, 0.75/0.60 hysteresis), `SessionStats`
+>   (engaged-time accumulator + longest-streak tracking, warm copy helpers).
+> - **App router** (`App.tsx`) — `useState` scene machine sharing one `SessionStats`
 >   (welcome → calibration → garden → summary).
-> - **Tests:** 26 unit/component tests (Vitest + jsdom, 11 test files) + 2 live
->   integration tests (real mock-EEG sidecar, ~27 s boot):
->   - `mock MI grows the garden over ~15 s of live frames` — IntentScore rises during
->     virtual-MI bursts, plant growth model accumulates.
->   - `patient and console parsers agree frame-for-frame` — shared `ScoreFrame` contract
->     validated against the same live WS stream.
-> - **Verification gates (all green):** typecheck clean; Vite build succeeds (40 modules,
->   dist/ 150 kB JS / 1.7 kB CSS, built in 451 ms); **26 unit tests passed**;
->   **2 integration tests passed** (~27 s); port 8765 free after teardown.
+> - **Tests:** 26 unit/component tests (Vitest + jsdom, 11 files) + 2 live integration
+>   tests (real mock-EEG sidecar, ~27 s boot):
+>   - `mock MI grows the garden over ~15 s of live frames` — observed 292 frames,
+>     score spread ~88, plant `maxGrowth` 0.88 (closed-loop proof).
+>   - `patient and console parsers agree frame-for-frame` — identical arrays over the
+>     same live WS stream.
+> - **Verification gates (all green):** typecheck clean; Vite build succeeds
+>   (~150 kB JS / 1.7 kB CSS); **26 unit tests passed**; **2 integration tests passed**;
+>   port 8765 free after teardown. Whole-branch review (opus): READY TO MERGE, no
+>   blockers. Review loop caught 3 arithmetic bugs in the plan's own tests (impl stayed
+>   verbatim) + 1 latent socket-restart (fixed via `createSocket` ref).
 > **Gaps / still open:**
 > P2 is cosmetic (client-timed, NOT marker-driven — no marker bridge to browser exists
 > yet); PixiJS deferred (React+SVG/CSS used throughout); LAN HTTPS/WSS server +
-> session-code pairing + QR (specsv2 §12); WebRTC patient camera → aiortc (V2-2);
-> P4 Reach game + P5 Progress screens not built; persistence (FastAPI+SQLite, §11) not
-> built; `game-client/` Unity codebase not yet deleted (superseded but still present).
+> session-code pairing + QR (specsv2 §5/§12); WebRTC patient camera → aiortc (V2-2);
+> P4 Reach & Collect + P5 compensation overlay not built (need kinematics); persistence
+> (FastAPI+SQLite, §11) not built; `SessionStats.incrementTrials` unwired (cosmetic P2
+> counts no trials); `config.ts` patient identity hardcoded ("Margaret") — must be
+> session-paired before real use; `game-client/` Unity codebase not yet deleted
+> (superseded but still present).
 
 ---
 
