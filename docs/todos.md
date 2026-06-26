@@ -65,6 +65,42 @@ Phase prompts: [`docs/prompts/`](prompts/).
 > data is mock/in-memory — real persistence needs the sidecar FastAPI+SQLite layer
 > (specsv2 §11), not yet built.
 
+> **V2-1 — Patient web prototype (Garden Grow, P1/P2/P3/P6) — DONE (2026-06-27):**
+> `patient-web/` (Vite + React + TypeScript) scaffolded as an independent package.
+> Implements the four MVP patient scenes from specsv2 §5:
+> - **P1 Welcome** (`WelcomeScene.tsx`) — entry point, "Begin Session" CTA.
+> - **P2 Calibration** (`CalibrationScene.tsx`) — client-timed 30 s rest countdown
+>   with animated ring; **cosmetic only** — no marker bridge to browser yet (LSL
+>   marker stream is Python-side; no spec mechanism exists to forward markers to the
+>   web client in V2-1).
+> - **P3 Garden Grow** (`GardenScene.tsx`) — live plant driven by IntentScore;
+>   SVG/CSS rendering (PixiJS deferred per §6 render-choice). Growth ring and bloom
+>   state update in real time from the mock-EEG sidecar.
+> - **P6 Summary** (`SummaryScene.tsx`) — positive post-session summary (engaged %, peak
+>   score, time, bloom achieved) matching the non-comparative spec §9.3 tone.
+> - **Logic layer (fully unit-tested, Vitest):**
+>   `intentScoreMessage` parser, `scoreStore` (Zustand-free reactive store),
+>   `scoreClient` (WebSocket adapter), `PlantGrowthModel` (TypeScript port of the C#
+>   state machine: 0.8/s grow, 0.3/s wilt, 3 s dwell bloom, 0.60 hysteresis),
+>   `SessionStats` (engaged-time accumulator + peak tracking).
+> - **App router** (`App.tsx`) — scene-state machine driven by session lifecycle events
+>   (welcome → calibration → garden → summary).
+> - **Tests:** 26 unit/component tests (Vitest + jsdom, 11 test files) + 2 live
+>   integration tests (real mock-EEG sidecar, ~27 s boot):
+>   - `mock MI grows the garden over ~15 s of live frames` — IntentScore rises during
+>     virtual-MI bursts, plant growth model accumulates.
+>   - `patient and console parsers agree frame-for-frame` — shared `ScoreFrame` contract
+>     validated against the same live WS stream.
+> - **Verification gates (all green):** typecheck clean; Vite build succeeds (40 modules,
+>   dist/ 150 kB JS / 1.7 kB CSS, built in 451 ms); **26 unit tests passed**;
+>   **2 integration tests passed** (~27 s); port 8765 free after teardown.
+> **Gaps / still open:**
+> P2 is cosmetic (client-timed, NOT marker-driven — no marker bridge to browser exists
+> yet); PixiJS deferred (React+SVG/CSS used throughout); LAN HTTPS/WSS server +
+> session-code pairing + QR (specsv2 §12); WebRTC patient camera → aiortc (V2-2);
+> P4 Reach game + P5 Progress screens not built; persistence (FastAPI+SQLite, §11) not
+> built; `game-client/` Unity codebase not yet deleted (superseded but still present).
+
 ---
 
 ## 1. Current phase
