@@ -28,10 +28,12 @@ export function GardenScene({
   const plant = useRef(new PlantGrowthModel());
   const latestScore = useRef(0);
   const lastTs = useRef<number | null>(null);
+  const createSocketRef = useRef(createSocket);
+  createSocketRef.current = createSocket;
 
   useEffect(() => {
     const socketFactory =
-      createSocket ?? ((url: string) => new WebSocket(url) as unknown as WsLike);
+      createSocketRef.current ?? ((url: string) => new WebSocket(url) as unknown as WsLike);
     const client = createScoreClient({
       url: config.wsUrl,
       createSocket: socketFactory,
@@ -60,7 +62,7 @@ export function GardenScene({
       cancelAnimationFrame(raf);
       client.stop();
     };
-  }, [createSocket, engagementThreshold, stats]);
+  }, [engagementThreshold, stats]);
 
   const reduced = prefersReducedMotion();
   const stemHeight = Math.round(growth * 100);
