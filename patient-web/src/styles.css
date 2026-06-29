@@ -1,11 +1,14 @@
 :root {
-  --warm-bg: #fdf6ec; --warm-accent: #e89a52; --ink: #33425a;
+  --warm-bg: #fdfbf9; --warm-accent: #e89a52; --ink: #33425a;
   --good: #2e7d54; --grow: #b5651f;
 }
 * { box-sizing: border-box; }
 body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, sans-serif; color: var(--ink); }
 .scene { min-height: 100vh; display: flex; flex-direction: column; align-items: center;
   justify-content: center; gap: 16px; padding: 24px; background: var(--warm-bg); }
+.scene--welcome { position: relative; }
+.welcome-logo { position: absolute; top: 24px; width: 650px; max-width: 85vw; z-index: 0; }
+.welcome-card { display: flex; flex-direction: column; align-items: center; gap: 16px; position: relative; z-index: 1; }
 .welcome-title, .cal-cue, .summary-title { font-size: clamp(28px, 5vw, 44px); text-align: center; }
 .big-button { font-size: 24px; padding: 18px 36px; border: 0; border-radius: 14px;
   background: var(--warm-accent); color: #fff; cursor: pointer; }
