@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from "react";
+import { WarmupHands } from "../warmup/WarmupHands";
+import { CameraFeed } from "./CameraFeed";
 
 type Phase = "fixation" | "cue" | "imagine" | "rest";
 const DURATIONS: Record<Phase, () => number> = {
@@ -19,18 +21,21 @@ export function CalibrationScene({
   affectedSide,
   totalTrials = 20,
   onComplete,
+  onQuit,
 }: {
   affectedSide: "left" | "right";
   totalTrials?: number;
   onComplete: () => void;
+  onQuit?: () => void;
 }) {
   const [trial, setTrial] = useState(1);
   const [phaseIdx, setPhaseIdx] = useState(0);
+  const [paused, setPaused] = useState(false);
   const done = useRef(false);
   const phase = ORDER[phaseIdx];
 
   useEffect(() => {
-    if (done.current) return;
+    if (done.current || paused) return;
     const t = setTimeout(() => {
       if (phaseIdx < ORDER.length - 1) {
         setPhaseIdx(phaseIdx + 1);
@@ -43,21 +48,54 @@ export function CalibrationScene({
       }
     }, DURATIONS[phase]());
     return () => clearTimeout(t);
-  }, [phase, phaseIdx, trial, totalTrials, onComplete]);
+  }, [phase, phaseIdx, trial, totalTrials, onComplete, paused]);
 
-  const showCue = phase === "cue" || phase === "imagine";
+  // Motor-imagery window: the cue lead-in plus the imagine phase. The text box
+  // turns green here to signal "imagine now".
+  const isMI = phase === "cue" || phase === "imagine";
+  const headline = isMI
+    ? `Imagine closing your ${affectedSide} hand`
+    : phase === "rest"
+      ? "Rest"
+      : "Get ready…";
+
   return (
     <main className="scene scene--calibration" data-testid="calibration" data-phase={phase}>
-      <div className="cal-header">Warm-up · trial {trial} of {totalTrials}</div>
-      <div className={`hand-glyph hand-glyph--${phase}`} aria-hidden="true" />
-      {showCue ? (
-        <>
-          <h1 className="cal-cue">Imagine opening your {affectedSide} hand</h1>
-          <p className="cal-sub">feel the movement — don't actually move</p>
-        </>
-      ) : (
-        <h1 className="cal-cue cal-cue--rest">{phase === "rest" ? "Rest" : "Get ready…"}</h1>
-      )}
+      {/* Row: existing cue/hands stack on the left, camera sidecar on the right,
+          vertically centered against the whole group. */}
+      <div className="cal-stage">
+        <div className="cal-main">
+          <div className="cal-header">Warm-up · trial {trial} of {totalTrials}</div>
+
+          {/* Fixed-size text box: always rendered so the layout never reflows
+              between rest and MI. Grey by default, green during motor imagery. */}
+          <div className="cal-textbox" data-mi={isMI}>
+            <h1 className="cal-cue">{headline}</h1>
+            {/* Reserve the caption line height even when empty to keep height stable. */}
+            <p className="cal-sub">{isMI ? "feel the movement — don't actually move" : " "}</p>
+          </div>
+
+          <WarmupHands phase={phase} activeSide={affectedSide} />
+        </div>
+
+        <CameraFeed />
+      </div>
+
+      <div className="cal-controls">
+        <button
+          type="button"
+          className="cal-ctl-btn"
+          onClick={() => setPaused((p) => !p)}
+          aria-pressed={paused}
+        >
+          {paused ? "Resume" : "Pause"}
+        </button>
+        {onQuit && (
+          <button type="button" className="cal-ctl-btn cal-ctl-btn--quit" onClick={onQuit}>
+            Quit
+          </button>
+        )}
+      </div>
     </main>
   );
 }

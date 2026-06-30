@@ -21,6 +21,7 @@ export default function App() {
           affectedSide={config.patient.affectedSide}
           totalTrials={2 /* short demo block this round */}
           onComplete={() => setView("garden")}
+          onQuit={() => { stats.reset(); setView("welcome"); }}
         />
       );
     case "garden":

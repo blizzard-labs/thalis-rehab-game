@@ -77,6 +77,18 @@ Phase prompts: [`docs/prompts/`](prompts/).
 >   "Imagine opening your {side} hand"); **cosmetic only** — no marker bridge to the
 >   browser yet (LSL marker stream is Python-side; no spec mechanism forwards markers
 >   to the web client in V2-1).
+>   - **Warm-up 3D hand viz (added 2026-06-29, `src/warmup/`):** replaced the empty
+>     `.hand-glyph` with two capsule **Shadow-Hand** renders (left + right) below the
+>     cue text. Ported from `archive/eeg-motor-imagery-collector` (`ShadowHand3D`,
+>     `handPoses`, `interpolation`) to typed TS; added `three`/`@react-three/fiber@8`/
+>     `@react-three/drei@9` (React-18-compatible pins). Affected side animates
+>     neutral→open on `cue`, then open↔close loop on `imagine` (`useWarmupPose` RAF
+>     hook over pure `poseForPhase`/`warmupMotion`); other hand dimmed neutral. Left =
+>     `scale-x:-1` mirror + `DoubleSide`; camera locked (no OrbitControls). Pure logic
+>     TDD-tested (`interpolation`/`warmupMotion`/`useWarmupPose`); R3F `Canvas` mocked
+>     in `test-setup.ts` for jsdom. Spec: `docs/superpowers/specs/2026-06-29-warmup-hand-visualization-design.md`.
+>     Bundle grew to ~979 kB JS (271 kB gz) from the 3D deps. **Not yet visually
+>     verified in a browser** (WebGL mirror shading + dual-canvas).
 > - **P3 Garden Grow** (`GardenScene.tsx`) — live SVG/CSS flower (height = growth,
 >   bloom petals) + vertical intent bar + plain-language colorblind-safe status pill
 >   ("Good focus" / "Keep imagining…") + connection badge, driven each `rAF` from the

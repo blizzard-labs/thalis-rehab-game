@@ -28,6 +28,44 @@ body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, sans-serif; co
 .conn-badge { font-size: 12px; opacity: 0.6; }
 .summary-tiles { display: flex; gap: 32px; }
 .summary-num { font-size: 48px; font-weight: 700; color: var(--warm-accent); text-align: center; }
+.cal-header { font-size: 18px; font-weight: 600; opacity: 0.7; }
+.cal-sub { opacity: 0.7; text-align: center; margin: 0; min-height: 1.4em; }
+/* Fixed-size rounded text box. Default grey, green during motor imagery.
+   Fixed min-height keeps the column height constant so nothing reflows
+   between rest and MI phases. */
+.cal-textbox { display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 10px; width: 100%; max-width: 760px;
+  min-height: 160px; padding: 20px 32px; border-radius: 24px;
+  background: #eef0f3; border: 2px solid #d3d8e0;
+  transition: background-color 250ms ease, border-color 250ms ease; }
+.cal-textbox .cal-cue { margin: 0; }
+.cal-textbox[data-mi="true"] { background: #e4f4ea; border-color: var(--good); }
+/* Stage row: the existing cue/hands stack on the left, camera sidecar on the
+   right, vertically centered against the whole group. */
+.cal-stage { display: flex; align-items: center; justify-content: center;
+  gap: 32px; width: 100%; }
+.cal-main { display: flex; flex-direction: column; align-items: center;
+  gap: 16px; flex: 0 1 760px; min-width: 0; }
+/* Camera sidecar — rounded corners matching the cue box. */
+.cal-camera { flex: 0 0 auto; width: clamp(240px, 26vw, 340px);
+  aspect-ratio: 3 / 4; border-radius: 24px; overflow: hidden;
+  border: 2px solid #d3d8e0; background: #11161d;
+  display: flex; align-items: center; justify-content: center; }
+.cal-camera video { width: 100%; height: 100%; object-fit: cover;
+  transform: scaleX(-1); /* selfie mirror */ }
+.cal-camera__placeholder { color: #9aa3af; font-size: 14px; text-align: center;
+  padding: 12px; }
+.cal-controls { position: fixed; right: 24px; bottom: 24px; display: flex;
+  gap: 12px; }
+.cal-ctl-btn { font-size: 15px; font-weight: 600; padding: 10px 20px;
+  border: 1px solid #d3d8e0; border-radius: 999px; background: #fff;
+  color: var(--ink); cursor: pointer; opacity: 0.75; transition: opacity 150ms; }
+.cal-ctl-btn:hover { opacity: 1; }
+.warmup-hands { display: flex; gap: 24px; width: 100%; max-width: 760px;
+  height: clamp(280px, 42vh, 380px); justify-content: center; }
+.warmup-hand { flex: 1 1 0; min-width: 0; max-width: 360px; height: 100%;
+  display: flex; align-items: center; justify-content: center; }
+
 .reduced-motion .flower, .reduced-motion .intent-bar-fill, .reduced-motion .flower-head {
   transition: none !important; }
 @media (prefers-reduced-motion: reduce) {

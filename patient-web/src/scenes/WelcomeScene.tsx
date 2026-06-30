@@ -10,7 +10,7 @@ export function WelcomeScene({ firstName, onBegin }: { firstName: string; onBegi
           Hi {firstName} — ready to play?
         </h1>
         <button type="button" className="big-button" onClick={onBegin}>
-          Let's begin
+          Let's begin!
         </button>
       </div>
     </main>

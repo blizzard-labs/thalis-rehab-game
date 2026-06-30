@@ -13,7 +13,7 @@ describe("CalibrationScene", () => {
     expect(screen.getByText(/trial 1 of 20/i)).toBeInTheDocument();
     act(() => vi.advanceTimersByTime(2000)); // fixation → cue
     expect(root).toHaveAttribute("data-phase", "cue");
-    expect(screen.getByText(/imagine opening your left hand/i)).toBeInTheDocument();
+    expect(screen.getByText(/imagine closing your left hand/i)).toBeInTheDocument();
     act(() => vi.advanceTimersByTime(1250)); // cue → imagine
     expect(root).toHaveAttribute("data-phase", "imagine");
   });
