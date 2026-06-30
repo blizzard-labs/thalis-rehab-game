@@ -1,5 +1,8 @@
 :root {
-  --warm-bg: #fdfbf9; --warm-accent: #e89a52; --ink: #33425a;
+  /* Brand: deep grape purple over warm off-white are the dominant colors.
+     --good green is reserved for semantic "go" cues (ready gate, REC, MI). */
+  --warm-bg: #fdfbf9; --purple: #6a4c93; --purple-deep: #553a78;
+  --warm-accent: var(--purple); --ink: #33425a;
   --good: #2e7d54; --grow: #b5651f;
 }
 * { box-sizing: border-box; }
@@ -71,12 +74,15 @@ body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, sans-serif; co
   box-shadow: 0 0 6px rgba(226, 59, 59, 0.9); animation: cal-rec-blink 1.2s ease-in-out infinite; }
 @keyframes cal-rec-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
 @media (prefers-reduced-motion: reduce) { .cal-rec__dot { animation: none; } }
-.cal-controls { position: fixed; right: 24px; bottom: 24px; display: flex;
+/* Pause sits at top-right beside the App-level Quit pill (right: 24px, ~62px wide). */
+.cal-controls { position: fixed; top: 20px; right: 100px; z-index: 50; display: flex;
   gap: 12px; }
-.cal-ctl-btn { font-size: 15px; font-weight: 600; padding: 10px 20px;
-  border: 1px solid #d3d8e0; border-radius: 999px; background: #fff;
-  color: var(--ink); cursor: pointer; opacity: 0.75; transition: opacity 150ms; }
+.cal-ctl-btn { font-size: 14px; font-weight: 600; padding: 8px 18px;
+  border: 1px solid #d3cfe0; border-radius: 999px; background: #fff;
+  color: var(--purple-deep); cursor: pointer; opacity: 0.8; transition: opacity 150ms; }
 .cal-ctl-btn:hover { opacity: 1; }
+/* Dev-only Skip — dashed border + muted to flag it as non-clinical. */
+.cal-ctl-btn--skip { border-style: dashed; color: #8a8594; }
 .warmup-hands { display: flex; gap: 24px; width: 100%; max-width: 760px;
   height: clamp(280px, 42vh, 380px); justify-content: center; }
 .warmup-hand { position: relative; flex: 1 1 0; min-width: 0; max-width: 360px; height: 100%;
@@ -92,3 +98,40 @@ body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, sans-serif; co
 @media (prefers-reduced-motion: reduce) {
   .flower, .intent-bar-fill, .flower-head { transition: none !important; }
 }
+
+/* ---- Post-calibration game-mode selection popup ---- */
+.modeselect-overlay { background: var(--warm-bg); }
+.modeselect-card { display: flex; flex-direction: column; align-items: center;
+  gap: 8px; width: 100%; max-width: 720px; padding: 32px;
+  background: #fff; border-radius: 24px; box-shadow: 0 12px 40px rgba(51, 66, 90, 0.15); }
+.modeselect-title { margin: 0; font-size: clamp(26px, 4vw, 36px); color: var(--purple); }
+.modeselect-sub { margin: 0 0 16px; font-size: 17px; color: var(--ink); text-align: center; }
+.modeselect-grid { display: flex; gap: 28px; justify-content: center;
+  flex-wrap: wrap; width: 100%; margin-bottom: 24px; }
+.modeselect-mode { display: flex; flex-direction: column; align-items: center; gap: 12px;
+  background: none; border: none; cursor: pointer; padding: 8px; font: inherit; color: var(--ink); }
+.modeselect-mode:disabled { cursor: not-allowed; opacity: 0.45; }
+.modeselect-icon { position: relative; width: clamp(96px, 14vw, 128px);
+  aspect-ratio: 1; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  background: #f3efe9; border: 4px solid transparent;
+  font-size: clamp(40px, 6vw, 56px);
+  transition: border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease; }
+.modeselect-mode:not(:disabled):hover .modeselect-icon { transform: translateY(-2px); }
+.modeselect-mode[data-selected="true"] .modeselect-icon {
+  border-color: var(--good); box-shadow: 0 0 0 4px rgba(46, 125, 84, 0.18); }
+.modeselect-glyph { line-height: 1; }
+.modeselect-check { position: absolute; right: -6px; bottom: -6px;
+  width: 32px; height: 32px; border-radius: 50%; background: var(--good); color: #fff;
+  font-size: 18px; font-weight: 800; display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 2px 6px rgba(46, 125, 84, 0.4); }
+.modeselect-label { font-size: 16px; font-weight: 700; text-align: center; }
+.modeselect-soon { display: block; font-size: 12px; font-weight: 600; opacity: 0.7; }
+.modeselect-ready { align-self: stretch; width: 100%; margin: 0; }
+.modeselect-ready:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
+
+/* Persistent Quit — fixed top-right on every non-welcome scene (App-level). */
+.app-quit-btn { position: fixed; top: 20px; right: 24px; z-index: 50;
+  font-size: 14px; font-weight: 600; padding: 8px 18px; border-radius: 999px;
+  border: 1px solid #d3cfe0; background: #fff; color: var(--purple-deep);
+  cursor: pointer; opacity: 0.8; transition: opacity 150ms, filter 150ms; }
+.app-quit-btn:hover { opacity: 1; filter: brightness(0.98); }

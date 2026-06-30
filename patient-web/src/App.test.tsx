@@ -31,6 +31,9 @@ describe("App flow", () => {
     await user.click(screen.getByRole("button", { name: /let's begin/i }));
     expect(screen.getByTestId("calibration")).toBeInTheDocument();
 
+    // Clinician pre-calibration gate: the cue sequence is held until "I'm ready".
+    await user.click(screen.getByTestId("ready-btn"));
+
     // CalibrationScene uses chained useEffect timeouts: each new timeout is
     // only registered after React flushes the previous state update, so a
     // single advanceTimersByTime(60000) misses every timer after the first.
@@ -42,6 +45,11 @@ describe("App flow", () => {
     for (const ms of phases) {
       act(() => { vi.advanceTimersByTime(ms); });
     }
+
+    // Post-calibration popup: pick Garden Grow, then confirm with "I'm ready".
+    expect(screen.getByTestId("modeselect")).toBeInTheDocument();
+    await user.click(screen.getByTestId("mode-garden"));
+    await user.click(screen.getByTestId("mode-ready"));
 
     expect(screen.getByTestId("flower")).toBeInTheDocument();
 

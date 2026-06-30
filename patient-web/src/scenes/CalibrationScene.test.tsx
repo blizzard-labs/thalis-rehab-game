@@ -34,6 +34,13 @@ describe("CalibrationScene", () => {
     expect(root).toHaveAttribute("data-phase", "imagine");
   });
 
+  it("skips the cue block via the dev Skip button", () => {
+    const onComplete = vi.fn();
+    render(<CalibrationScene affectedSide="left" totalTrials={20} onComplete={onComplete} />);
+    act(() => fireEvent.click(screen.getByTestId("skip-btn")));
+    expect(onComplete).toHaveBeenCalledOnce();
+  });
+
   it("calls onComplete after the configured trial count", () => {
     const onComplete = vi.fn();
     render(<CalibrationScene affectedSide="right" totalTrials={1} onComplete={onComplete} />);

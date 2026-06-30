@@ -21,12 +21,10 @@ export function CalibrationScene({
   affectedSide,
   totalTrials = 20,
   onComplete,
-  onQuit,
 }: {
   affectedSide: "left" | "right";
   totalTrials?: number;
   onComplete: () => void;
-  onQuit?: () => void;
 }) {
   const [trial, setTrial] = useState(1);
   const [phaseIdx, setPhaseIdx] = useState(0);
@@ -108,11 +106,15 @@ export function CalibrationScene({
         >
           {paused ? "Resume" : "Pause"}
         </button>
-        {onQuit && (
-          <button type="button" className="cal-ctl-btn cal-ctl-btn--quit" onClick={onQuit}>
-            Quit
-          </button>
-        )}
+        {/* Dev-only: skip the cue block and jump straight to mode select. */}
+        <button
+          type="button"
+          className="cal-ctl-btn cal-ctl-btn--skip"
+          data-testid="skip-btn"
+          onClick={() => { done.current = true; onComplete(); }}
+        >
+          Skip
+        </button>
       </div>
     </main>
   );

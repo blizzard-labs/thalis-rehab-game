@@ -97,6 +97,24 @@ Phase prompts: [`docs/prompts/`](prompts/).
 >     prop; honors `prefers-reduced-motion`). Large bold **L**/**R** labels overlay
 >     the back of each warm-up palm (`.warmup-hand__label`). Tests updated to click
 >     ready before advancing phases (14 passing).
+>   - **Post-calibration game-mode select popup (added 2026-06-30):** new
+>     `scenes/GameModeSelect.tsx` + `modeselect` view in `App.tsx` sits between
+>     calibration `onComplete` and the garden scene. Shows "Great work! …choose a
+>     game mode" with three circular icons (**Garden Grow** live; **River Rowing**,
+>     **Star Catcher** disabled placeholders from the §6 catalogue). Selecting a
+>     mode outlines its icon + adds a check badge; a full-width green "I'm ready"
+>     gate (reuses `.cal-ready-btn`) is disabled until a mode is chosen, then fires
+>     `onConfirm(id)` → garden. TDD'd (`GameModeSelect.test.tsx`, 4 tests); App
+>     flow test updated to walk both gates. 42 patient-web tests passing.
+>   - **Purple brand palette + persistent Quit (added 2026-06-30):** `--purple`
+>     (#6a4c93 deep grape) + warm off-white are now the dominant colors; repurposed
+>     `--warm-accent` → purple so the "Let's begin" button, intent bar, summary
+>     numbers and mascot all shift to purple, and the "Great work" mode-select title
+>     is purple. Green `--good` kept only for semantic go-cues (ready gate / REC /
+>     MI box). Quit moved to a single App-level fixed top-right `.app-quit-btn`
+>     shown on every non-welcome scene (resets stats → Welcome); removed the
+>     per-scene Quit from `CalibrationScene` (Pause stays). Garden "End session"
+>     (normal finish → summary) is unchanged.
 > - **P3 Garden Grow** (`GardenScene.tsx`) — live SVG/CSS flower (height = growth,
 >   bloom petals) + vertical intent bar + plain-language colorblind-safe status pill
 >   ("Good focus" / "Keep imagining…") + connection badge, driven each `rAF` from the
