@@ -31,11 +31,15 @@ export function CalibrationScene({
   const [trial, setTrial] = useState(1);
   const [phaseIdx, setPhaseIdx] = useState(0);
   const [paused, setPaused] = useState(false);
+  // Clinician gate: the cue sequence (and recording) is held until the clinician
+  // confirms pre-calibration setup — electrode contact, camera position, patient
+  // profile — by pressing "I'm ready".
+  const [ready, setReady] = useState(false);
   const done = useRef(false);
   const phase = ORDER[phaseIdx];
 
   useEffect(() => {
-    if (done.current || paused) return;
+    if (done.current || paused || !ready) return;
     const t = setTimeout(() => {
       if (phaseIdx < ORDER.length - 1) {
         setPhaseIdx(phaseIdx + 1);
@@ -48,7 +52,7 @@ export function CalibrationScene({
       }
     }, DURATIONS[phase]());
     return () => clearTimeout(t);
-  }, [phase, phaseIdx, trial, totalTrials, onComplete, paused]);
+  }, [phase, phaseIdx, trial, totalTrials, onComplete, paused, ready]);
 
   // Motor-imagery window: the cue lead-in plus the imagine phase. The text box
   // turns green here to signal "imagine now".
@@ -61,6 +65,20 @@ export function CalibrationScene({
 
   return (
     <main className="scene scene--calibration" data-testid="calibration" data-phase={phase}>
+      {/* Pre-calibration gate: thin green bar centered on top. The clinician
+          checks electrode contact, camera position, and patient profile, then
+          presses it to start the cue sequence. It disappears once pressed. */}
+      {!ready && (
+        <button
+          type="button"
+          className="cal-ready-btn"
+          onClick={() => setReady(true)}
+          data-testid="ready-btn"
+        >
+          I’m ready
+        </button>
+      )}
+
       {/* Row: existing cue/hands stack on the left, camera sidecar on the right,
           vertically centered against the whole group. */}
       <div className="cal-stage">
@@ -78,7 +96,7 @@ export function CalibrationScene({
           <WarmupHands phase={phase} activeSide={affectedSide} />
         </div>
 
-        <CameraFeed />
+        <CameraFeed recording={ready} />
       </div>
 
       <div className="cal-controls">

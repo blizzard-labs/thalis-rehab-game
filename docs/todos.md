@@ -89,6 +89,14 @@ Phase prompts: [`docs/prompts/`](prompts/).
 >     in `test-setup.ts` for jsdom. Spec: `docs/superpowers/specs/2026-06-29-warmup-hand-visualization-design.md`.
 >     Bundle grew to ~979 kB JS (271 kB gz) from the 3D deps. **Not yet visually
 >     verified in a browser** (WebGL mirror shading + dual-canvas).
+>   - **Clinician pre-cal gate + recording cues (added 2026-06-30):** thin green
+>     "I'm ready" bar centered on top of `CalibrationScene` gates the cue sequencer
+>     (and recording) until the clinician confirms electrode contact / camera
+>     position / patient profile; the button disappears on click. A blinking red
+>     **REC** dot overlays the `CameraFeed` frame while ready (passed `recording`
+>     prop; honors `prefers-reduced-motion`). Large bold **L**/**R** labels overlay
+>     the back of each warm-up palm (`.warmup-hand__label`). Tests updated to click
+>     ready before advancing phases (14 passing).
 > - **P3 Garden Grow** (`GardenScene.tsx`) — live SVG/CSS flower (height = growth,
 >   bloom petals) + vertical intent bar + plain-language colorblind-safe status pill
 >   ("Good focus" / "Keep imagining…") + connection badge, driven each `rAF` from the

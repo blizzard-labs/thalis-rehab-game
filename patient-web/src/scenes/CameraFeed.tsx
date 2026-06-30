@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from "react";
  * placeholder when the camera is unavailable or permission is denied — and when
  * getUserMedia is absent entirely (e.g. jsdom under test).
  */
-export function CameraFeed() {
+export function CameraFeed({ recording = false }: { recording?: boolean }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -43,6 +43,12 @@ export function CameraFeed() {
         <div className="cal-camera__placeholder">{error}</div>
       ) : (
         <video ref={videoRef} autoPlay playsInline muted />
+      )}
+      {recording && (
+        <div className="cal-rec" data-testid="rec-indicator" aria-label="Recording">
+          <span className="cal-rec__dot" />
+          REC
+        </div>
       )}
     </div>
   );

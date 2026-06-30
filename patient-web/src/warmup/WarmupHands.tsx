@@ -37,9 +37,12 @@ export function WarmupHands({
     <div className="warmup-hands" data-testid="warmup-hands" data-active-side={activeSide}>
       <div className="warmup-hand" data-side="left" data-active={activeSide === "left"}>
         {left}
+        {/* Large bold side label on the back of the palm. */}
+        <span className="warmup-hand__label" aria-hidden="true">L</span>
       </div>
       <div className="warmup-hand" data-side="right" data-active={activeSide === "right"}>
         {right}
+        <span className="warmup-hand__label" aria-hidden="true">R</span>
       </div>
     </div>
   );

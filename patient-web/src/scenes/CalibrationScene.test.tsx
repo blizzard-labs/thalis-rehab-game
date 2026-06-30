@@ -1,16 +1,32 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, act } from "@testing-library/react";
+import { render, screen, act, fireEvent } from "@testing-library/react";
 import { CalibrationScene } from "./CalibrationScene";
 
 describe("CalibrationScene", () => {
   beforeEach(() => vi.useFakeTimers());
   afterEach(() => vi.useRealTimers());
 
+  it("holds the cue sequence until the clinician presses 'I'm ready'", () => {
+    render(<CalibrationScene affectedSide="left" totalTrials={20} onComplete={() => {}} />);
+    const root = screen.getByTestId("calibration");
+    // No recording indicator and the sequence does not advance before ready.
+    expect(screen.queryByTestId("rec-indicator")).not.toBeInTheDocument();
+    act(() => vi.advanceTimersByTime(5000));
+    expect(root).toHaveAttribute("data-phase", "fixation");
+    act(() => fireEvent.click(screen.getByTestId("ready-btn")));
+    // Button disappears, recording indicator appears.
+    expect(screen.queryByTestId("ready-btn")).not.toBeInTheDocument();
+    expect(screen.getByTestId("rec-indicator")).toBeInTheDocument();
+    act(() => vi.advanceTimersByTime(2000)); // fixation → cue
+    expect(root).toHaveAttribute("data-phase", "cue");
+  });
+
   it("shows the affected-side cue and trial counter, and advances phases", () => {
     render(<CalibrationScene affectedSide="left" totalTrials={20} onComplete={() => {}} />);
     const root = screen.getByTestId("calibration");
     expect(root).toHaveAttribute("data-phase", "fixation");
     expect(screen.getByText(/trial 1 of 20/i)).toBeInTheDocument();
+    act(() => fireEvent.click(screen.getByTestId("ready-btn")));
     act(() => vi.advanceTimersByTime(2000)); // fixation → cue
     expect(root).toHaveAttribute("data-phase", "cue");
     expect(screen.getByText(/imagine closing your left hand/i)).toBeInTheDocument();
@@ -21,6 +37,7 @@ describe("CalibrationScene", () => {
   it("calls onComplete after the configured trial count", () => {
     const onComplete = vi.fn();
     render(<CalibrationScene affectedSide="right" totalTrials={1} onComplete={onComplete} />);
+    act(() => fireEvent.click(screen.getByTestId("ready-btn")));
     // BUG-FIX (task-7-report): brief's original single act(advanceTimersByTime(total)) fails
     // because each phase timer is registered inside a useEffect that only runs after React
     // flushes; advancing the full window in one shot leaves subsequent timers unregistered
