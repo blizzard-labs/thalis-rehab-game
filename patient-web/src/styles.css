@@ -19,16 +19,76 @@ body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, sans-serif; co
 .status-pill { padding: 8px 16px; border-radius: 999px; font-weight: 600; color: #fff;
   background: var(--grow); }
 .status-pill[data-engaged="true"] { background: var(--good); }
-.garden-stage { display: flex; align-items: flex-end; gap: 32px; height: 60vh; }
-.flower { width: 60px; background: #6aa84f; border-radius: 8px 8px 0 0;
-  transition: height 120ms linear; position: relative; }
-.flower-head { position: absolute; top: -28px; left: -14px; width: 88px; height: 88px;
-  border-radius: 50%; background: var(--warm-accent); opacity: 0.5; transition: opacity 200ms; }
-.flower--bloom .flower-head { opacity: 1; }
-.intent-bar { width: 28px; height: 100%; background: #e6d6c0; border-radius: 14px;
-  display: flex; align-items: flex-end; overflow: hidden; }
-.intent-bar-fill { width: 100%; background: var(--warm-accent); transition: height 120ms linear; }
-.conn-badge { font-size: 12px; opacity: 0.6; }
+/* ---- Garden Grow scene ---- */
+/* The garden fills the whole viewport: sky gradient on the scene, a soft sun
+   and a full-width soil mound as CSS layers, with the plant SVG floating on
+   top. Only the App-level top bar (Quit) sits above it. */
+.scene--garden { position: relative; overflow: hidden; justify-content: flex-start;
+  gap: 0; padding: 0;
+  background: linear-gradient(180deg, #e9ecfb 0%, #f4eff0 52%, #fbf3ec 100%); }
+.garden-banner { position: relative; z-index: 6; width: 100%; display: flex;
+  justify-content: center; padding: 22px 120px 14px; }
+.scene--garden .status-pill { font-size: clamp(20px, 2.6vw, 30px);
+  padding: 14px 32px; box-shadow: 0 6px 20px rgba(51, 66, 90, 0.16); }
+
+.garden-row { position: relative; flex: 1 1 auto; width: 100%; min-height: 0; }
+
+/* Soft sun, top-right, behind the plant. */
+.garden-sun { position: absolute; z-index: 0; top: clamp(16px, 5vh, 60px);
+  right: clamp(36px, 8vw, 130px); width: clamp(96px, 12vw, 160px); aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(circle, #ffd968 0 36%, rgba(255, 233, 173, 0.6) 50%,
+    rgba(255, 233, 173, 0) 72%); }
+/* Full-width soil mound anchored to the bottom of the page. */
+.garden-ground { position: absolute; z-index: 0; left: -6%; right: -6%; bottom: 0;
+  height: clamp(150px, 24vh, 280px);
+  background: linear-gradient(180deg, #b98a52 0%, #a9743f 42%, #8a5a2b 100%);
+  border-radius: 50% 50% 0 0 / 30% 30% 0 0; }
+
+/* Plant SVG — anchored to the soil surface, centered, tall and narrow. */
+.garden-stage { position: absolute; inset: 0; z-index: 1;
+  display: flex; align-items: flex-end; justify-content: center; }
+.garden-art { height: 86%; width: auto; max-width: 88%; display: block;
+  position: relative; bottom: clamp(56px, 11vh, 130px);
+  filter: drop-shadow(0 12px 22px rgba(51, 66, 90, 0.12)); }
+/* No transform transition: the leaves and flower head are positioned from the
+   same `growth` value as the stem every frame, so they must move in lockstep —
+   a CSS transition here makes them visibly lag the stem on rapid score swings.
+   Only the bloom glow eases, and the sway is a steady-state ambient loop. */
+.petals { transition: filter 400ms ease; }
+.flower--bloom .petals { filter: saturate(1.15) drop-shadow(0 0 6px rgba(106, 76, 147, 0.45)); }
+.flower--bloom .flower-headg { animation: flower-sway 3.4s ease-in-out infinite;
+  transform-origin: center; }
+@keyframes flower-sway {
+  0%, 100% { rotate: 0deg; } 50% { rotate: 2.2deg; }
+}
+
+/* Effort meter — tall, clearly labelled, calm. Reads the raw IntentScore. */
+.focus-meter { position: absolute; z-index: 2; right: clamp(20px, 5vw, 64px);
+  top: clamp(8px, 4vh, 40px); bottom: calc(clamp(150px, 24vh, 280px) + 16px);
+  display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.focus-meter__label { font-size: 18px; font-weight: 700; color: var(--purple-deep);
+  letter-spacing: 0.04em; }
+.focus-meter__value { font-size: 26px; font-weight: 800; color: var(--purple);
+  font-variant-numeric: tabular-nums; min-width: 2.4ch; text-align: center; }
+.intent-bar { width: clamp(40px, 5vw, 56px); flex: 1 1 auto; min-height: 0;
+  background: rgba(255, 255, 255, 0.7); border-radius: 999px; border: 3px solid #e0d2bd;
+  display: flex; align-items: flex-end; overflow: hidden;
+  box-shadow: inset 0 2px 6px rgba(51, 66, 90, 0.08); }
+.intent-bar-fill { width: 100%;
+  background: linear-gradient(180deg, var(--purple) 0%, var(--purple-deep) 100%);
+  border-radius: 999px; transition: height 120ms linear; }
+
+/* Footer — End session button + connection state, floating over the soil. */
+.garden-footer { position: absolute; z-index: 5; left: 0; right: 0; bottom: 0;
+  display: flex; justify-content: center; align-items: center; padding: 16px 24px 26px; }
+.end-button { font-size: 18px; font-weight: 700; padding: 14px 40px; border-radius: 999px;
+  border: 2px solid #d8cfe6; background: #fff; color: var(--purple-deep);
+  cursor: pointer; transition: filter 150ms, box-shadow 150ms;
+  box-shadow: 0 3px 12px rgba(51, 66, 90, 0.18); }
+.end-button:hover { filter: brightness(0.99); box-shadow: 0 5px 16px rgba(51, 66, 90, 0.24); }
+.conn-badge { position: absolute; left: 24px; bottom: 28px; font-size: 12px;
+  color: #fdf6ec; opacity: 0.75; }
 .summary-tiles { display: flex; gap: 32px; }
 .summary-num { font-size: 48px; font-weight: 700; color: var(--warm-accent); text-align: center; }
 .cal-header { font-size: 18px; font-weight: 600; opacity: 0.7; }
@@ -93,10 +153,13 @@ body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, sans-serif; co
   font-weight: 800; color: #5a4632; opacity: 0.85; pointer-events: none;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.25); }
 
-.reduced-motion .flower, .reduced-motion .intent-bar-fill, .reduced-motion .flower-head {
+.reduced-motion .intent-bar-fill, .reduced-motion .leaf,
+.reduced-motion .flower-headg, .reduced-motion .petals {
   transition: none !important; }
+.reduced-motion .flower--bloom .flower-headg { animation: none !important; }
 @media (prefers-reduced-motion: reduce) {
-  .flower, .intent-bar-fill, .flower-head { transition: none !important; }
+  .intent-bar-fill, .leaf, .flower-headg, .petals { transition: none !important; }
+  .flower--bloom .flower-headg { animation: none !important; }
 }
 
 /* ---- Post-calibration game-mode selection popup ---- */

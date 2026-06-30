@@ -120,6 +120,19 @@ Phase prompts: [`docs/prompts/`](prompts/).
 >   ("Good focus" / "Keep imagining…") + connection badge, driven each `rAF` from the
 >   mock-EEG sidecar via `ScoreStore` → `PlantGrowthModel`. Honors
 >   `prefers-reduced-motion`; no strobe. PixiJS deferred (§6 render-choice).
+>   - **Garden visual overhaul (2026-06-30):** replaced the abstract thin-stem +
+>     floating-circle layout (sparse whitespace, status pill overlapping the conn
+>     badge, End-session button overlapping the flower head) with an **illustrated
+>     garden scene** for stroke-patient legibility. Single SVG (`viewBox 0 0 480 600`,
+>     `xMidYMax meet`): sky gradient + soft sun, layered soil mound, a real plant that
+>     grows from the soil — rounded green stem (height = growth), two leaves that
+>     sprout at growth fractions, and an 8-petal purple flower head that scales from
+>     bud → open and pops/sways on bloom (sway off under reduced-motion). Layout is now
+>     a 3-row flex: big centered **status banner** on top (no longer collides with the
+>     App-level Quit), garden + a tall labelled **Focus meter** (relabeled intent bar,
+>     shows the live 0–100 value) in the middle, footer-pinned **End session** with the
+>     conn badge tucked bottom-left. Test contracts preserved (`flower`/`data-growth`,
+>     `status-pill`/`data-engaged`, End-session button); all 43 patient-web tests pass.
 > - **P6 Summary** (`SummaryScene.tsx`) — warm recap: minutes played + best streak
 >   tiles, **non-comparative** copy ("You kept the garden growing today"), lighthouse
 >   placeholder. No PHI, no raw % / grade (spec §9.3).
