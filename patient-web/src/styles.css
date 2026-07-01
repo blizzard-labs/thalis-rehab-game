@@ -205,33 +205,42 @@ body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, sans-serif; co
 .app-quit-btn:hover { opacity: 1; filter: brightness(0.98); }
 
 /* ---- Star Catcher (Reach & Collect) ---- */
+/* Mirrors the Garden scene's proven full-viewport flex-column layout: the base
+   `.scene` centers its children, so (like `.scene--garden`) we override to a
+   top-anchored column and let `.stars-row` grow to fill the remaining height.
+   The SVG is sized by HEIGHT (not width+auto, which collapses inline SVGs). */
 .scene--stars {
   position: relative;
   overflow: hidden;
-  min-height: 100vh;
+  justify-content: flex-start;
+  gap: 0;
+  padding: 0;
   background: linear-gradient(180deg, #2a2140 0%, #4a3a6b 60%, #6a4c93 100%);
 }
 .stars-banner {
   position: relative;
   z-index: 6;
+  width: 100%;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   gap: 16px;
-  padding: 16px 24px;
+  padding: 22px 120px 14px;
+}
+.stars-banner .status-pill {
+  font-size: clamp(20px, 2.6vw, 30px);
+  padding: 14px 32px;
+  box-shadow: 0 6px 20px rgba(51, 66, 90, 0.16);
 }
 .stars-banner .star-count {
-  font-size: 1.4rem;
-  font-weight: 700;
+  font-size: clamp(20px, 2.6vw, 30px);
+  font-weight: 800;
   color: #fff;
   background: rgba(0, 0, 0, 0.25);
   border-radius: 999px;
-  padding: 6px 16px;
+  padding: 10px 22px;
 }
-.stars-row {
-  position: relative;
-  min-height: calc(100vh - 160px);
-}
+.stars-row { position: relative; flex: 1 1 auto; width: 100%; min-height: 0; }
 .stars-sky { position: absolute; inset: 0; z-index: 0; }
 .stars-ground {
   position: absolute;
@@ -248,7 +257,13 @@ body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, sans-serif; co
   align-items: center;
   justify-content: center;
 }
-.stars-art { width: min(90vw, 70vh); height: auto; }
+.stars-art {
+  height: 88%;
+  width: auto;
+  max-width: 92%;
+  display: block;
+  filter: drop-shadow(0 12px 22px rgba(0, 0, 0, 0.25));
+}
 .stars-art--celebrate { filter: drop-shadow(0 0 18px #f4c84a); }
 .scene--stars.reduced-motion .stars-art--celebrate { filter: none; }
 .stars-camera {

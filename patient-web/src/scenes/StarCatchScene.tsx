@@ -157,7 +157,7 @@ export function StarCatchScene({
             {/* next-target star (dashed outline) at the current goal fraction */}
             <path
               d={STAR} transform={`translate(${nextStar.x} ${nextStar.y}) scale(18)`}
-              fill="none" stroke="var(--purple, #6a4c93)" strokeWidth="0.14" strokeDasharray="0.3 0.25"
+              fill="none" stroke="#e6dcff" strokeWidth="0.18" strokeDasharray="0.32 0.22"
             />
 
             {/* the arm: shoulder → hand */}
