@@ -63,6 +63,11 @@ body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, sans-serif; co
   0%, 100% { rotate: 0deg; } 50% { rotate: 2.2deg; }
 }
 
+/* Camera sidecar — floats over the scene, left of the centered plant and
+   vertically centered against the viewport. Reuses the .cal-camera shape. */
+.garden-camera { position: fixed; z-index: 3; left: clamp(20px, 5vw, 64px);
+  top: 50%; transform: translateY(-50%); }
+
 /* Effort meter — tall, clearly labelled, calm. Reads the raw IntentScore. */
 .focus-meter { position: absolute; z-index: 2; right: clamp(20px, 5vw, 64px);
   top: clamp(8px, 4vh, 40px); bottom: calc(clamp(150px, 24vh, 280px) + 16px);

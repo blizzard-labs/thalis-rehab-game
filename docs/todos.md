@@ -140,6 +140,13 @@ Phase prompts: [`docs/prompts/`](prompts/).
 >     with no easing → they move together. Only the bloom glow eases; sway is ambient.
 >     Test contracts preserved (`flower`/`data-growth`, `status-pill`/`data-engaged`,
 >     End-session button); all 43 patient-web tests pass.
+>   - **Garden camera feed (2026-07-01):** added the same `CameraFeed` sidecar used
+>     in the calibration scene to the garden gamemode. Wrapped in `.garden-camera`
+>     (`position: fixed`, left `clamp(20px,5vw,64px)`, `top:50%`/`translateY(-50%)`)
+>     so it floats over the full-bleed scene, left of the centered plant, vertically
+>     centered against the viewport. Reuses the `.cal-camera` 3:4 rounded dark frame
+>     and selfie-mirror video. `recording` passed → the blinking red **REC** pill
+>     (`.cal-rec`, same as calibration) shows throughout gameplay. All 43 tests pass.
 > - **P6 Summary** (`SummaryScene.tsx`) — warm recap: minutes played + best streak
 >   tiles, **non-comparative** copy ("You kept the garden growing today"), lighthouse
 >   placeholder. No PHI, no raw % / grade (spec §9.3).

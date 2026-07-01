@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { PlantGrowthModel } from "../garden/PlantGrowthModel";
 import type { SessionStats } from "../session/SessionStats";
 import { createScoreClient, type WsLike, type ConnectionState } from "../net/scoreClient";
+import { CameraFeed } from "./CameraFeed";
 import { ScoreStore } from "../scoring/scoreStore";
 import { config } from "../config";
 
@@ -106,6 +107,12 @@ export function GardenScene({
             a soft sun, and a full-width soil mound. The plant SVG floats on top. */}
         <div className="garden-sun" aria-hidden="true" />
         <div className="garden-ground" aria-hidden="true" />
+
+        {/* Live camera sidecar — same shape/style as calibration, floating on
+            the left of the scene, vertically centered against the viewport. */}
+        <div className="garden-camera">
+          <CameraFeed recording />
+        </div>
 
         <div className="garden-stage">
           <svg
