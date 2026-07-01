@@ -203,3 +203,95 @@ body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, sans-serif; co
   border: 1px solid #d3cfe0; background: #fff; color: var(--purple-deep);
   cursor: pointer; opacity: 0.8; transition: opacity 150ms, filter 150ms; }
 .app-quit-btn:hover { opacity: 1; filter: brightness(0.98); }
+
+/* ---- Star Catcher (Reach & Collect) ---- */
+.scene--stars {
+  position: relative;
+  overflow: hidden;
+  min-height: 100vh;
+  background: linear-gradient(180deg, #2a2140 0%, #4a3a6b 60%, #6a4c93 100%);
+}
+.stars-banner {
+  position: relative;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 24px;
+}
+.stars-banner .star-count {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 999px;
+  padding: 6px 16px;
+}
+.stars-row {
+  position: relative;
+  min-height: calc(100vh - 160px);
+}
+.stars-sky { position: absolute; inset: 0; z-index: 0; }
+.stars-ground {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 12%;
+  z-index: 0;
+  background: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.35) 100%);
+}
+.stars-stage {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.stars-art { width: min(90vw, 70vh); height: auto; }
+.stars-art--celebrate { filter: drop-shadow(0 0 18px #f4c84a); }
+.scene--stars.reduced-motion .stars-art--celebrate { filter: none; }
+.stars-camera {
+  position: fixed;
+  z-index: 3;
+  left: clamp(20px, 5vw, 64px);
+  top: 50%;
+  transform: translateY(-50%);
+}
+.reach-meter {
+  position: fixed;
+  z-index: 2;
+  right: clamp(20px, 5vw, 64px);
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: #fff;
+}
+.reach-meter__label { font-weight: 600; }
+.reach-meter__value { font-size: 1.6rem; font-weight: 800; }
+.reach-bar {
+  width: 40px;
+  height: 300px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.18);
+  overflow: hidden;
+  display: flex;
+  align-items: flex-end;
+}
+.reach-bar-fill {
+  width: 100%;
+  background: linear-gradient(180deg, #f4c84a 0%, #e0ad2e 100%);
+}
+.stars-footer {
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 16px;
+}
