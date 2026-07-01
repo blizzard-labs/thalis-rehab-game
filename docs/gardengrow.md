@@ -46,12 +46,18 @@ End-session button overlapping the flower head. It was replaced with a recogniza
 └──────────────────────────────────────────────┘
 ```
 
-**The garden (`.garden-art`, one SVG, `viewBox 0 0 480 600`, `xMidYMax meet`):**
-- **Sky + sun** — vertical gradient (`#eef0fb` → warm `#fdfbf9`) with a soft radial sun glow top-right.
-- **Soil** — three stacked ellipses forming a layered earth mound the plant roots into.
+**Environment (full-bleed CSS, fills the whole viewport):** the scene background is a
+sky gradient (`#e9ecfb` → warm `#fbf3ec`); a `.garden-sun` radial glow sits top-right
+and a full-width `.garden-ground` soil mound (brown gradient, arched top via
+`border-radius`) anchors the bottom. Only the App-level top bar (Quit) sits above the
+garden.
+
+**The plant (`.garden-art`, plant-only SVG, `viewBox 120 20 240 520`, `xMidYMax meet`,
+absolutely positioned centered and rooted into the soil):**
 - **Stem** — rounded green line (`stroke-linecap: round`), `y2` driven by `growth` (full height ≈ 392 units at growth 1).
 - **Leaves** — two leaf paths sprout at fixed fractions up the *current* stem (so they ride it upward), each scaling in over a small growth window (~0.22 and ~0.48).
-- **Flower head** — group of 8 radial purple petals (`var(--purple)`) around a golden center, scaling from a bud (`~0.34`) to open; **bloom** snaps it to full size, saturates + glows the petals, and adds a gentle 3.4 s sway (sway/transitions disabled under `prefers-reduced-motion`).
+- **Flower head** — group of 8 radial purple petals (`var(--purple)`) around a golden center, scaling from a bud (`~0.34`) to open; **bloom** snaps it to full size, saturates + glows the petals, and adds a gentle 3.4 s sway (sway disabled under `prefers-reduced-motion`).
+- Stem, leaves and head are **all positioned from the same per-frame `growth` value with no CSS transform transition** — so on rapid IntentScore swings the leaves and flower track the stem in lockstep instead of easing behind it.
 - Still carries the `flower` testid + `data-growth` / `flower--bloom` contract the unit tests assert.
 
 **The Focus meter (`.focus-meter` + `.intent-bar`):**
