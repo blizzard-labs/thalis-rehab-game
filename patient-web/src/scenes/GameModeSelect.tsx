@@ -13,7 +13,7 @@ type GameMode = {
 const MODES: GameMode[] = [
   { id: "garden", title: "Garden Grow", icon: "🌱", available: true },
   { id: "river", title: "River Rowing", icon: "🚣", available: false },
-  { id: "stars", title: "Star Catcher", icon: "⭐", available: false },
+  { id: "stars", title: "Star Catcher", icon: "⭐", available: true },
 ];
 
 /**

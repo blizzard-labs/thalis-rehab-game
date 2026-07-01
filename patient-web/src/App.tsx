@@ -3,11 +3,12 @@ import { WelcomeScene } from "./scenes/WelcomeScene";
 import { CalibrationScene } from "./scenes/CalibrationScene";
 import { GameModeSelect } from "./scenes/GameModeSelect";
 import { GardenScene } from "./scenes/GardenScene";
+import { StarCatchScene } from "./scenes/StarCatchScene";
 import { SummaryScene } from "./scenes/SummaryScene";
 import { SessionStats } from "./session/SessionStats";
 import { config } from "./config";
 
-type View = "welcome" | "calibration" | "modeselect" | "garden" | "summary";
+type View = "welcome" | "calibration" | "modeselect" | "garden" | "stars" | "summary";
 
 export default function App() {
   const [view, setView] = useState<View>("welcome");
@@ -31,14 +32,22 @@ export default function App() {
           />
         );
       case "modeselect":
-        // Only Garden Grow is wired this round; GameModeSelect disables the rest,
-        // so onConfirm always resolves to the garden scene for now.
-        return <GameModeSelect onConfirm={() => setView("garden")} />;
+        // Garden Grow and Star Catcher are wired; GameModeSelect disables the rest.
+        return <GameModeSelect onConfirm={(id) => setView(id === "stars" ? "stars" : "garden")} />;
       case "garden":
         return (
           <GardenScene
             stats={stats}
             engagementThreshold={config.engagementThreshold}
+            onEnd={() => setView("summary")}
+          />
+        );
+      case "stars":
+        return (
+          <StarCatchScene
+            stats={stats}
+            engagementThreshold={config.engagementThreshold}
+            affectedSide={config.patient.affectedSide}
             onEnd={() => setView("summary")}
           />
         );

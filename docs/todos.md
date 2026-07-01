@@ -147,6 +147,18 @@ Phase prompts: [`docs/prompts/`](prompts/).
 >     centered against the viewport. Reuses the `.cal-camera` 3:4 rounded dark frame
 >     and selfie-mirror video. `recording` passed → the blinking red **REC** pill
 >     (`.cal-rec`, same as calibration) shows throughout gameplay. All 43 tests pass.
+>   - **Star Catcher / Reach & Collect (2026-07-01):** new patient-web mini-game
+>     (`reach/ReachModel.ts` + `scenes/StarCatchScene.tsx`, spec §9.2 / wireframe P4).
+>     An embodied avatar arm anchored on the patient's **affected side** reaches
+>     diagonally toward a star goal in the intact upper field; reach is driven by
+>     `IntentScore` (EMA ease — quick to extend, gentle to recede, never punitive).
+>     Holding reach at/above the goal collects the star (glow + `⭐` count, `trials++`),
+>     then an adaptive staircase (`ReachModel`, band 0.55–0.9) nudges the next goal and
+>     a fresh star spawns — endless. A single fused **"Reach power"** meter is the only
+>     number shown (angles/degrees are clinician-only, P4). Wired to the **Star Catcher**
+>     menu slot: `GameModeSelect` enables it and `App.tsx` routes `stars → StarCatchScene`
+>     instead of Garden Grow. TDD: 6 `ReachModel` + 2 scene tests; full suite 52 green,
+>     `tsc -b` clean. Spec: `docs/superpowers/specs/2026-07-01-star-catcher-reach-collect-design.md`.
 > - **P6 Summary** (`SummaryScene.tsx`) — warm recap: minutes played + best streak
 >   tiles, **non-comparative** copy ("You kept the garden growing today"), lighthouse
 >   placeholder. No PHI, no raw % / grade (spec §9.3).

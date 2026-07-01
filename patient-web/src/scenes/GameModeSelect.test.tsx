@@ -15,8 +15,18 @@ describe("GameModeSelect", () => {
   it("disables placeholder modes that are not yet available", () => {
     render(<GameModeSelect onConfirm={() => {}} />);
     expect(screen.getByTestId("mode-garden")).not.toBeDisabled();
+    expect(screen.getByTestId("mode-stars")).not.toBeDisabled();
     expect(screen.getByTestId("mode-river")).toBeDisabled();
-    expect(screen.getByTestId("mode-stars")).toBeDisabled();
+  });
+
+  it("allows selecting Star Catcher and confirms with its id", () => {
+    const onConfirm = vi.fn();
+    render(<GameModeSelect onConfirm={onConfirm} />);
+    const stars = screen.getByTestId("mode-stars");
+    expect(stars).not.toBeDisabled();
+    fireEvent.click(stars);
+    fireEvent.click(screen.getByTestId("mode-ready"));
+    expect(onConfirm).toHaveBeenCalledWith("stars");
   });
 
   it("gates the 'I'm ready' button until a mode is selected", () => {
