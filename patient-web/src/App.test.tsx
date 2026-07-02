@@ -57,4 +57,35 @@ describe("App flow", () => {
     expect(screen.getByText(/great work today/i)).toBeInTheDocument();
     vi.useRealTimers();
   });
+
+  it("pairs first when a session code is in the URL, then shows Welcome with the paired name", async () => {
+    // Capture the pairing socket so we can drive the paired handshake.
+    let sock: any = null;
+    vi.stubGlobal("WebSocket", class {
+      onopen: any = null; onclose: any = null; onmessage: any = null; onerror: any = null;
+      send() {}
+      close() {}
+      constructor() { sock = this; }
+    });
+    window.history.pushState({}, "", "/?c=ABC234");
+    try {
+      render(<App />);
+      expect(screen.getByText(/connecting to your session/i)).toBeInTheDocument();
+
+      act(() => {
+        sock.onopen?.({});
+        sock.onmessage?.({
+          data: JSON.stringify({
+            type: "paired",
+            session: { patientFirstName: "Jordan", affectedSide: "right", mode: "band_power_only" },
+          }),
+        });
+      });
+
+      expect(screen.getByText(/hi jordan/i)).toBeInTheDocument();
+      expect(screen.getByText(/ready to play/i)).toBeInTheDocument();
+    } finally {
+      window.history.pushState({}, "", "/");
+    }
+  });
 });

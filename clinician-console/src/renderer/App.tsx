@@ -7,6 +7,23 @@ import type { SidecarState } from "../main/sidecar";
 import { Roster } from "./Roster";
 import { Setup } from "./Setup";
 import { PatientWorkspace, type WorkspaceTab } from "./PatientWorkspace";
+import { PairingPanel, type PairingApi, type SessionInfo } from "./PairingPanel";
+import type { Patient } from "../data/types";
+
+// The preload bridge (window.neuroreach) exposes the LAN pairing API in the
+// Electron runtime; it is absent under jsdom, so the panel is guarded below.
+function pairingApi(): PairingApi | null {
+  const nr = (window as unknown as { neuroreach?: PairingApi }).neuroreach;
+  return nr && typeof nr.startSession === "function" ? nr : null;
+}
+
+function sessionInfoFor(patient: Patient): SessionInfo {
+  return {
+    patientFirstName: patient.name.split(" ")[0],
+    affectedSide: patient.affectedSide.toLowerCase() as "left" | "right",
+    mode: patient.mode,
+  };
+}
 
 type Props = {
   patientStore: PatientStore;
@@ -26,6 +43,8 @@ type View =
 // holding C3/C4/C5 as tabs.
 export function App({ patientStore, scoreStore, qualityStore, connectionState, sidecarState }: Props) {
   const [view, setView] = useState<View>({ name: "roster" });
+  const api = pairingApi();
+  const activePatient = view.name === "workspace" ? patientStore.get(view.id) : undefined;
 
   return (
     <div className="app-root">
@@ -33,6 +52,9 @@ export function App({ patientStore, scoreStore, qualityStore, connectionState, s
         <span className="app-title">NeuroReach Console</span>
         <span className="app-meta">Dr. Ortiz · Clinic A</span>
         <span className="spacer" style={{ flex: 1 }} />
+        {api && activePatient && (
+          <PairingPanel api={api} session={sessionInfoFor(activePatient)} />
+        )}
         <span className="app-badge">● Offline-OK</span>
       </div>
 

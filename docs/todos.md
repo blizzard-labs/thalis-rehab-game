@@ -209,6 +209,65 @@ Phase prompts: [`docs/prompts/`](prompts/).
 > signal-engine/vision dependency; Phase C is blocked on the vision-pipeline
 > milestone shared by every Blended/Active-mode feature, not just this game.
 
+> **S1 — LAN server + session-code pairing — DONE (2026-07-02):** the transport
+> foundation for specsv2 Phase 2 (vision fusion, V2-2) and Phase 3 (clinical
+> workflow, V2-3). Decomposed the "Phase 2 + Phase 3" ask into four dependency-
+> ordered sub-projects (S1 foundation → S2 vision → S3 workflow; S4 mock-EEG
+> extensions fold into S3) — see `docs/superpowers/specs/2026-07-02-lan-server-
+> pairing-design.md` + `plans/2026-07-02-lan-server-pairing.md`. **Locked
+> decisions:** camera is real/available on the patient device (no mock camera —
+> only the EEG headset needs mocking, and `MockUnicornOutlet`/`run_ws_server.py`
+> already cover it); dev TLS = self-signed trust-on-first-use (§12.3 opt 2, local
+> CA deferred to V2-4); S3 persistence = full SQLite via sidecar FastAPI.
+> - **New module `clinician-console/src/main/lan/`** (Electron-free, headless-
+>   testable): `cert.ts` (self-signed TOFU cert cached in `userData`; pinned
+>   `selfsigned@2.x` for the sync API — 5.x went async), `pairing.ts`
+>   (`SessionPairing`: 6-char confusable-free code `23456789ABCDEFGHJKMNPQRSTVWXYZ`,
+>   single active session, single-claimant bind, TTL), `scoreRelay.ts` (subscribes
+>   to the sidecar WS, forwards **only `intent_score`** to the patient — `eeg_quality`
+>   never leaves the clinician side, §5), `signaling.ts` (WebRTC SDP/ICE relay
+>   **contract + S1 echo stub**; the real aiortc peer is S2), `netUtil.ts` (LAN-IPv4
+>   detection), `lanServer.ts` (`LanServer`: HTTPS static serve of `patient-web/dist`
+>   + `ws` dispatcher on one port, **binds LAN-IP only**, **Origin allowlist** on
+>   upgrade, mints codes, fans score out to the paired socket).
+> - **Electron main wired** (`config.ts` `LAN_PORT=8443` + `lanServerOptions`,
+>   `main.ts` spawns/stops `LanServer` + `start-session`/`end-session` IPC,
+>   `preload.ts` exposes `window.neuroreach.startSession/endSession/onPatient*`).
+> - **Console pairing panel** (`renderer/PairingPanel.tsx`, mounted in `App.tsx`
+>   app-bar for the active-patient workspace): Start Session → QR (`qrcode`) + code
+>   + "✓ Patient connected" indicator; session identity mapped from the selected
+>   patient (§10.3 pairing panel).
+> - **patient-web**: `net/lanClient.ts` (pair from `?c=`, route `paired`/`error`/
+>   `intent_score`, localhost auto-pair fallback in dev), `scenes/PairingScene.tsx`
+>   ("Connecting to your session…" → advances on `paired`), `App.tsx` boots to a
+>   pairing gate when `?c=` is present and **takes patient identity from the paired
+>   ack** (closes the hardcoded-"Margaret" V2-1 gap in the LAN path; config remains
+>   the dev default). `config.readSessionCode()` parses the query. Added
+>   `src/vite-env.d.ts` (fixes a **pre-existing** `tsc -b` failure on the
+>   WelcomeScene `logo.png` import — asset-module types were never declared).
+> - **Tests:** console **88 unit** (Vitest) incl. a headless `LanServer` integration
+>   test (fake sidecar → two mock WSS clients: pairs, single-claimant `session_taken`,
+>   `eeg_quality` never forwarded, bad code, foreign-origin upgrade rejected);
+>   patient-web **58 unit** incl. `lanClient`/`PairingScene`/App pairing-gate. New
+>   **live integration** `integration/lan.live.test.ts` boots the **real mock-EEG
+>   sidecar** → `LanServer` → a Node WSS client pairs and receives **>100 real
+>   `intent_score` frames** (score spread >15 from virtual-MI bursts) with **zero
+>   `eeg_quality` leakage**, plus a second-claimant rejection — verified end-to-end
+>   (4 integration tests green, no orphan sidecar). Integration files now run
+>   serially (`fileParallelism:false`) so two sidecars never race on port 8765.
+> - **Verification gates (all green):** console `build:main` + `build:renderer`
+>   clean; patient-web `tsc -b` + `vite build` clean; 88 + 58 unit tests; 4 live
+>   integration tests. The physical **second-device browser smoke** (scan QR over
+>   the LAN, accept the TOFU cert, see the score animate) is the one step that needs
+>   real hardware — it is documented in the plan's Task 10 for a clinician to run;
+>   the headless `lan.live.test.ts` proves the same score-fan-out + pairing spine.
+> **Gaps / next:** signaling is an **echo stub** → S2 wires the real aiortc peer;
+> patient `getUserMedia` → WebRTC publish → aiortc → MediaPipe → `kinematic_score`
+> fusion + EEG-only fallback (S2); engine **control channel** (pause/rest/end/
+> switch-mode still disabled) + camera-link **health** panel + **SQLite/FastAPI
+> persistence** (S3); local-CA cert provisioning + electron-builder installer
+> (V2-4).
+
 ---
 
 ## 1. Current phase

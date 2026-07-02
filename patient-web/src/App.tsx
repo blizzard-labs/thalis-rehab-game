@@ -5,13 +5,23 @@ import { GameModeSelect } from "./scenes/GameModeSelect";
 import { GardenScene } from "./scenes/GardenScene";
 import { StarCatchScene } from "./scenes/StarCatchScene";
 import { SummaryScene } from "./scenes/SummaryScene";
+import { PairingScene } from "./scenes/PairingScene";
 import { SessionStats } from "./session/SessionStats";
-import { config } from "./config";
+import { config, readSessionCode } from "./config";
+import type { PairedSession } from "./net/lanClient";
 
-type View = "welcome" | "calibration" | "modeselect" | "garden" | "stars" | "summary";
+type View = "pairing" | "welcome" | "calibration" | "modeselect" | "garden" | "stars" | "summary";
 
 export default function App() {
-  const [view, setView] = useState<View>("welcome");
+  // A pairing code in the URL (`?c=`) means this device was launched from the
+  // clinician console over the LAN: pair before Welcome. Without a code we are
+  // in local/dev mode and boot straight to Welcome against the localhost sidecar.
+  const code = useMemo(() => readSessionCode(), []);
+  const wssUrl = useMemo(() => `wss://${window.location.host}`, []);
+  const [view, setView] = useState<View>(code ? "pairing" : "welcome");
+  const [paired, setPaired] = useState<PairedSession | null>(null);
+  const identity = paired ?? config.patient;
+  const firstName = paired ? paired.patientFirstName : config.patient.firstName;
   const stats = useMemo(() => new SessionStats(), []);
 
   // Quit abandons the session and returns to Welcome, resetting accumulated
@@ -21,12 +31,20 @@ export default function App() {
 
   const scene = (() => {
     switch (view) {
+      case "pairing":
+        return (
+          <PairingScene
+            code={code!}
+            wssUrl={wssUrl}
+            onPaired={(s) => { setPaired(s); setView("welcome"); }}
+          />
+        );
       case "welcome":
-        return <WelcomeScene firstName={config.patient.firstName} onBegin={() => setView("calibration")} />;
+        return <WelcomeScene firstName={firstName} onBegin={() => setView("calibration")} />;
       case "calibration":
         return (
           <CalibrationScene
-            affectedSide={config.patient.affectedSide}
+            affectedSide={identity.affectedSide}
             totalTrials={2 /* short demo block this round */}
             onComplete={() => setView("modeselect")}
           />
@@ -47,7 +65,7 @@ export default function App() {
           <StarCatchScene
             stats={stats}
             engagementThreshold={config.engagementThreshold}
-            affectedSide={config.patient.affectedSide}
+            affectedSide={identity.affectedSide}
             onEnd={() => setView("summary")}
           />
         );

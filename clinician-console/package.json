@@ -14,8 +14,9 @@
     "dev": "node scripts/dev.mjs"
   },
   "devDependencies": {
-    "@testing-library/react": "^16.0.0",
     "@testing-library/jest-dom": "^6.4.0",
+    "@testing-library/react": "^16.0.0",
+    "@types/qrcode": "^1.5.6",
     "@types/react": "^18.3.0",
     "@types/react-dom": "^18.3.0",
     "@types/ws": "^8.5.0",
@@ -28,7 +29,9 @@
     "ws": "^8.18.0"
   },
   "dependencies": {
+    "qrcode": "^1.5.4",
     "react": "^18.3.0",
-    "react-dom": "^18.3.0"
+    "react-dom": "^18.3.0",
+    "selfsigned": "^2.4.1"
   }
 }

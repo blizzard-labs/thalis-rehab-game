@@ -7,6 +7,7 @@ export type WsLike = {
   onclose: ((ev: any) => void) | null;
   onmessage: ((ev: { data: any }) => void) | null;
   onerror: ((ev: any) => void) | null;
+  send?(data: string): void;
   close(): void;
 };
 
