@@ -192,6 +192,23 @@ Phase prompts: [`docs/prompts/`](prompts/).
 > session-paired before real use; `game-client/` Unity codebase not yet deleted
 > (superseded but still present).
 
+> **Reach & Collect design doc (`docs/reachcollect.md`, added 2026-07-02):** full
+> reference doc for the Star Catcher mini-game, mirroring `docs/gardengrow.md`'s
+> format (model logic table, current-build screen layout, spec-vs-built table, gaps).
+> Adds a **ROM-targets design section** answering how to move beyond single-axis
+> IntentScore-only reach: splits "ROM target" into a *magnitude* dimension (already
+> built) and a *direction/joint* dimension (not built — one fixed target, one fixed
+> direction, no elbow joint in the SVG rig). Proposes two phases — **Phase B,
+> cued-direction targets** (buildable now, EEG-only: a clinician-configurable target
+> catalogue of shoulder flexion/abduction/cross-body directions cycles per trial,
+> magnitude still driven by `intent_score`, direction is a presented cue not a
+> verified one) and **Phase C, verified ROM targets** (needs the still-unbuilt vision
+> pipeline: real joint angles from MediaPipe Pose feed a `kinematic_score` blended
+> into `IntentScore` per spec §8, a two-bone shoulder+elbow arm rig, and trunk-lean
+> compensation penalties per §7.2). Recommends shipping Phase B next since it has no
+> signal-engine/vision dependency; Phase C is blocked on the vision-pipeline
+> milestone shared by every Blended/Active-mode feature, not just this game.
+
 ---
 
 ## 1. Current phase
