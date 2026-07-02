@@ -21,7 +21,6 @@ const DEV_SESSION: PairedSession = { patientFirstName: "Margaret", affectedSide:
 
 export function createLanClient(opts: LanClientOptions) {
   let socket: WsLike | null = null;
-  let stopped = false;
 
   function open() {
     const url = opts.code ? opts.wssUrl : opts.localhostUrl;
@@ -50,11 +49,9 @@ export function createLanClient(opts: LanClientOptions) {
 
   return {
     connect() {
-      stopped = false;
       open();
     },
     stop() {
-      stopped = true;
       socket?.close();
     },
   };
