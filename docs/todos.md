@@ -7,6 +7,8 @@ This is the **whole-project** status board across all three subsystems. Each sub
 what is **implemented ✅**, the **tests that exist 🧪**, **missing capabilities ⚠️**, and **tests still
 lined up 🔜**. Detailed change history lives in git + claude-mem, not here.
 
+> **Editing this file? Read [§6 Maintaining this document](#6-maintaining-this-document--agent-update-protocol) first.** It is a status board, **not** a changelog — keep it current, keep it terse, don't append a running log.
+
 ## Status at a glance
 
 | Subsystem | State | Tests |
@@ -241,3 +243,64 @@ preview, not yet published to the clinic.
 3. **Persistence** — sidecar FastAPI + SQLite/EDF; real console records + export.
 4. **On-head H1** — un-skip signal-quality test, confirm production µV/ERD thresholds.
 5. **V2-4 packaging** — electron-builder installer, cert provisioning, offline smoke test, re-measure p95.
+
+---
+
+## 6. Maintaining this document — agent update protocol
+
+**Update this file at the end of every task that changes code, tests, capabilities, or plans.** This is a
+**living status board**, not a changelog. The goal: any agent or scientist can read it cold and know the
+true current state. Follow the rules below exactly so it stays organized across the whole project.
+
+### 6.1 Golden rules
+1. **Reflect the present, don't log the past.** State *what is true now*. Do **not** append dated "on
+   2026-07-03 I added X" entries — that history belongs in git commits + claude-mem. If you're tempted to
+   add a paragraph narrating what you did, instead **edit the relevant bullet** to its new truth.
+2. **Every claim must be verifiable.** Test counts must come from an actual run (§6.4), not memory. A
+   capability is only ✅ if it works, not if it's "mostly done."
+3. **Terse and factual.** Match the existing telegraphic style — fragments, `code` identifiers, module
+   paths. No filler, no hedging, no marketing.
+4. **One fact, one place.** If a change touches multiple sections, update each; don't duplicate prose.
+   Cross-reference with `specs.md` §-numbers and the design docs instead of restating.
+
+### 6.2 Which section to touch (map change → edit)
+| You did… | Update |
+|---|---|
+| Shipped a working feature/module | Move it from ⚠️ (or 🔜) into the subsystem's **✅ Implemented** list; delete the now-stale gap bullet |
+| Added/changed tests | Update that subsystem's **🧪 Tests available** table (file, count, what) **and** the count in **Status at a glance** |
+| Found/created a gap or known limitation | Add a bullet under **⚠️ Missing capabilities** (be specific about *why* it's blocked and *what* it blocks) |
+| Planned a test not yet written | Add under **🔜 Tests still lined up** with its blocker |
+| Completed a milestone (V2-x / S-x / H-x) | Flip its status in the **Milestone map** (intro) and the **§15 table in `specs.md`**; if it unblocks others, update **§5 Next up** |
+| Changed the `intent_score` / `eeg_quality` wire contract | Update **§4 Cross-cutting** and both parser mentions (patient-web + console) |
+| Re-prioritized remaining work | Re-order **§5 Next up** |
+
+### 6.3 Moving items between states (the lifecycle)
+`🔜 lined-up test` → (written & passing) → counted in `🧪 Tests available`.
+`⚠️ missing capability` → (built & tested) → bullet in `✅ Implemented` **and** its ⚠️ bullet **deleted**.
+Never leave the same item in two states. If a capability is partial, keep it in ⚠️ with an explicit
+"partial: X works, Y doesn't" note rather than prematurely marking it ✅.
+
+### 6.4 Keep the numbers honest
+Before editing any test count, actually run the suite and paste the real totals:
+```bash
+conda run -n eeg python -m pytest signal-engine/tests/   # → "N passed, M skipped"
+cd patient-web       && npm run test                     # → "Tests  N passed"
+cd clinician-console && npm run test                     # → "Tests  N passed"
+```
+Update **all three** places a count appears: the **Status-at-a-glance** row, the subsystem's **🧪** table
+header, and the run-commands block near the top. If a suite is red, do not mark the work ✅ — record the
+failure under ⚠️.
+
+### 6.5 Finishing checklist (run before you consider a task done)
+- [ ] Moved shipped work ✅; deleted the gap/lined-up bullets it resolved.
+- [ ] Added new gaps ⚠️ and planned tests 🔜.
+- [ ] Ran the affected suite(s); updated every test count (§6.4).
+- [ ] Updated the **Milestone map** + **§5 Next up** if a milestone moved.
+- [ ] Bumped the **_Last updated:_** date on line 3.
+- [ ] Kept it a board, not a log — no dated narration added.
+- [ ] Skimmed for contradictions (a ✅ item still listed as a gap, a stale count, a dead `specs.md` §-ref).
+
+### 6.6 Scope discipline
+Keep this file to **status + pointers**. Deep design rationale goes in `specs.md` or the per-game design
+docs (`gardengrow.md`, `reachcollect.md`) — link to them, don't inline them here. If a subsystem grows a
+fourth concern, add a subsection under it, not a new top-level section, so the three-subsystem shape holds.
