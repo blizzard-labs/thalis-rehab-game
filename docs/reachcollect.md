@@ -2,7 +2,7 @@
 
 ## Core mechanic
 
-Spec (`specsv1.md` §9.2): *"Avatar arm reaches toward fruit/stars positioned at
+Spec (`specs.md` §9.2): *"Avatar arm reaches toward fruit/stars positioned at
 clinically-relevant ROM targets; reach extends proportionally to combined
 EEG+kinematic score. Best for Blended/Active modes, ROM-specific therapy
 goals."*
@@ -105,7 +105,7 @@ are conflated in the current build that need to be pulled apart:
 Genuine ROM targeting needs both dimensions live, and — per spec §8 — the
 *direction/joint* dimension is inherently a **kinematic** (camera-verified)
 concept, since EEG alone cannot tell you which joint the patient is moving.
-That means full ROM targeting is gated on the vision pipeline (`specsv1.md`
+That means full ROM targeting is gated on the vision pipeline (`specs.md`
 §7, Phase 2 of the roadmap, §15) which does not exist yet in this repo
 (`signal-engine/vision/` is unbuilt; no `Pose` LSL stream, no
 `kinematic_score`, no `Trial.kinematic_score` field wired to WS). Recommend
@@ -199,7 +199,7 @@ shorter/faster than gross-motor reach).
 1. Ship Phase B (cued-direction targets) next — no backend/vision
    dependency, directly reuses the existing `ReachModel`/`StarCatchScene`
    shape, and gives clinicians a genuinely varied ROM-cueing protocol today.
-2. Track Phase C as blocked on the vision pipeline milestone (`specsv1.md`
+2. Track Phase C as blocked on the vision pipeline milestone (`specs.md`
    Roadmap Phase 2, §15) — don't attempt to fake kinematic scoring with
    camera-less heuristics; that would misrepresent what the game is
    measuring, which the spec explicitly warns against (§12, no claims

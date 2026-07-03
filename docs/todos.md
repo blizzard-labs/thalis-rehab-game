@@ -1,677 +1,243 @@
-# thalis-rehab-game — Development Status & TODOs
+# NeuroReach — Development Status & TODOs
 
-_Last updated: 2026-06-23. Scope of this doc: the `signal-engine` Python stack
-(acquisition → preprocessing → features → calibration → classifier → scoring) and
-its validation against the real g.tec Unicorn Hybrid Black. Game client, CV, and
-clinician console are tracked at a high level under "Roadmap" only._
+_Last updated: 2026-07-03. Reference spec: [`docs/specs.md`](specs.md). Game design docs:
+[`gardengrow.md`](gardengrow.md), [`reachcollect.md`](reachcollect.md)._
 
-Reference spec: [`docs/specsv1.md`](specsv1.md) (renamed from specs.md).
-Phase prompts: [`docs/prompts/`](prompts/).
+This is the **whole-project** status board across all three subsystems. Each subsystem section lists
+what is **implemented ✅**, the **tests that exist 🧪**, **missing capabilities ⚠️**, and **tests still
+lined up 🔜**. Detailed change history lives in git + claude-mem, not here.
 
-> **v2 architecture pivot (2026-06-24):** see [`docs/specsv2.md`](specsv2.md). The
-> signal-engine core below is **unchanged**, but the delivery layer is being
-> rearchitected: patient client moves **Unity → React web app** (served over the
-> clinic LAN by the console, paired via session code); clinician console becomes an
-> **Electron app** wrapping the Python signal-engine as a **PyInstaller sidecar**
-> (one-click installer, bundles Unicorn software pending §14.2 licensing); camera
-> relocates to the **patient device**, streamed back via **WebRTC → aiortc →
-> MediaPipe** on the clinic PC (vision still clinician-side). The Unity work tracked
-> under "Roadmap" is **superseded** by specsv2 §15 phases V2-0…V2-4. `game-client/`
-> will be deleted; `patient-web/` + the Electron `clinician-console/` replace it.
+## Status at a glance
 
-> **V2-0a — Clinician console prototype (C3 live monitor) — DONE (2026-06-24):**
-> Electron app `clinician-console/` spawns + supervises the Python sidecar
-> (`conda run -n eeg python signal-engine/run_ws_server.py`, mock EEG). React+Vite
-> renderer shows the live IntentScore (wireframe **C3**): status tiles (signal/mode/
-> classifier/fatigue), big score, ERD sub-score, rolling trace, connection + sidecar
-> badges. Pure logic (parser, store, WS client, supervisor) is decoupled and unit-
-> tested (Vitest, 21 tests); a Node integration test boots the **real** sidecar and
-> asserts a well-formed, non-flat score rising during virtual-MI bursts. Verified
-> end-to-end: Electron-spawned sidecar streamed 154 frames @ ~20 Hz, score 1→89,
-> teardown leaves no orphan process. Spec/plan: `docs/superpowers/specs/2026-06-24-
-> clinician-console-prototype-design.md`, `docs/superpowers/plans/2026-06-24-
-> clinician-console-prototype.md`.
-> **Gaps / next (V2-0b+):** LAN HTTPS/WSS server + session-code pairing + QR;
-> control channel (pause/rest/end wired to the engine); PyInstaller-frozen sidecar;
-> console screens C1/C2/C4/C5; WebRTC patient camera → aiortc; electron-builder
-> one-click installer + cert provisioning. The patient `getUserMedia` secure-context
-> requirement (specsv2 §12.3) is still the key open risk before camera work.
-
-> **V2-0b — Full clinician console (screens C1–C5) — DONE (2026-06-24):**
-> Completed the console to all five wireframe screens, decoupled and Vitest-tested.
-> - **C1 Patient roster** (`Roster.tsx`) — searchable worklist, affected side /
->   mode / last-session / trend, opens the patient workspace.
-> - **C2 Setup & signal-quality** (`Setup.tsx`) — electrode-contact map + live
->   C3/Cz/C4 trace driven by a **new real signal**: the sidecar now broadcasts an
->   `eeg_quality` frame (per-channel good/check/poor + MI trace) at 5 Hz, on its own
->   message type so the 20 Hz `intent_score` contract is byte-for-byte unchanged
->   (`signal-engine/scoring/signal_quality.py`, `ScoringService.latest_quality()`,
->   `ws_server._quality_loop`). Camera rest-pose is a placeholder (WebRTC = V2-2).
-> - **C3 Live monitor** — extended with the 8-channel quality strip, patient-view
->   mirror placeholder, ERD/laterality/kinematics sub-tiles.
-> - **C4 History & Trends** (`HistoryTrends.tsx`) — KPI tiles (classifier acc, peak
->   ERD, elbow ROM, game level) + proxy-vs-clinical SVG chart; **Assessments**
->   (`Assessments.tsx`) — clinical-scales table, add-score, CSV export.
-> - **C5 Protocol editor** (`ProtocolEditor.tsx`) — mode/weight, reach axis, trial
->   structure, layout side, enabled mini-games, calibration auto-switch note.
-> - Shell: `App.tsx` view-state router (roster → setup → tabbed workspace), in-memory
->   `PatientStore` seeded to the wireframe roster (no persistence — prototype choice).
-> - **Tests:** 64 console unit tests (Vitest) + 2 live integration tests (real sidecar
->   asserts both `intent_score` and `eeg_quality` frames); signal-engine **59 passed,
->   6 skipped** (on-head). Full typecheck + renderer/main builds clean.
-> **Gaps / next unchanged from V2-0b+ list above**, minus the console screens (done):
-> control channel (Switch mode / Pause / End still disabled — no engine command path),
-> LAN server + pairing + QR, WebRTC camera, PyInstaller freeze, installer/cert. Console
-> data is mock/in-memory — real persistence needs the sidecar FastAPI+SQLite layer
-> (specsv2 §11), not yet built.
-
-> **V2-1 — Patient web prototype (Garden Grow, P1/P2/P3/P6) — DONE & MERGED to `main` (2026-06-27):**
-> `patient-web/` (Vite + React + TypeScript) scaffolded as an independent package,
-> built task-by-task under TDD (subagent-driven). Merged via no-ff commit `80bf3610`;
-> branch `feat/patient-web-prototype` deleted. Implements the four EEG-only patient
-> scenes from specsv2 §9 (the camera-dependent P4/P5 are deferred to V2-2):
-> - **P1 Welcome** (`WelcomeScene.tsx`) — warm greeting "Hi {firstName} — ready to
->   play?" + one large "Let's begin" button; profile from `config.ts` seed.
-> - **P2 Calibration** (`CalibrationScene.tsx`) — client-timed **Graz cue sequencer**
->   (fixation 2 s → cue 1.25 s → imagine 4 s → rest 2–3 s, "trial N of 20",
->   "Imagine opening your {side} hand"); **cosmetic only** — no marker bridge to the
->   browser yet (LSL marker stream is Python-side; no spec mechanism forwards markers
->   to the web client in V2-1).
->   - **Warm-up 3D hand viz (added 2026-06-29, `src/warmup/`):** replaced the empty
->     `.hand-glyph` with two capsule **Shadow-Hand** renders (left + right) below the
->     cue text. Ported from `archive/eeg-motor-imagery-collector` (`ShadowHand3D`,
->     `handPoses`, `interpolation`) to typed TS; added `three`/`@react-three/fiber@8`/
->     `@react-three/drei@9` (React-18-compatible pins). Affected side animates
->     neutral→open on `cue`, then open↔close loop on `imagine` (`useWarmupPose` RAF
->     hook over pure `poseForPhase`/`warmupMotion`); other hand dimmed neutral. Left =
->     `scale-x:-1` mirror + `DoubleSide`; camera locked (no OrbitControls). Pure logic
->     TDD-tested (`interpolation`/`warmupMotion`/`useWarmupPose`); R3F `Canvas` mocked
->     in `test-setup.ts` for jsdom. Spec: `docs/superpowers/specs/2026-06-29-warmup-hand-visualization-design.md`.
->     Bundle grew to ~979 kB JS (271 kB gz) from the 3D deps. **Not yet visually
->     verified in a browser** (WebGL mirror shading + dual-canvas).
->   - **Clinician pre-cal gate + recording cues (added 2026-06-30):** thin green
->     "I'm ready" bar centered on top of `CalibrationScene` gates the cue sequencer
->     (and recording) until the clinician confirms electrode contact / camera
->     position / patient profile; the button disappears on click. A blinking red
->     **REC** dot overlays the `CameraFeed` frame while ready (passed `recording`
->     prop; honors `prefers-reduced-motion`). Large bold **L**/**R** labels overlay
->     the back of each warm-up palm (`.warmup-hand__label`). Tests updated to click
->     ready before advancing phases (14 passing).
->   - **Post-calibration game-mode select popup (added 2026-06-30):** new
->     `scenes/GameModeSelect.tsx` + `modeselect` view in `App.tsx` sits between
->     calibration `onComplete` and the garden scene. Shows "Great work! …choose a
->     game mode" with three circular icons (**Garden Grow** live; **River Rowing**,
->     **Star Catcher** disabled placeholders from the §6 catalogue). Selecting a
->     mode outlines its icon + adds a check badge; a full-width green "I'm ready"
->     gate (reuses `.cal-ready-btn`) is disabled until a mode is chosen, then fires
->     `onConfirm(id)` → garden. TDD'd (`GameModeSelect.test.tsx`, 4 tests); App
->     flow test updated to walk both gates. 42 patient-web tests passing.
->   - **Purple brand palette + persistent Quit (added 2026-06-30):** `--purple`
->     (#6a4c93 deep grape) + warm off-white are now the dominant colors; repurposed
->     `--warm-accent` → purple so the "Let's begin" button, intent bar, summary
->     numbers and mascot all shift to purple, and the "Great work" mode-select title
->     is purple. Green `--good` kept only for semantic go-cues (ready gate / REC /
->     MI box). Quit moved to a single App-level fixed top-right `.app-quit-btn`
->     shown on every non-welcome scene (resets stats → Welcome); removed the
->     per-scene Quit from `CalibrationScene` (Pause stays). Garden "End session"
->     (normal finish → summary) is unchanged.
-> - **P3 Garden Grow** (`GardenScene.tsx`) — live SVG/CSS flower (height = growth,
->   bloom petals) + vertical intent bar + plain-language colorblind-safe status pill
->   ("Good focus" / "Keep imagining…") + connection badge, driven each `rAF` from the
->   mock-EEG sidecar via `ScoreStore` → `PlantGrowthModel`. Honors
->   `prefers-reduced-motion`; no strobe. PixiJS deferred (§6 render-choice).
->   - **Garden visual overhaul (2026-06-30):** replaced the abstract thin-stem +
->     floating-circle layout (sparse whitespace, status pill overlapping the conn
->     badge, End-session button overlapping the flower head) with an **illustrated
->     garden scene** for stroke-patient legibility. The environment is **full-bleed
->     CSS** covering the whole viewport (below the App-level Quit bar): sky gradient
->     background, soft `.garden-sun` glow top-right, full-width `.garden-ground` soil
->     mound at the bottom. A **plant-only SVG** (`viewBox 120 20 240 520`, `xMidYMax
->     meet`) floats centered and rooted into the soil — rounded green stem (height =
->     growth), two leaves that sprout at growth fractions, and an 8-petal purple flower
->     head that scales from bud → open and glows/sways on bloom (sway off under
->     reduced-motion). A big centered **status banner** sits on top, a tall labelled
->     **Focus meter** (relabeled intent bar, live 0–100 value) is pinned right, and the
->     **End session** button + conn badge float over the soil at the bottom.
->   - **Lockstep plant parts (2026-06-30):** removed the `transform` CSS transition on
->     `.leaf` / `.flower-headg`. Stem geometry updates every `rAF` directly, so a
->     transform transition made the leaves + flower head visibly *lag* the stem on fast
->     score swings. All three are now derived from the same per-frame `growth` value
->     with no easing → they move together. Only the bloom glow eases; sway is ambient.
->     Test contracts preserved (`flower`/`data-growth`, `status-pill`/`data-engaged`,
->     End-session button); all 43 patient-web tests pass.
->   - **Garden camera feed (2026-07-01):** added the same `CameraFeed` sidecar used
->     in the calibration scene to the garden gamemode. Wrapped in `.garden-camera`
->     (`position: fixed`, left `clamp(20px,5vw,64px)`, `top:50%`/`translateY(-50%)`)
->     so it floats over the full-bleed scene, left of the centered plant, vertically
->     centered against the viewport. Reuses the `.cal-camera` 3:4 rounded dark frame
->     and selfie-mirror video. `recording` passed → the blinking red **REC** pill
->     (`.cal-rec`, same as calibration) shows throughout gameplay. All 43 tests pass.
->   - **Star Catcher / Reach & Collect (2026-07-01):** new patient-web mini-game
->     (`reach/ReachModel.ts` + `scenes/StarCatchScene.tsx`, spec §9.2 / wireframe P4).
->     An embodied avatar arm anchored on the patient's **affected side** reaches
->     diagonally toward a star goal in the intact upper field; reach is driven by
->     `IntentScore` (EMA ease — quick to extend, gentle to recede, never punitive).
->     Holding reach at/above the goal collects the star (glow + `⭐` count, `trials++`),
->     then an adaptive staircase (`ReachModel`, band 0.55–0.9) nudges the next goal and
->     a fresh star spawns — endless. A single fused **"Reach power"** meter is the only
->     number shown (angles/degrees are clinician-only, P4). Wired to the **Star Catcher**
->     menu slot: `GameModeSelect` enables it and `App.tsx` routes `stars → StarCatchScene`
->     instead of Garden Grow. TDD: 6 `ReachModel` + 2 scene tests; full suite 52 green,
->     `tsc -b` clean. Spec: `docs/superpowers/specs/2026-07-01-star-catcher-reach-collect-design.md`.
-> - **P6 Summary** (`SummaryScene.tsx`) — warm recap: minutes played + best streak
->   tiles, **non-comparative** copy ("You kept the garden growing today"), lighthouse
->   placeholder. No PHI, no raw % / grade (spec §9.3).
-> - **Logic layer (fully unit-tested, Vitest):**
->   `intentScoreMessage` parser (**byte-identical to the console parser** — shared
->   `ScoreFrame` contract), `scoreStore` (circular buffer; latest/recentAverage/streak;
->   wired into Garden as the frame source), `scoreClient` (WS adapter w/ reconnect +
->   exponential backoff, injectable socket/scheduler), `PlantGrowthModel` (verbatim C#
->   port: 0.8/s grow, 0.3/s wilt, 3 s dwell bloom, 0.75/0.60 hysteresis), `SessionStats`
->   (engaged-time accumulator + longest-streak tracking, warm copy helpers).
-> - **App router** (`App.tsx`) — `useState` scene machine sharing one `SessionStats`
->   (welcome → calibration → garden → summary).
-> - **Tests:** 26 unit/component tests (Vitest + jsdom, 11 files) + 2 live integration
->   tests (real mock-EEG sidecar, ~27 s boot):
->   - `mock MI grows the garden over ~15 s of live frames` — observed 292 frames,
->     score spread ~88, plant `maxGrowth` 0.88 (closed-loop proof).
->   - `patient and console parsers agree frame-for-frame` — identical arrays over the
->     same live WS stream.
-> - **Verification gates (all green):** typecheck clean; Vite build succeeds
->   (~150 kB JS / 1.7 kB CSS); **26 unit tests passed**; **2 integration tests passed**;
->   port 8765 free after teardown. Whole-branch review (opus): READY TO MERGE, no
->   blockers. Review loop caught 3 arithmetic bugs in the plan's own tests (impl stayed
->   verbatim) + 1 latent socket-restart (fixed via `createSocket` ref).
-> **Gaps / still open:**
-> P2 is cosmetic (client-timed, NOT marker-driven — no marker bridge to browser exists
-> yet); PixiJS deferred (React+SVG/CSS used throughout); LAN HTTPS/WSS server +
-> session-code pairing + QR (specsv2 §5/§12); WebRTC patient camera → aiortc (V2-2);
-> P4 Reach & Collect + P5 compensation overlay not built (need kinematics); persistence
-> (FastAPI+SQLite, §11) not built; `SessionStats.incrementTrials` unwired (cosmetic P2
-> counts no trials); `config.ts` patient identity hardcoded ("Margaret") — must be
-> session-paired before real use; `game-client/` Unity codebase not yet deleted
-> (superseded but still present).
-
-> **Reach & Collect design doc (`docs/reachcollect.md`, added 2026-07-02):** full
-> reference doc for the Star Catcher mini-game, mirroring `docs/gardengrow.md`'s
-> format (model logic table, current-build screen layout, spec-vs-built table, gaps).
-> Adds a **ROM-targets design section** answering how to move beyond single-axis
-> IntentScore-only reach: splits "ROM target" into a *magnitude* dimension (already
-> built) and a *direction/joint* dimension (not built — one fixed target, one fixed
-> direction, no elbow joint in the SVG rig). Proposes two phases — **Phase B,
-> cued-direction targets** (buildable now, EEG-only: a clinician-configurable target
-> catalogue of shoulder flexion/abduction/cross-body directions cycles per trial,
-> magnitude still driven by `intent_score`, direction is a presented cue not a
-> verified one) and **Phase C, verified ROM targets** (needs the still-unbuilt vision
-> pipeline: real joint angles from MediaPipe Pose feed a `kinematic_score` blended
-> into `IntentScore` per spec §8, a two-bone shoulder+elbow arm rig, and trunk-lean
-> compensation penalties per §7.2). Recommends shipping Phase B next since it has no
-> signal-engine/vision dependency; Phase C is blocked on the vision-pipeline
-> milestone shared by every Blended/Active-mode feature, not just this game.
-
-> **S1 — LAN server + session-code pairing — DONE (2026-07-02):** the transport
-> foundation for specsv2 Phase 2 (vision fusion, V2-2) and Phase 3 (clinical
-> workflow, V2-3). Decomposed the "Phase 2 + Phase 3" ask into four dependency-
-> ordered sub-projects (S1 foundation → S2 vision → S3 workflow; S4 mock-EEG
-> extensions fold into S3) — see `docs/superpowers/specs/2026-07-02-lan-server-
-> pairing-design.md` + `plans/2026-07-02-lan-server-pairing.md`. **Locked
-> decisions:** camera is real/available on the patient device (no mock camera —
-> only the EEG headset needs mocking, and `MockUnicornOutlet`/`run_ws_server.py`
-> already cover it); dev TLS = self-signed trust-on-first-use (§12.3 opt 2, local
-> CA deferred to V2-4); S3 persistence = full SQLite via sidecar FastAPI.
-> - **New module `clinician-console/src/main/lan/`** (Electron-free, headless-
->   testable): `cert.ts` (self-signed TOFU cert cached in `userData`; pinned
->   `selfsigned@2.x` for the sync API — 5.x went async), `pairing.ts`
->   (`SessionPairing`: 6-char confusable-free code `23456789ABCDEFGHJKMNPQRSTVWXYZ`,
->   single active session, single-claimant bind, TTL), `scoreRelay.ts` (subscribes
->   to the sidecar WS, forwards **only `intent_score`** to the patient — `eeg_quality`
->   never leaves the clinician side, §5), `signaling.ts` (WebRTC SDP/ICE relay
->   **contract + S1 echo stub**; the real aiortc peer is S2), `netUtil.ts` (LAN-IPv4
->   detection), `lanServer.ts` (`LanServer`: HTTPS static serve of `patient-web/dist`
->   + `ws` dispatcher on one port, **binds LAN-IP only**, **Origin allowlist** on
->   upgrade, mints codes, fans score out to the paired socket).
-> - **Electron main wired** (`config.ts` `LAN_PORT=8443` + `lanServerOptions`,
->   `main.ts` spawns/stops `LanServer` + `start-session`/`end-session` IPC,
->   `preload.ts` exposes `window.neuroreach.startSession/endSession/onPatient*`).
-> - **Console pairing panel** (`renderer/PairingPanel.tsx`, mounted in `App.tsx`
->   app-bar for the active-patient workspace): Start Session → QR (`qrcode`) + code
->   + "✓ Patient connected" indicator; session identity mapped from the selected
->   patient (§10.3 pairing panel).
-> - **patient-web**: `net/lanClient.ts` (pair from `?c=`, route `paired`/`error`/
->   `intent_score`, localhost auto-pair fallback in dev), `scenes/PairingScene.tsx`
->   ("Connecting to your session…" → advances on `paired`), `App.tsx` boots to a
->   pairing gate when `?c=` is present and **takes patient identity from the paired
->   ack** (closes the hardcoded-"Margaret" V2-1 gap in the LAN path; config remains
->   the dev default). `config.readSessionCode()` parses the query. Added
->   `src/vite-env.d.ts` (fixes a **pre-existing** `tsc -b` failure on the
->   WelcomeScene `logo.png` import — asset-module types were never declared).
-> - **Tests:** console **88 unit** (Vitest) incl. a headless `LanServer` integration
->   test (fake sidecar → two mock WSS clients: pairs, single-claimant `session_taken`,
->   `eeg_quality` never forwarded, bad code, foreign-origin upgrade rejected);
->   patient-web **58 unit** incl. `lanClient`/`PairingScene`/App pairing-gate. New
->   **live integration** `integration/lan.live.test.ts` boots the **real mock-EEG
->   sidecar** → `LanServer` → a Node WSS client pairs and receives **>100 real
->   `intent_score` frames** (score spread >15 from virtual-MI bursts) with **zero
->   `eeg_quality` leakage**, plus a second-claimant rejection — verified end-to-end
->   (4 integration tests green, no orphan sidecar). Integration files now run
->   serially (`fileParallelism:false`) so two sidecars never race on port 8765.
-> - **Verification gates (all green):** console `build:main` + `build:renderer`
->   clean; patient-web `tsc -b` + `vite build` clean; 88 + 58 unit tests; 4 live
->   integration tests. The physical **second-device browser smoke** (scan QR over
->   the LAN, accept the TOFU cert, see the score animate) is the one step that needs
->   real hardware — it is documented in the plan's Task 10 for a clinician to run;
->   the headless `lan.live.test.ts` proves the same score-fan-out + pairing spine.
-> **Gaps / next:** signaling is an **echo stub** → S2 wires the real aiortc peer;
-> patient `getUserMedia` → WebRTC publish → aiortc → MediaPipe → `kinematic_score`
-> fusion + EEG-only fallback (S2); engine **control channel** (pause/rest/end/
-> switch-mode still disabled) + camera-link **health** panel + **SQLite/FastAPI
-> persistence** (S3); local-CA cert provisioning + electron-builder installer
-> (V2-4).
-
----
-
-## 1. Current phase
-
-**Signal acquisition + preprocessing + ERD feature extraction are implemented
-and validated against real hardware.** The end-to-end real-time path
-
-```
-Unicorn HW → Unicorn LSL bridge → pylsl
-           → CausalFilterChain (notch+bandpass) → CommonAverageReference
-           → ERDCalculator (mu/beta band power → ERD% → laterality index)
-```
-
-runs live and meets the MVP latency target. The **Graz-style cued MI calibration
-block** (cue paradigm + marker stream + labeled epoch collection), the
-**CSP+LDA online classifier** (offline fit on calibration epochs + live decode +
-joblib persistence), and now the **real-time scoring loop** (ring buffer +
-IntentScore fusion engine + threaded `ScoringService`, MODE A blend, EMA
-smoothing), and now the **WebSocket transport** (`NeuroReachWSServer` bridging
-the scoring output queue to game/clinician clients at 20 Hz) are built and
-tested against synthetic/mock data.
-The **Unity game client skeleton** (`game-client/`) now consumes the WebSocket
-score stream: pure C# scoring/garden logic (NUnit-tested in EditMode) plus thin
-MonoBehaviour wrappers (`NeuroReachClient`, `GardenGrowController`,
-`SessionSummaryController`).
-**Next major piece: wire the Unity scenes + run the full live pipeline**
-(Unicorn → signal-engine → WebSocket → Unity), plus the 60 s baseline-rest
-block and per-patient versioned filter persistence (spec §6.1/§6.6).
-
-Test suite: **52 passing, 6 skipped** (offline + mock + live; the skips are
-on-head/live validations, which require the cap worn / a live stream). Run
-everything with:
-
-```bash
-conda run -n eeg python -m pytest signal-engine/tests/ -v
-```
-
----
-
-## 2. Completed & tested
-
-### Acquisition — `signal-engine/acquisition/`
-- `lsl_inlet.EEGInlet` — resolves an LSL stream, slices EEG/IMU sub-streams.
-  Now supports BOTH label-based (mock / labelled streams) and **positional
-  fallback** (real Unicorn bridge — see §4).
-- `mock_eeg_outlet.MockUnicornOutlet` — 17-ch synthetic Unicorn stream with
-  mu/beta sinusoids + scheduled ERD injection, used as the test fixture.
-- Tests (`test_lsl_inlet.py`): channel identification, permuted-order slicing,
-  chunk shape/dtype/no-NaN, IMU shape, time correction, graceful behaviour
-  after outlet stops, `StreamNotFoundError` on timeout.
-
-### Preprocessing — `signal-engine/preprocessing/`
-- `filters.py` — dual path: offline zero-phase (`*_offline`) + causal
-  `CausalFilterChain` (persistent SOS state for real-time).
-- `spatial.py` — `common_average_reference`.
-- `artifact.py` — `AmplitudeGate`, `MovementGate`.
-- Tests (`test_preprocessing.py`): notch rejects 60 Hz / keeps 10 Hz, bandpass
-  removes drift+70 Hz, chunked-causal == single-call equivalence, CAR removes
-  common offset, amplitude/movement gates.
-
-### Features — `signal-engine/features/`
-- `band_power.py` — Welch PSD band power.
-- `erd.py` — `ERDCalculator` (per-channel/per-band ERD% vs calibrated
-  baseline) + `laterality_index`.
-- Tests (`test_erd.py`): ERD detected on injected channel only, laterality
-  sign for left/right injection, pre-calibration guard, zero-denominator LI,
-  band-power shape contract. (End-to-end against the mock outlet.)
-
-### Calibration — `signal-engine/calibration/`
-- `orchestrator.py` — `CalibrationOrchestrator` runs the Graz cue-paced block
-  (fixation → cue → MI window → randomized ITI) with `perf_counter` absolute
-  per-segment deadlines (no accumulating sleep overshoot). Builds a balanced,
-  ≤3-consecutive trial order (rejection sampling, 1000-attempt fallback),
-  collects one fixed-length epoch per MI window, supports clean `abort_event`
-  early-exit (partial MI windows discarded), and returns a `CalibrationDataset`
-  (`epochs [n_trials, n_ch, n_samp]`, `labels`, `marker_timestamps`,
-  `session_info`). Raises `InsufficientDataError` only on an empty result;
-  below-`min_trials_per_class` is a soft warning so the §6.5 cross-val quality
-  gate decides usability.
-- `marker_outlet.py` — `create_marker_outlet` (LSL "NeuroReach-Markers", type
-  "Markers", 1-ch, irregular, string) + `send_marker`/`format_marker`/
-  `parse_marker` using the canonical `"label|{json}"` format shared with epoch
-  extraction and the game client.
-- `epoch_extractor.py` — `extract_epochs_from_dataset` (re-slice MI buffer to a
-  sub-window without re-running calibration; identity when `post_onset_s=None`)
-  + `label_encode` (sklearn `LabelEncoder`; returns `(y_int, encoder)` to
-  serialize alongside the classifier).
-- Tests (`test_calibration.py`, end-to-end against the mock outlet): dataset
-  shape `[6,8,N]` + label balance + no-long-runs, ±10% wall-clock timing, clean
-  abort → exactly 2 trials, `InsufficientDataError` on pre-trial abort, and the
-  `label_encode` int/length/`classes_` contract.
-
-### Classifiers — `signal-engine/classifiers/`
-- `csp_lda.py` — `CSPLDAClassifier`: offline notch(60 Hz)+bandpass(1–40 Hz)
-  `filtfilt` of each epoch (reuses `preprocessing.filters`, never the causal
-  path), `label_encode`, `mne.decoding.CSP(n_components≤4, log=True)` →
-  shrinkage-LDA (`solver='lsqr'`, Ledoit-Wolf `shrinkage='auto'`) chained in a
-  sklearn `Pipeline`. `fit` runs `StratifiedKFold(5)` `cross_val_score` and
-  returns a `FitResult` (`mean_cv_accuracy`, `per_fold_accuracies`,
-  `is_reliable = acc ≥ 0.60` §6.5 gate — warns, not errors, on fail; `n_trials`,
-  `classes`, `timestamp`). Raises `ValueError` on <2 classes. `save`/`load`
-  joblib-serialize the fitted pipeline **and** the `LabelEncoder` together (the
-  encoder decodes predictions to class names); `save` on an unfitted instance
-  raises `ModelNotFittedError`.
-- `online_classifier.py` — `OnlineClassifier` wraps a fitted `CSPLDAClassifier`:
-  `predict_proba(epoch, channel_labels)` filters the full 4 s MI window and
-  returns `{class_name: prob}` (warns once/min when the model is unreliable);
-  `mi_score(...)` returns the target-class probability as 0–100 (EEG_Score for
-  the IntentScore fusion). Channel-count mismatch raises a clear `ValueError`.
-- Tests (`test_classifier.py`, synthetic lateralized 10 Hz MI vs rest, no
-  headset): strong-pattern fit CV > 0.65, noise quality-gate `is_reliable=False`
-  & acc≈0.5, save/load round-trip identical proba, `ModelNotFittedError` on
-  unfit save, single-class `ValueError`, `mi_score ∈ [0,100]`, channel-mismatch
-  `ValueError`. **8 passing.**
-
-### Scoring — `signal-engine/scoring/`
-- `ring_buffer.py` — `RingBuffer`: fixed-capacity circular EEG buffer.
-  `get_window(n)` returns exactly `[n_channels, n]`, **front zero-padded** so the
-  most recent samples are right-aligned; `n_samples_available()` reports real
-  (non-padded) fill.
-- `intent_score.py` — `IntentScoreEngine.compute(ring_buffer, artifact_clean)`
-  → `IntentScoreResult`. ERD score = C3+C4 mu-ERD averaged, clipped `[0,100]`
-  (ERS→0); classifier score via `OnlineClassifier.mi_score` only when reliable
-  **and** a full `mi_window` of real samples exists (else ERD-only). MODE A
-  blend `0.4·ERD + 0.6·classifier` (spec §8.2), per-session adaptive min-max
-  normalization (priors held for first 10 real points), EMA smoothing
-  (`α=0.15` ≈ τ300 ms @ 20 Hz, spec §8.5). Artifact windows freeze the score
-  (return previous, sub-scores `None`, no EMA/normalization update). ERD is not
-  computed on a not-yet-full buffer (zero-pad would read as bogus ~100% ERD).
-- `scoring_service.py` — `ScoringService` background thread: single combined
-  `EEGInlet.get_chunk` pull → causal filter → CAR → ring buffer; amplitude gate
-  runs on a **separate raw (pre-filter, pre-CAR) buffer** — CAR cancels a
-  common-mode spike and the bandpass attenuates it, so a post-pipeline gate is
-  blind to global artifacts; movement gate on the time-aligned IMU; scoring
-  throttled to `update_rate_hz`; results pushed non-blocking to `output_queue`
-  (drops oldest when full, never blocks the loop).
-- Tests (`test_scoring_service.py`, end-to-end against the mock outlet, band-
-  power-only mode): smoke (≥40 results in 3 s), artifact spike suppression
-  (`inject_spike`), EMA smoothing visible (rise anchored, 100 ms < 80%·500 ms),
-  `stop()` joins < 2 s, full-queue drop-without-block + recent item. **5 passing.**
-
-### Server — `signal-engine/server/`
-- `ws_server.py` — `NeuroReachWSServer` bridges the (synchronous, threaded)
-  `ScoringService.output_queue` to asyncio WebSocket clients. The bridge stays
-  a thread-safe `queue.Queue` (**not** an `asyncio.Queue`, since the producer
-  isn't async): a drain task reads it via `loop.run_in_executor` (blocking
-  `Queue.get` on a worker thread, never the event loop) into a held latest
-  result; a separate task broadcasts that to all clients at `broadcast_hz`
-  (default 20 Hz), decoupled from producer rate. Outbound `intent_score`
-  messages carry `mode` (`band_power_only` vs `csp_lda_blend`) and forward the
-  held clean `intent_score` on artifact frames (Unity shows an indicator).
-  Inbound dispatcher: `ping`→`pong`, `get_status`, `set_mode` (flips the
-  engine's `classifier_reliable` at runtime); unknown commands get a per-client
-  `error` (never broadcast). Graceful client-drop handling (catch
-  `ConnectionClosed`, remove, continue); queue drained regardless of client
-  count. `start()` blocks (event loop in caller thread); `start_background()`
-  runs the loop in a daemon thread for tests; `stop()` shuts down cleanly.
-- Tests (`test_ws_server.py`, mock-driven, module-scoped server fixture via
-  `start_background`): connection accepted, broadcast rate (50–70 in 3 s),
-  message schema (+recent timestamp, `intent_score ∈ [0,100]`), multi-client
-  parity (±3 within one shared window), abrupt-disconnect resilience +
-  reconnect, ping/pong < 200 ms, unknown command, zero-client clean run.
-  **8 passing.**
-
-### Game client — `game-client/` (Unity 2022 LTS, .NET Standard 2.1)
-- Pure C# (NUnit EditMode-tested, no Unity runtime needed):
-  - `Scripts/Scoring/IntentScoreMessage` — Newtonsoft `[JsonProperty]` mapping of
-    the server's snake_case frame; `FromJson` returns null on malformed/empty,
-    `-1` sentinel when `classifier_score` is null/absent.
-  - `Scripts/Scoring/IntentScoreBuffer` — fixed circular buffer (default 600 =
-    30 s @ 20 Hz), `Latest`/`RecentAverage(n)`/`StreakAboveThreshold`; static
-    `Shared` bridges producer↔consumer.
-  - `Scripts/Garden/PlantGrowthModel` — asymmetric grow 0.8/s, wilt 0.3/s; bloom
-    on 3 s dwell above 0.75 with 0.60 off-threshold hysteresis (spec §9.1).
-- Thin MonoBehaviours (not unit-tested): `Networking/NeuroReachClient`
-  (NativeWebSocket, reconnect 5 s ×10, static `ConnectionStatus`),
-  `Garden/GardenGrowController`, `UI/SessionSummaryController` (positive,
-  non-comparative summary per spec §9.3).
-- Assemblies: `NeuroReach.Core` (pure + UI/TMP), `NeuroReach.Networking`
-  (isolates the git NativeWebSocket dep), `NeuroReach.EditModeTests`.
-- Packages in `Packages/manifest.json`: `com.endel.nativewebsocket` (git#upm),
-  `com.unity.nuget.newtonsoft-json` 3.2.1, TMP/uGUI/test-framework.
-- Tests (`Assets/Tests/EditMode/`): message parse/sentinel/malformed, buffer
-  average/streak/wrap/empty, plant grow/wilt/bloom-hysteresis/clamp. **Run in
-  the Unity Test Runner (EditMode) — cannot run headless here.**
-- Scene plan: `Assets/Scenes/README.md` (Calibration → Garden → Summary).
-
-### Live hardware validation — `signal-engine/tests/test_live_unicorn.py`
-Opt-in (`THALIS_LIVE_UNICORN=1`), gated so CI/mock never runs it.
-- `test_stream_metadata_well_formed` — 250 Hz, 17 channels.
-- `test_eeg_data_is_live` — finite, majority channels live, C3/C4 live (off-head
-  liveness only; see §5).
-- `test_imu_data_is_live` — 6 IMU rows, finite.
-- **`test_acquisition_to_feature_latency_p95`** — 30 s loop, full pipeline,
-  end-to-end latency measured against newest LSL timestamp. **Result: p95
-  ≈ 18 ms (budget 250 ms), compute-only ≈ 1.5 ms.** ✅
-- `test_pipeline_end_to_end_on_live_data` — full chain yields finite,
-  well-formed features (structure only off-head).
-- `lsl_diagnostic.py` — standalone connectivity probe (run directly).
-
----
-
-## 3. Tests still lined up
-
-| Test / task | Why | Blocker |
+| Subsystem | State | Tests |
 |---|---|---|
-| **On-head signal quality + ERD magnitude** (`test_signal_quality_on_head_TODO`, currently `@skip`) | Validate real µV amplitude (10–100 µV) and 20–40% mu-ERD with contralateral laterality | Needs cap worn + self-paced MI protocol |
-| Wire `test_live_unicorn.py` to use `EEGInlet` instead of the local `_LiveUnicorn` shim | Exercise the production acquisition path end-to-end (needs timestamp access for the latency test) | EEGInlet drops LSL timestamps; add a timestamped pull or keep tapping `_inlet` |
-| ~~Classifier unit/integration tests~~ | ~~CSP/LDA fit on `CalibrationDataset.epochs` + online decode~~ | **done** — `test_classifier.py` (8 tests, synthetic MI vs rest). Real on-head CV accuracy still pending H2. |
-| ~~IntentScore fusion + scoring loop tests~~ | ~~ring buffer, ERD/classifier blend, artifact freeze, EMA~~ | **done** — `test_scoring_service.py` (5 tests, mock, band-power-only). |
-| ~~WebSocket transport tests~~ | ~~drain `ScoringService.output_queue` to clients; broadcast rate, schema, multi-client, disconnect, commands~~ | **done** — `test_ws_server.py` (8 tests, mock). OSC variant + full-pipeline latency-to-client budget still open. |
-| ~~Calibration-block orchestration tests~~ | ~~cue paradigm + labeled epoch collection~~ | **done** — `test_calibration.py` (CSP/LDA fit + per-patient versioning still pending, belongs to the classifier piece) |
-| 60 s baseline-rest block + per-patient versioned filter persistence | spec §6.1/§6.6: resting spectral baseline + serialize CSP/LDA per patient/session | orchestrator collects MI trials only; baseline block + disk versioning not built |
-| Offline replay / regression harness | shadow-mode "no regression" before deploy | needs stored raw EEG+pose corpus |
+| `signal-engine/` (Python DSP + scoring + WS) | Core complete, mock/synthetic-validated; on-head validation pending | **59 passed, 6 skipped** (skips = opt-in live/on-head) |
+| `clinician-console/` (Electron + React, C1–C5 + LAN pairing) | UI complete on mock/in-memory data; no engine control channel or persistence yet | **88 passed** (25 files) + 2 live integration |
+| `patient-web/` (React + Vite patient game) | Welcome→Calibration→Garden/StarCatch→Summary + pairing gate; EEG-only | **58 passed** (19 files) + 2 live integration |
+
+**Milestone map (spec §15):** V2-0 foundation ✅ · V2-1 patient web ✅ · S1 LAN + pairing ✅ · **V2-2 remote
+camera/WebRTC ⏳ next** · V2-3 clinical workflow ⏳ · V2-4 packaging/hardening ⏳.
+
+**The single biggest gap is the vision pipeline** (WebRTC → aiortc → MediaPipe → `kinematic_score`). Every
+Blended/Active-mode feature, verified-ROM gameplay, covert-MI validity gating, and compensation penalty
+is blocked on it. Everything shipped so far is **EEG-only (Mode A, band-power)**.
+
+Run all tests:
+```bash
+conda run -n eeg python -m pytest signal-engine/tests/   # 59 passed, 6 skipped
+cd patient-web        && npm run test                     # 58 passed
+cd clinician-console  && npm run test                     # 88 passed
+```
 
 ---
 
-## 4. Required changes (signal-engine)
+## 1. `signal-engine/` — Python real-time service
 
-### Done in this pass
-- **EEGInlet now reads the real bridge.** The live Unicorn stream is **type
-  `Data`, has NO channel-label XML, and is fixed-positional** — the original
-  label-only `EEGInlet` (resolve `type=="EEG"`, slice by parsed label) found
-  nothing. Patched to: resolve by `stream_name` OR type (configurable), and fall
-  back to the fixed Unicorn positional layout (`0..7` EEG, `8..13` IMU) when
-  labels are absent. Label-based path unchanged for labelled streams (mock).
-  Covered by `test_inlet_positional_fallback_when_no_labels` (offline) and
-  verified live: `EEGInlet(stream_name="UN-2024.06.42")` slices 8 EEG / 6 IMU.
-- **Front-end DC-offset removal is now in production.** Added
-  `preprocessing.filters.DCOffsetRemover` — a stateful, causal front-end stage
-  that latches ONE per-channel offset (from `calibrate(baseline)` or lazily from
-  the first chunk) and subtracts that SAME constant on every later chunk, so it
-  never injects a boundary discontinuity that would re-excite the IIR. Sits
-  before the chain: `DCOffsetRemover → CausalFilterChain → CAR → …`.
-  `CausalFilterChain` is untouched, so its chunked==single-call equivalence test
-  still holds (rejected the "init filter state to steady-state" alternative for
-  exactly that reason). Live tests now consume the production component instead
-  of a local `_estimate_dc` helper. Offline coverage:
-  `test_dc_remover_*` in `test_preprocessing.py` (latch, fixed-offset-across-
-  chunks, cold-start-transient collapse, channel-count guard, reset). Suite:
-  **26 offline passing** (was 21); **31 passing / 1 skipped** with hardware
-  (live gated). _Live re-verify on hardware still pending (device was
-  unoccupied)._
+The end-to-end real-time path runs live and meets the MVP latency target:
+`Unicorn HW → LSL bridge → DCOffsetRemover → CausalFilterChain (notch+bandpass) → CAR → gates →
+ERDCalculator (+CSP/LDA when reliable) → IntentScore fusion → 20 Hz WebSocket`.
 
-### Done in this pass (scoring loop)
-- **`EEGInlet.get_chunk(max_samples)`** — pulls EEG **and** IMU from one
-  `pull_chunk`, time-aligned. The real-time loop must use this, not separate
-  `get_eeg_chunk`/`get_imu_chunk` calls: those issue two independent pulls on the
-  single inlet, so the IMU pull steals samples and leaves GAPS in the EEG stream,
-  which breaks the stateful causal filter and corrupted every band-power/ERD
-  estimate (manifested as a spurious ~85% rest ERD before this was found).
-- **MockUnicornOutlet pacing bug fixed.** The generator waited on `_running`
-  (which is *set* during run), so the wait returned instantly and it free-ran at
-  ~270 k samples/s instead of 250 Hz — making any real-time timing test
-  meaningless and stalling `stop()` on push back-pressure. Now waits on a
-  dedicated `_sleep_interrupt` event (clear during run, set by `stop()`).
-- **MockUnicornOutlet per-channel phase.** mu/beta were identical-phase on every
-  EEG channel, so common-average-reference cancelled them completely (no rhythm
-  survived). Each EEG channel now gets independent random mu/beta phase — more
-  realistic and lets CAR'd ERD scoring actually see the rhythm.
-- **`MockUnicornOutlet.inject_spike(amplitude_uv, n_samples, start_in_s)`** — adds
-  a large amplitude artifact on all EEG channels, for the AmplitudeGate test.
+### ✅ Implemented
+- **Acquisition** (`acquisition/`): `EEGInlet.get_chunk()` single aligned EEG+IMU pull; label-based +
+  **positional fallback** for the real Unicorn bridge (type `Data`, no XML labels). `MockUnicornOutlet`
+  17-ch synthetic stream with `inject_erd()` / `inject_spike()` + virtual-MI driver.
+- **Preprocessing** (`preprocessing/`): `CausalFilterChain` (persistent-SOS causal) + offline `filtfilt`
+  path; `DCOffsetRemover` (latched constant, no IIR re-excitation); `common_average_reference`;
+  `AmplitudeGate` + `MovementGate` (run on **raw** pre-CAR data).
+- **Features** (`features/`): Welch band power; `ERDCalculator` (per-channel/band ERD% vs calibrated
+  baseline) + `laterality_index`.
+- **Calibration** (`calibration/`): `CalibrationOrchestrator` (Graz cue-paced block, `perf_counter`
+  deadlines, balanced ≤3-run trial order, clean abort) → `CalibrationDataset`; `marker_outlet`
+  (`NeuroReach-Markers`, canonical `"label|{json}"`); `epoch_extractor` (`extract_epochs_from_dataset`,
+  `label_encode`).
+- **Classifiers** (`classifiers/`): `CSPLDAClassifier` (offline filtfilt → CSP≤4 → shrinkage-LDA,
+  `StratifiedKFold(5)`, §6.5 CV gate ≥0.60, joblib save/load with encoder); `OnlineClassifier`
+  (`predict_proba` / `mi_score` 0–100).
+- **Scoring** (`scoring/`): `RingBuffer` (front-zero-padded windows); `IntentScoreEngine` (ERD +
+  classifier blend, MODE A `0.4·ERD+0.6·clf`, per-session adaptive min-max, EMA α=0.15, artifact freeze);
+  `ScoringService` (threaded pipeline, separate raw-gate buffer, non-blocking `output_queue`);
+  `signal_quality` (per-channel good/check/poor + MI trace → `eeg_quality` frame at 5 Hz).
+- **Server** (`server/`): `NeuroReachWSServer` (asyncio, thread-safe queue drain, 20 Hz broadcast
+  decoupled from producer, `ping`/`get_status`/`set_mode` dispatch, graceful client drop). `intent_score`
+  frame is byte-stable; `eeg_quality` on its own message type.
 
-### Still required
-- **`pytest.ini` / markers.** Add a `live` marker so live tests run via
-  `-m live` instead of an env var, and register markers to silence warnings.
-  (`test_calibration.py` is mock-only/offline, so `-m "not live"` already
-  excludes nothing there, but the marker registration cleanup still applies.)
-- **Dead-channel handling.** Off-head, individual electrodes go flat (std 0).
-  Production needs a per-channel quality flag feeding the clinician console’s
-  "Check Cz contact" indicator (spec §10.2), not just a test tolerance.
-- **Units/scaling note.** Confirm the bridge streams µV (values are µV + huge DC
-  offset, not raw ADC counts) — documented, but assert in onboarding.
+### 🧪 Tests available (`signal-engine/tests/`, 65 collected)
+| File | # | Covers |
+|---|---|---|
+| `test_lsl_inlet.py` | 8 | channel ID, permuted slicing, chunk shape/dtype, IMU, positional fallback, timeout |
+| `test_preprocessing.py` | 12 | notch/bandpass, chunked==single-call causal, CAR, gates, DCOffsetRemover latch/reset |
+| `test_erd.py` | 6 | ERD on injected channel, laterality sign, pre-cal guard, band-power shape |
+| `test_calibration.py` | 5 | dataset shape/balance/no-long-runs, wall-clock timing, clean abort, `label_encode` |
+| `test_classifier.py` | 8 | strong-pattern CV>0.65, noise gate `is_reliable=False`, save/load round-trip, `mi_score∈[0,100]` |
+| `test_scoring_service.py` | 6 | smoke ≥40 results/3 s, spike suppression, EMA visible, `stop()` join, full-queue drop |
+| `test_signal_quality.py` | 5 | per-channel classification + MI trace frame |
+| `test_ws_server.py` | 9 | connect, broadcast rate, schema, multi-client parity, disconnect/reconnect, ping, unknown cmd |
+| `test_live_unicorn.py` | 6 | **skipped** unless `THALIS_LIVE_UNICORN=1` — stream metadata, live EEG/IMU, p95 latency, end-to-end |
 
----
+Latency validated off-head: **p95 ≈ 18 ms** (budget 250 ms), compute-only ≈ 1.5 ms.
 
-## 5. Important context for developers
+### ⚠️ Missing capabilities
+- **Vision pipeline absent** — no `vision/` module, no aiortc receive, no MediaPipe, no `kinematic_score`.
+  Fusion runs EEG-only (`w_kin=0`). Blocks Modes B/C, covert-MI validity gate, compensation penalty.
+- **60 s baseline-rest block** not built (orchestrator collects MI trials only).
+- **Per-patient versioned filter persistence** to disk not built (CSP/LDA fit in-memory only).
+- **Dead-channel handling** — off-head flat electrodes need a per-channel quality flag feeding the
+  console "Check Cz contact" indicator (partially covered by `signal_quality`, not wired to a hard flag).
+- **Engine control channel** — `set_mode` exists, but pause/rest/end/switch-mode commands from the
+  console are not wired to the running engine.
+- **FastAPI + SQLite/EDF persistence layer** (spec §11) not built.
+- **pytest markers** — live tests gated by env var, not a `-m live` marker; markers unregistered (warns).
+- **On-head numbers unverified** — µV amplitude and ERD magnitude were measured off-head (floating-
+  electrode noise); do NOT trust until re-run on-head.
 
-- **Off-head vs on-head.** Latency is signal-source-independent, so the p95
-  result is trustworthy now. **EEG amplitude and ERD magnitude are NOT** — they
-  were measured off-head (floating-electrode noise). Re-run on-head before
-  trusting any µV/ERD number; un-skip `test_signal_quality_on_head_TODO`.
-- **Real stream identity:** name `UN-2024.06.42`, type `Data`, 17 ch, 250 Hz,
-  host `whitetower`, no XML labels. Positional layout:
-  `0..7` EEG `[Fz,C3,Cz,C4,Pz,PO7,Oz,PO8]`,
-  `8..13` IMU `[AccX,AccY,AccZ,Gyro1,Gyro2,Gyro3]`,
-  `14..16` `[Battery,Counter,Validation]`.
-- **Always use the `eeg` conda env** (`conda run -n eeg ...`). `conda run`
-  needs `--no-capture-output` to see `-s` test prints, and pass env vars via
-  `env VAR=… python` (they don’t propagate through `conda run` reliably).
-- **Bring-up order:** start the Unicorn LSL bridge → `python
-  signal-engine/tests/lsl_diagnostic.py` (confirm stream visible) →
-  `THALIS_LIVE_UNICORN=1 … pytest test_live_unicorn.py`.
+### 🔜 Tests still lined up
+- On-head signal quality + ERD magnitude (un-skip `test_signal_quality_on_head_TODO`): µV 10–100, mu-ERD
+  >15% at C3, contralateral laterality. **Blocker:** cap worn.
+- Real on-head CSP+LDA cross-val accuracy (H2).
+- Wire `test_live_unicorn.py` through `EEGInlet` instead of the local `_LiveUnicorn` shim.
+- 60 s baseline-rest + per-patient filter versioning tests.
+- Offline replay / regression harness (needs a stored raw EEG+pose corpus).
+- Vision: MediaPipe joint-angle vs goniometer ground-truth; remote aiortc-stream parity; frame-drop /
+  camera-deny → EEG-only fallback.
+- Full-pipeline latency-to-client budget (EEG → WSS → render).
 
 ---
 
-## 6. Roadmap (beyond signal-engine, per `docs/specs.md`)
+## 2. `clinician-console/` — Electron + React
 
-- [~] Online classifier: **CSP+LDA baseline built** (`signal-engine/classifiers/`,
-  fit on `CalibrationDataset.epochs` / `label_encode` output, §6.5 CV gate,
-  joblib persistence, online decode + EEG_Score). Optional EEGNet upgrade later.
-- [~] Calibration block (spec §6): **cued MI orchestration + marker stream + labeled
-  epoch collection done** (`signal-engine/calibration/`); still TODO — 60 s baseline-rest
-  block, CSP/LDA fit, per-patient versioned filter persistence.
-- [~] Fusion/scoring service, EMA-smoothed IntentScore (spec §8): **scoring engine +
-  threaded service built** (`signal-engine/scoring/`, MODE A blend, adaptive
-  normalization, artifact freeze, EMA, `output_queue`), and the **WebSocket
-  transport** (`signal-engine/server/ws_server.py`, `NeuroReachWSServer`,
-  20 Hz broadcast + command dispatcher) that delivers the queue to clients.
-  Still TODO — optional OSC transport.
-- [ ] Camera/CV pipeline (MediaPipe pose/hands) as validity gate + kinematic scoring (spec §7).
-- [~] Unity game client consuming the score stream (spec §11): **skeleton built**
-  (`game-client/`, pure C# scoring/garden logic + EditMode tests, NativeWebSocket
-  client, garden grow controller, session summary). Still TODO — author the three
-  `.unity` scenes, wire `[SerializeField]` refs, run the live end-to-end pipeline.
-- [ ] Clinician console: live signal quality, ERD/LI trends, session history (spec §10).
-- [ ] Full-pipeline latency instrumentation incl. WebSocket→Unity frame (spec §13.2).
+Electron main spawns/supervises the Python sidecar and hosts the LAN server; the React renderer is the
+five-screen console. Data is **mock/in-memory** (seeded roster), no persistence.
 
----
+### ✅ Implemented
+- **Sidecar supervision** (`src/main/sidecar.ts`) — spawns `conda run -n eeg python run_ws_server.py`,
+  health/teardown, no orphan process.
+- **LAN server** (`src/main/lan/`): `lanServer` (HTTPS static serve of `patient-web/dist` + `ws` on one
+  port, **LAN-IP-only bind**, **Origin allowlist**); `cert` (self-signed TOFU, `selfsigned@2.x`);
+  `pairing` (`SessionPairing`: 6-char confusable-free code, single active session, single-claimant bind,
+  TTL); `scoreRelay` (forwards **only `intent_score`** to the patient); `signaling` (WebRTC SDP/ICE relay
+  **contract + echo stub** — real aiortc peer is V2-2); `netUtil` (LAN-IPv4 detection). Wired via
+  `config.ts` (`LAN_PORT=8443`), `main.ts` (start/end-session IPC), `preload.ts` (`window.neuroreach`).
+- **Renderer C1–C5**: `Roster` (C1 searchable worklist) · `Setup` (C2 electrode map + live C3/Cz/C4 trace
+  from the `eeg_quality` frame) · `LiveMonitor` (C3 score + 8-ch quality strip + sub-tiles) · `HistoryTrends`
+  + `Assessments` (C4 KPI tiles, proxy-vs-clinical chart, clinical-scales table + CSV export) ·
+  `ProtocolEditor` (C5 mode/weight, reach axis, trial structure, mini-games). Shell `App.tsx` view router
+  (roster → setup → tabbed workspace); `PatientStore` in-memory seed.
+- **PairingPanel** (`renderer/PairingPanel.tsx`) — on the **Setup** screen: Start Session → QR (`qrcode`)
+  + code + "✓ Patient connected"; session identity from the selected patient.
+- **Shared parsers** (`src/scoring/`) — `intentScoreMessage` (byte-identical to patient-web),
+  `eegQualityMessage`, `scoreStore`, `eegQualityStore`; `net/scoreClient` WS adapter.
 
-## 7. Headset testing schedule
+### 🧪 Tests available (25 files, 88 unit + 2 live integration)
+- **Renderer:** `App`, `Roster`, `Setup`, `LiveMonitor`, `HistoryTrends`, `Assessments`, `ProtocolEditor`,
+  `PatientWorkspace`, `PairingPanel`.
+- **Main/LAN:** `lanServer` (headless integration: fake sidecar → two mock WSS clients — pairs,
+  single-claimant `session_taken`, `eeg_quality` never forwarded, bad code, foreign-origin rejected),
+  `cert`, `pairing`, `scoreRelay`, `signaling`, `netUtil`, `lanConfig`, `sidecar`.
+- **Data/scoring:** `store`, `selectors`, `scoreStore`, `eegQualityStore`, `intentScoreMessage`,
+  `eegQualityMessage`, `scoreClient`, `sanity`.
+- **Integration** (`integration/`, real sidecar): `sidecar.live` (asserts `intent_score` + `eeg_quality`
+  frames); `lan.live` (real mock-EEG sidecar → `LanServer` → Node WSS client pairs, receives >100 real
+  `intent_score` frames, **zero `eeg_quality` leakage**, second-claimant rejected). Runs serially
+  (`fileParallelism:false`) so two sidecars never race on port 8765.
+- Verification gates: `build:main` + `build:renderer` clean.
 
-**Design principle:** everything that can be validated with synthetic/mock data must be, before
-touching the headset. Four on-head sessions, each gated on a code milestone.
+### ⚠️ Missing capabilities
+- **No engine control channel** — Switch mode / Pause / End buttons are disabled; no command path to the
+  running engine.
+- **No persistence** — all data is in-memory mock; real records need the sidecar FastAPI + SQLite layer
+  (spec §11), not built.
+- **WebRTC signaling is an echo stub** — no real aiortc peer, no camera-link health panel (V2-2).
+- **"Offline-OK" badge is a static label**, not a live LAN/patient-connection indicator.
+- **Game scenes still read `localhost:8765`** — a remote paired device pairs, but the paired LAN socket
+  isn't yet wired into the game scenes, so remote gameplay visuals don't follow the score.
+- No login / role separation (spec §11.2) implemented.
 
-### Why only 4
-
-- Latency is signal-source-independent → the p95 18 ms result off-head is valid.
-- Classifier logic, calibration block protocol, fusion math, WebSocket server, CV pipeline, Unity
-  client, and clinician console can all be built and unit/integration tested with mock data.
-- Only four things genuinely require a real brain signal: (1) amplitude/ERD ground-truth,
-  (2) labeled MI calibration data, (3) end-to-end perceptual latency through the full stack,
-  (4) clinical workflow validation.
-
----
-
-### Session H1 — Signal quality + ERD ground-truth
-**Gate:** §4 "still required" items done (pytest markers, dead-channel flag). No new code needed.  
-**When:** now (signal-engine is otherwise complete).
-
-| What | How |
-|---|---|
-| Un-skip `test_signal_quality_on_head_TODO` | Remove `@pytest.mark.skip`; run with headset on |
-| Confirm µV amplitudes in range 10–100 µV on C3/Cz/C4 | Assert in test |
-| Confirm DCOffsetRemover latches correct on-head DC (~−3.8e5 µV expected) | Log pre/post per channel |
-| Self-paced MI: 5 × "imagine right-hand grasp" → verify mu-ERD > 15% at C3, laterality index > 0 | Manual check; log ERD% to stdout |
-| IMU noise floor on a still head | Assert AccX/Y/Z variance < threshold |
-
-**Output:** confirmed µV/ERD numbers to set production thresholds. Updates §5 "important context."
-
----
-
-### Session H2 — Calibration data collection + classifier validation
-**Gate:** `signal-engine/classifiers/` (LDA baseline) + calibration block routine built and
-unit-tested with mock data. Graz cue-paced block must run in software before this session.
-**Cued MI orchestration AND the CSP+LDA classifier are now built**
-(`calibration/orchestrator.py` + `classifiers/`, both mock/synthetic-tested);
-remaining gate items: 60 s baseline-rest block, per-patient filter versioning to
-disk, and the real on-head CV-accuracy check.
-
-| What | How |
-|---|---|
-| Run full Graz calibration block (~8 min): 60 s rest baseline + 20 cued MI trials | Use the production calibration routine |
-| Fit CSP + LDA on collected trials; log cross-validated accuracy | Must be ≥ 60% to proceed with EEG-led mode (else flag Blended Mode path) |
-| Verify per-patient CSP filters serialized/versioned to disk | Load back and confirm identical output |
-| Run online classifier for 5 min post-calibration; spot-check live ERD → classifier output correlation | Visual/stdout check |
-
-**Output:** first real calibration dataset. Confirms the classifier pipeline works with real neural
-signal before the game client exists. Dataset also seeds the offline regression harness (§3 table).
+### 🔜 Tests still lined up
+- Control-channel command round-trip (console → engine → ack) once built.
+- Persistence layer (FastAPI/SQLite) CRUD + EDF/PDF export.
+- Camera-link health panel + "vision degraded → EEG-only" state.
+- Physical second-device browser smoke over the LAN (scan QR, accept TOFU cert, see score animate) —
+  needs real hardware; the headless `lan.live.test.ts` proves the score-fan-out + pairing spine.
 
 ---
 
-### Session H3 — End-to-end stack + perceptual latency
-**Gate:** Unity game client + WebSocket/OSC server + IntentScore fusion service all built and
-integration-tested with mock signal. **IntentScore fusion service + WebSocket server are done**
-(`signal-engine/scoring/` + `signal-engine/server/`, mock-tested, MODE A), and the **Unity
-client skeleton is built** (`game-client/`, EditMode-tested logic + WebSocket client); remaining
-gate item: author/wire the Unity scenes and run the live end-to-end pipeline. CV pipeline may
-still be absent (use `w_kin=0` Mode A).
+## 3. `patient-web/` — React + Vite patient game
 
-| What | How |
-|---|---|
-| Full pipeline live: Unicorn → signal-engine → WebSocket → Unity | Visual check: game responds to MI |
-| Instrument end-to-end latency: LSL EEG timestamp → Unity frame update | Target p95 < 250 ms (spec §9.1); log distribution |
-| Subjective responsiveness check: does the game feel coupled to MI? | Developer judgment; 5–10 min play |
-| EMA smoothing τ ≈ 300 ms: does it reduce jitter without killing feel? | Tune if needed |
-| Clinician console live ERD/LI trace (if built) | Confirm trace updates < 500 ms behind signal |
+Scene machine `Welcome → Calibration → GameModeSelect → Garden / StarCatch → Summary`, with a `Pairing`
+gate when a `?c=<code>` session code is present. **EEG-only**; camera overlay is a local `getUserMedia`
+preview, not yet published to the clinic.
 
-**Output:** first proof that the closed-loop BCI game actually works. Latency number for spec §13.
+### ✅ Implemented
+- **Scenes** (`src/scenes/`): `WelcomeScene` (P1 greeting) · `CalibrationScene` (P2 client-timed Graz cue
+  sequencer — **cosmetic**, no marker bridge; clinician pre-cal "I'm ready" gate; blinking REC dot) ·
+  `GameModeSelect` (Garden live; River disabled; Star Catcher live) · `GardenScene` (P3 illustrated
+  full-bleed SVG flower, focus meter, status banner, camera overlay) · `StarCatchScene` (P4 reach avatar
+  toward star ROM target) · `SummaryScene` (P6 warm non-comparative recap) · `PairingScene` ("Connecting
+  to your session…" → advances on `paired`). `CameraFeed` selfie preview + REC.
+- **Warm-up 3D hand viz** (`src/warmup/`): dual Shadow-Hand capsule renders (R3F v8/drei v9 pinned for
+  React 18); affected side animates neutral→open→loop; pure motion logic TDD'd; `Canvas` mocked in jsdom.
+- **Logic layer** (fully unit-tested): `garden/PlantGrowthModel` (verbatim C# port: grow 0.8/s, wilt
+  0.3/s, 3 s bloom dwell, 0.75/0.60 hysteresis) · `reach/ReachModel` (adaptive staircase band 0.55–0.9) ·
+  `scoring/intentScoreMessage` (shared `ScoreFrame` contract, byte-identical to console) · `scoring/scoreStore`
+  (circular buffer, latest/recentAverage/streak) · `net/scoreClient` (WSS reconnect + backoff) ·
+  `net/lanClient` (pair from `?c=`, route `paired`/`error`/`intent_score`, localhost dev fallback) ·
+  `session/SessionStats` (engaged-time + longest-streak).
+- **App router** (`App.tsx`) — `useState` scene machine sharing one `SessionStats`; boots to the pairing
+  gate when `?c=` present and takes patient identity from the paired ack (closes the hardcoded-"Margaret"
+  gap in the LAN path; `config.ts` remains the dev default).
+
+### 🧪 Tests available (19 files, 58 unit + 2 live integration)
+- **Scenes:** `Welcome`, `Calibration`, `GameModeSelect`, `Garden`, `StarCatch`, `Summary`, `Pairing`.
+- **Logic:** `PlantGrowthModel`, `ReachModel`, `intentScoreMessage`, `scoreStore`, `scoreClient`,
+  `SessionStats`, `sanity`.
+- **Warm-up:** `warmupMotion`, `interpolation`, `useWarmupPose`.
+- **App:** flow `Welcome → Calibration → Garden → Summary`.
+- **Integration** (`integration/sidecar.live.test.ts`, real mock-EEG sidecar ~27 s boot): "mock MI grows
+  the garden over ~15 s" (closed-loop proof) + "patient and console parsers agree frame-for-frame".
+- Gates: `tsc -b` clean; `vite build` clean.
+
+### ⚠️ Missing capabilities
+- **P2 Calibration is cosmetic** — client-timed, NOT marker-driven; no mechanism forwards the Python LSL
+  marker stream to the browser.
+- **No camera publish** — `CameraFeed` is a local preview; no `getUserMedia` → WebRTC → aiortc publish.
+  P4 verified-ROM and P5 compensation overlay need kinematics (blocked on the vision pipeline).
+- **Reach & Collect is Phase-A only** — single fixed direction/target driven by IntentScore magnitude;
+  cued-direction (Phase B) and verified-ROM (Phase C) not built (see `reachcollect.md`).
+- **PixiJS deferred** — all scenes are React + SVG/CSS.
+- **No adaptive difficulty in Garden** — `engagementThreshold` is a fixed prop (spec §9.4 staircase not
+  wired); `SessionStats.incrementTrials` unwired (no trial counting in free-form garden play).
+- **River Rowing** and **Lighthouse story mode** not built (menu placeholders).
+- **Remote gameplay** — scenes read `localhost:8765`; not yet driven by the paired LAN socket.
+
+### 🔜 Tests still lined up
+- Marker-driven calibration once the LSL-marker → browser bridge exists.
+- Camera publish + WebRTC path (patient side of V2-2).
+- Adaptive-difficulty staircase in Garden.
+- Reach & Collect Phase B (cued-direction target catalogue).
+- End-to-end web latency (EEG → WSS → React render) p95 < 250 ms.
 
 ---
 
-### Session H4 — Internal usability pilot + clinical workflow
-**Gate:** clinician console complete, hardening pass done (installer, signal-quality UX, dead-channel
-indicator), camera/CV pipeline integrated (or at minimum stubbed to `w_kin=0`).
+## 4. Cross-cutting
 
-| What | How |
-|---|---|
-| Full 30–40 min session protocol end-to-end (spec §10.2) | One developer as "patient" |
-| Setup time: Unicorn BT pair → LSL bridge → calibration ready | Target < 10 min (spec §10.1) |
-| Adaptive difficulty staircase: does 70–80% success-rate band hold? | Check trial-level log |
-| Fatigue proxy: does declining classifier confidence actually trigger console flag? | Simulate by removing headset briefly mid-session |
-| Dead-channel indicator triggers on bad electrode contact | Lift one electrode, confirm console shows "Check Cz contact" |
-| Full session SQLite log + PDF export | Verify all trial fields populated |
+- **Shared wire contract:** the `intent_score` JSON frame parser is byte-identical in `patient-web/` and
+  `clinician-console/` (`intentScoreMessage.ts`), asserted frame-for-frame by a live integration test.
+  Any change to the frame must update both. `eeg_quality` is clinician-side only and must never reach the
+  patient channel (enforced by `scoreRelay` + `lan.live.test.ts`).
+- **On-head hardware schedule** (spec §13.6): four gated sessions H1–H4. H1 (signal/ERD ground-truth) is
+  unblocked now; H2 needs the baseline block + filter versioning; H3 needs V2-2; H4 needs the console
+  control channel + persistence + vision.
+- **`game-client/` (Unity)** is fully removed and ported to `patient-web/`. Do not re-add.
+- **Dev data stream:** to drive the games without a headset, run the mock sidecar
+  (`conda run -n eeg python signal-engine/run_ws_server.py`) — the virtual-MI driver cycles ERD 6 s on /
+  3 s rest so the score actually moves (`NEUROREACH_NO_MI=1` disables it).
 
-**Output:** pre-patient-pilot readiness check. Go/no-go for spec §13.2 (usability testing with
-healthy volunteers before any patient contact).
+## 5. Next up (priority order)
+
+1. **V2-2 vision pipeline** — the keystone. Patient `getUserMedia` → WebRTC publish → aiortc receive in
+   the sidecar → MediaPipe → `kinematic_score` fusion; frame-drop/deny → EEG-only fallback; framing-check
+   setup step; camera-link health panel. Unblocks Modes B/C, verified ROM, compensation penalty.
+2. **Engine control channel** — wire pause/rest/end/switch-mode from the console to the running engine.
+3. **Persistence** — sidecar FastAPI + SQLite/EDF; real console records + export.
+4. **On-head H1** — un-skip signal-quality test, confirm production µV/ERD thresholds.
+5. **V2-4 packaging** — electron-builder installer, cert provisioning, offline smoke test, re-measure p95.

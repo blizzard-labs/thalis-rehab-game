@@ -1,13 +1,28 @@
+# OS / editor
+.DS_Store
+.vscode/
+
+# Python
 venv/
 .venv/
 env/
 __pycache__/
 .pytest_cache/
+
+# Node / build artifacts
+node_modules/
+dist/
+dist-main/
+*.log
+*.tsbuildinfo
+.vite/
+
+# Local tooling
 .graphify/
 graphify-out/
 .graphify_*.json
 .graphify_python
 .claude/
 CLAUDE.md
+.superpowers/
 archive/
-.vscode/
