@@ -37,16 +37,18 @@ export function PairingPanel({ api, session }: { api: PairingApi; session: Sessi
   return (
     <section className="pairing-panel">
       {!code ? (
-        <button onClick={start}>Start Session</button>
+        <button className="btn btn-primary" onClick={start}>Start Session</button>
       ) : (
         <div className="pairing-active">
-          {qr && <img src={qr} alt="Session pairing QR code" width={180} height={180} />}
-          <p className="pairing-code">{code}</p>
-          {!connected && <p className="pairing-status">Waiting for patient to scan…</p>}
-          <button onClick={end}>End Session</button>
+          {qr && <img className="pairing-qr" src={qr} alt="Session pairing QR code" width={180} height={180} />}
+          <div className="pairing-detail">
+            <p className="pairing-code">{code}</p>
+            {!connected && <p className="pairing-status">Waiting for patient to scan…</p>}
+            <button className="btn btn-danger" onClick={end}>End Session</button>
+          </div>
         </div>
       )}
-      {connected && <p className="pairing-status">✓ Patient connected</p>}
+      {connected && <p className="pairing-status pairing-status--ok">✓ Patient connected</p>}
     </section>
   );
 }

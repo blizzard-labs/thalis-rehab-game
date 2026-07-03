@@ -142,3 +142,30 @@ body { margin: 0; }
 
 /* ---- chart ---- */
 .chart { width: 100%; height: 220px; }
+
+/* ---- pairing (LAN session) ---- */
+.pairing-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px;
+  margin: 18px 24px 0;
+}
+.pairing-panel { display: flex; }
+.pairing-active { display: flex; align-items: center; gap: 20px; }
+.pairing-qr {
+  background: #fff;
+  border-radius: 8px;
+  padding: 6px;
+}
+.pairing-detail { display: flex; flex-direction: column; gap: 10px; }
+.pairing-code {
+  font-size: 34px;
+  letter-spacing: 0.18em;
+  font-weight: 700;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--accent);
+  margin: 0;
+}
+.pairing-status { color: var(--muted); font-size: 14px; margin: 0; }
+.pairing-status--ok { color: var(--good); font-weight: 600; }

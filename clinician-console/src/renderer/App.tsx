@@ -44,7 +44,6 @@ type View =
 export function App({ patientStore, scoreStore, qualityStore, connectionState, sidecarState }: Props) {
   const [view, setView] = useState<View>({ name: "roster" });
   const api = pairingApi();
-  const activePatient = view.name === "workspace" ? patientStore.get(view.id) : undefined;
 
   return (
     <div className="app-root">
@@ -52,9 +51,6 @@ export function App({ patientStore, scoreStore, qualityStore, connectionState, s
         <span className="app-title">NeuroReach Console</span>
         <span className="app-meta">Dr. Ortiz · Clinic A</span>
         <span className="spacer" style={{ flex: 1 }} />
-        {api && activePatient && (
-          <PairingPanel api={api} session={sessionInfoFor(activePatient)} />
-        )}
         <span className="app-badge">● Offline-OK</span>
       </div>
 
@@ -63,12 +59,20 @@ export function App({ patientStore, scoreStore, qualityStore, connectionState, s
       )}
 
       {view.name === "setup" && (
-        <Setup
-          qualityStore={qualityStore}
-          patient={patientStore.get(view.id)!}
-          onProceed={() => setView({ name: "workspace", id: view.id, tab: "live" })}
-          onBack={() => setView({ name: "workspace", id: view.id, tab: "history" })}
-        />
+        <>
+          {api && (
+            <div className="pairing-card">
+              <div className="panel-title">Pair patient device</div>
+              <PairingPanel api={api} session={sessionInfoFor(patientStore.get(view.id)!)} />
+            </div>
+          )}
+          <Setup
+            qualityStore={qualityStore}
+            patient={patientStore.get(view.id)!}
+            onProceed={() => setView({ name: "workspace", id: view.id, tab: "live" })}
+            onBack={() => setView({ name: "workspace", id: view.id, tab: "history" })}
+          />
+        </>
       )}
 
       {view.name === "workspace" && (
