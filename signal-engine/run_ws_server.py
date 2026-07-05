@@ -13,7 +13,6 @@ from __future__ import annotations
 
 import os
 import queue
-import threading
 import time
 
 from acquisition.lsl_inlet import EEGInlet
@@ -24,6 +23,7 @@ from preprocessing.filters import CausalFilterChain
 from preprocessing.spatial import common_average_reference
 from scoring.intent_score import IntentScoreEngine
 from scoring.scoring_service import ScoringService
+from scoring.session_simulator import SessionSimulator
 from server.ws_server import NeuroReachWSServer
 
 FS = 250
@@ -73,54 +73,50 @@ def build_scoring_service():
     )
 
 
-def drive_virtual_mi(outlet: MockUnicornOutlet, stop_event: threading.Event,
-                     mi_seconds: float = 6.0, rest_seconds: float = 3.0,
-                     suppression: float = 0.9) -> None:
-    """Simulate a patient repeatedly doing motor imagery on the mock stream.
-
-    Without this the mock streams only resting rhythm, so ERD (and the Intent
-    Score) never rises and the garden plant just twitches near the floor. Each
-    cycle suppresses mu+beta power on C3 and C4 (an ERD burst) for `mi_seconds`,
-    then rests for `rest_seconds`. The plant grows during the burst and blooms on
-    a sustained one; it wilts gently during rest. Disable with NEUROREACH_NO_MI=1
-    to see the true (flat) mock baseline.
-    """
-    period = mi_seconds + rest_seconds
-    while not stop_event.is_set():
-        for ch in ("C3", "C4"):
-            outlet.inject_erd(ch, (8.0, 12.0), 0.0, mi_seconds, suppression)
-            outlet.inject_erd(ch, (13.0, 30.0), 0.0, mi_seconds, suppression * 0.8)
-        # Re-arm one cycle before the events expire so MI bursts are continuous.
-        stop_event.wait(period)
-
-
 def main():
-    outlet = MockUnicornOutlet(seed=7)
-    outlet.start()
-    print("MockUnicornOutlet streaming; letting LSL discovery settle...")
-    time.sleep(0.3)
+    source = os.environ.get("EEG_SOURCE", "sim").lower()
 
-    # Baseline ERD must calibrate on TRUE rest, so build the service (which pulls
-    # 2s of clean rest) BEFORE starting the virtual-MI driver.
-    svc = build_scoring_service()
+    outlet = None
+    sim = None
+    if source == "sim":
+        outlet = MockUnicornOutlet(seed=7)
+        outlet.start()
+        print("MockUnicornOutlet streaming (idle); letting LSL discovery settle...")
+        time.sleep(0.3)
+    elif source == "live":
+        print("EEG_SOURCE=live: expecting a real Unicorn 'Data' LSL stream.")
+    else:
+        raise SystemExit(f"unknown EEG_SOURCE={source!r} (expected 'sim' or 'live')")
 
-    stop_mi = threading.Event()
-    if os.environ.get("NEUROREACH_NO_MI") != "1":
-        threading.Thread(
-            target=drive_virtual_mi, args=(outlet, stop_mi), daemon=True
-        ).start()
-        print("Virtual MI driver ON (6s imagine / 3s rest). NEUROREACH_NO_MI=1 to disable.")
+    # Baseline ERD calibrates on clean rest. In sim mode the simulator is NOT yet
+    # armed, so the mock streams flat rest -> the 2 s baseline is clean.
+    try:
+        svc = build_scoring_service()
+    except Exception as exc:  # live with no stream present, etc.
+        if source == "live":
+            raise SystemExit(
+                "no EEG source: expected a live Unicorn 'Data' stream; none resolved"
+            ) from exc
+        raise
 
-    srv = NeuroReachWSServer(svc, host="localhost", port=8765, broadcast_hz=20.0)
+    if source == "sim":
+        sim = SessionSimulator(outlet)
+        print("SessionSimulator ready (idle). Arms on Start Session.")
+
+    srv = NeuroReachWSServer(
+        svc, host="localhost", port=8765, broadcast_hz=20.0, session_controller=sim
+    )
     print("WS server starting on ws://localhost:8765 (Ctrl-C to stop)")
     try:
         srv.start()  # blocks
     except KeyboardInterrupt:
         print("\nShutting down...")
     finally:
-        stop_mi.set()
+        if sim is not None:
+            sim.disarm()
         srv.stop()
-        outlet.stop()
+        if outlet is not None:
+            outlet.stop()
 
 
 if __name__ == "__main__":
