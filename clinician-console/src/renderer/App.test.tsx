@@ -27,17 +27,18 @@ describe("App navigation", () => {
   it("opens a patient workspace from the roster", () => {
     renderApp();
     fireEvent.click(screen.getByText("Margaret R."));
-    expect(screen.getByRole("button", { name: "Live Monitor" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "History & Trends" })).toBeTruthy();
   });
 
-  it("enters setup from the workspace and returns to live", () => {
+  it("launches the session flow from the workspace and returns on exit", () => {
     renderApp();
     fireEvent.click(screen.getByText("Margaret R."));
     fireEvent.click(screen.getByRole("button", { name: /Start session/i }));
-    expect(screen.getByText(/Setup/)).toBeTruthy();
-    fireEvent.click(screen.getByText(/Next: Calibration/i));
-    // back in the workspace on the live tab
-    expect(screen.getByTestId("intent-score")).toBeTruthy();
+    // session flow, step 1
+    expect(screen.getByText(/Signal check/i)).toBeTruthy();
+    // back out via the workspace link
+    fireEvent.click(screen.getByRole("button", { name: /← Workspace/i }));
+    expect(screen.getByRole("button", { name: "History & Trends" })).toBeTruthy();
   });
 
   it("returns to the roster from the workspace", () => {

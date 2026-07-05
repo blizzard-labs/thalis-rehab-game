@@ -1,17 +1,11 @@
 import type { PatientStore } from "../data/store";
-import type { ScoreStore } from "../scoring/scoreStore";
-import type { EegQualityStore } from "../scoring/eegQualityStore";
-import type { ConnectionState } from "../net/scoreClient";
-import type { SidecarState } from "../main/sidecar";
-import { LiveMonitor } from "./LiveMonitor";
 import { HistoryTrends } from "./HistoryTrends";
 import { ProtocolEditor } from "./ProtocolEditor";
 import { Assessments } from "./Assessments";
 
-export type WorkspaceTab = "live" | "history" | "protocol" | "assessments";
+export type WorkspaceTab = "history" | "protocol" | "assessments";
 
 const TABS: { id: WorkspaceTab; label: string }[] = [
-  { id: "live", label: "Live Monitor" },
   { id: "history", label: "History & Trends" },
   { id: "protocol", label: "Protocol" },
   { id: "assessments", label: "Assessments" },
@@ -20,10 +14,6 @@ const TABS: { id: WorkspaceTab; label: string }[] = [
 type Props = {
   store: PatientStore;
   patientId: string;
-  scoreStore: ScoreStore;
-  qualityStore: EegQualityStore;
-  connectionState: ConnectionState;
-  sidecarState: SidecarState;
   tab: WorkspaceTab;
   onTab: (t: WorkspaceTab) => void;
   onStartSession: () => void;
@@ -63,15 +53,6 @@ export function PatientWorkspace(props: Props) {
         ))}
       </div>
 
-      {tab === "live" && (
-        <LiveMonitor
-          store={props.scoreStore}
-          qualityStore={props.qualityStore}
-          connectionState={props.connectionState}
-          sidecarState={props.sidecarState}
-          patient={p}
-        />
-      )}
       {tab === "history" && <HistoryTrends patient={p} />}
       {tab === "protocol" && <ProtocolEditor store={store} patientId={patientId} />}
       {tab === "assessments" && <Assessments store={store} patientId={patientId} />}

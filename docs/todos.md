@@ -14,7 +14,7 @@ lined up 🔜**. Detailed change history lives in git + claude-mem, not here.
 | Subsystem | State | Tests |
 |---|---|---|
 | `signal-engine/` (Python DSP + scoring + WS) | Core complete, mock/synthetic-validated; on-head validation pending | **67 passed, 6 skipped** (skips = opt-in live/on-head) |
-| `clinician-console/` (Electron + React, C1–C5 + LAN pairing) | UI complete on mock/in-memory data; session start/end gates a dev EEG simulator; general engine control channel + persistence still pending | **93 passed** (26 files) + 2 live integration |
+| `clinician-console/` (Electron + React, C1–C5 + LAN pairing) | Guided session stepper (Signal→Pair→Calibrate→Live); Sim/Live toggle + pairing surfaced; End/Switch-mode wired; persistence still pending | **106 passed** (30 files) + 2 live integration |
 | `patient-web/` (React + Vite patient game) | Welcome→Calibration→Garden/StarCatch→Summary + pairing gate; EEG-only | **58 passed** (19 files) + 2 live integration |
 
 **Milestone map (spec §15):** V2-0 foundation ✅ · V2-1 patient web ✅ · S1 LAN + pairing ✅ · **V2-2 remote
@@ -28,7 +28,7 @@ Run all tests:
 ```bash
 conda run -n eeg python -m pytest signal-engine/tests/   # 67 passed, 6 skipped
 cd patient-web        && npm run test                     # 58 passed
-cd clinician-console  && npm run test                     # 93 passed
+cd clinician-console  && npm run test                     # 106 passed
 ```
 
 ---
@@ -131,27 +131,33 @@ five-screen console. Data is **mock/in-memory** (seeded roster), no persistence.
   **contract + echo stub** — real aiortc peer is V2-2); `netUtil` (LAN-IPv4 detection). Wired via
   `config.ts` (`LAN_PORT=8443`), `main.ts` (start/end-session IPC), `preload.ts` (`window.neuroreach`).
 - **Session control channel** (`src/main/main.ts` + `sessionControl.ts`) — a persistent control socket to
-  the sidecar arms/disarms the dev-mode `SessionSimulator` on Start/End Session; `sessionControlCommand`
-  maps `source`+action → `start_session`/`end_session` (only `sim` start arms; end always disarms). Socket
-  reconnects like the score relay; outbound commands queue until open.
-- **Renderer C1–C5**: `Roster` (C1 searchable worklist) · `Setup` (C2 electrode map + live C3/Cz/C4 trace
-  from the `eeg_quality` frame) · `LiveMonitor` (C3 score + 8-ch quality strip + sub-tiles) · `HistoryTrends`
-  + `Assessments` (C4 KPI tiles, proxy-vs-clinical chart, clinical-scales table + CSV export) ·
-  `ProtocolEditor` (C5 mode/weight, reach axis, trial structure, mini-games). Shell `App.tsx` view router
-  (roster → setup → tabbed workspace); `PatientStore` in-memory seed.
-- **PairingPanel** (`renderer/PairingPanel.tsx`) — on the **Setup** screen: **Simulated EEG (dev) / Live
-  headset** source toggle (default sim) → Start Session → QR (`qrcode`) + code + "✓ Patient connected";
-  session identity from the selected patient; `source` flows via `SessionInfo` into the start-session IPC.
+  the sidecar, driven by decoupled IPC: `session:open` mints the pairing code (no arm), `session:begin`
+  arms the `SessionSimulator` (sim source only, fired when the Live step mounts), `session:end` disarms +
+  ends pairing, `session:set-mode` sends `set_mode`. `sessionControlCommand`/`setModeCommand` build the
+  frames; socket reconnects like the score relay; outbound commands queue until open.
+- **Guided session flow** (`renderer/SessionFlow.tsx` + `useSession.ts`) — a stepper **Signal check →
+  Pair device → Calibrate → Live** launched from the workspace "Start session ▶". Steps: `SignalCheckStep`
+  (C2 electrode map + C3/Cz/C4 trace + **Simulated EEG / Live headset** toggle), `PairDeviceStep` (Start
+  Session → QR (`qrcode`) + code + waiting/✓-connected + dev-localhost note; **not hard-gated**),
+  `CalibrateStep` (honest skippable placeholder), `LiveStep` (arms the sim on mount). `useSession` owns
+  source/pairing/lifecycle over the `session:{open,begin,end,set-mode}` IPC; shows a desktop-app notice
+  when `window.neuroreach` is absent. Sim **arms on entering Live**, not at pairing.
+- **Renderer**: `Roster` (C1 worklist) · session flow (C2 signal + pairing above) · `LiveMonitor` (C3 hero
+  score + 8-ch quality strip + sub-tiles; **End session + Switch-mode wired**, Switch-mode capability-gated
+  on a loaded classifier, Pause/rest still disabled) · `HistoryTrends` + `Assessments` (C4 KPI tiles,
+  proxy-vs-clinical chart, clinical-scales table + CSV export) · `ProtocolEditor` (C5). Shell `App.tsx`
+  view router (roster → session flow → review-tabs workspace, no redundant Live tab); `PatientStore` seed.
 - **Shared parsers** (`src/scoring/`) — `intentScoreMessage` (byte-identical to patient-web),
   `eegQualityMessage`, `scoreStore`, `eegQualityStore`; `net/scoreClient` WS adapter.
 
-### 🧪 Tests available (26 files, 93 unit + 2 live integration)
-- **Renderer:** `App`, `Roster`, `Setup`, `LiveMonitor`, `HistoryTrends`, `Assessments`, `ProtocolEditor`,
-  `PatientWorkspace`, `PairingPanel` (incl. source toggle default sim + forwards live).
+### 🧪 Tests available (30 files, 106 unit + 2 live integration)
+- **Renderer:** `App`, `Roster`, `SignalCheckStep`, `PairDeviceStep`, `CalibrateStep`, `LiveStep`,
+  `SessionFlow`, `useSession`, `LiveMonitor` (incl. End/Switch-mode controls), `HistoryTrends`,
+  `Assessments`, `ProtocolEditor`, `PatientWorkspace`.
 - **Main/LAN:** `lanServer` (headless integration: fake sidecar → two mock WSS clients — pairs,
   single-claimant `session_taken`, `eeg_quality` never forwarded, bad code, foreign-origin rejected),
   `cert`, `pairing`, `scoreRelay`, `signaling`, `netUtil`, `lanConfig`, `sidecar`, `sessionControl`
-  (source+action → command mapping).
+  (source+action → command mapping + `setModeCommand`).
 - **Data/scoring:** `store`, `selectors`, `scoreStore`, `eegQualityStore`, `intentScoreMessage`,
   `eegQualityMessage`, `scoreClient`, `sanity`.
 - **Integration** (`integration/`, real sidecar): `sidecar.live` (asserts `intent_score` + `eeg_quality`
@@ -161,9 +167,10 @@ five-screen console. Data is **mock/in-memory** (seeded roster), no persistence.
 - Verification gates: `build:main` + `build:renderer` clean.
 
 ### ⚠️ Missing capabilities
-- **Engine control channel partial** — Start/End Session now arm/disarm the dev-mode EEG simulator over a
-  control socket, but Switch mode / Pause / Rest buttons are still disabled; no command path for those to
-  the running engine.
+- **Engine control channel partial** — Start/End Session (arm/disarm sim), **End session**, and
+  **Switch mode** (`set_mode`, capability-gated on a loaded classifier) are wired from the UI over the
+  control socket. Still missing: **Pause/rest** (no sidecar command) and real **marker-driven
+  calibration** (Calibrate is an honest placeholder — needs the LSL-marker → browser bridge).
 - **No persistence** — all data is in-memory mock; real records need the sidecar FastAPI + SQLite layer
   (spec §11), not built.
 - **WebRTC signaling is an echo stub** — no real aiortc peer, no camera-link health panel (V2-2).
@@ -173,7 +180,9 @@ five-screen console. Data is **mock/in-memory** (seeded roster), no persistence.
 - No login / role separation (spec §11.2) implemented.
 
 ### 🔜 Tests still lined up
-- Control-channel command round-trip (console → engine → ack) once built.
+- Pause/rest command round-trip once the sidecar pause command exists.
+- Marker-driven calibration step once the LSL-marker → browser bridge exists (replaces the placeholder).
+- Surface `session`/`set_mode` control-socket ack replies in the console (read inbound control frames).
 - Persistence layer (FastAPI/SQLite) CRUD + EDF/PDF export.
 - Camera-link health panel + "vision degraded → EEG-only" state.
 - Physical second-device browser smoke over the LAN (scan QR, accept TOFU cert, see score animate) —
@@ -248,19 +257,20 @@ preview, not yet published to the clinic.
   unblocked now; H2 needs the baseline block + filter versioning; H3 needs V2-2; H4 needs the console
   control channel + persistence + vision.
 - **`game-client/` (Unity)** is fully removed and ported to `patient-web/`. Do not re-add.
-- **Dev data stream:** to drive the games without a headset, use the console's **Simulated EEG (dev)**
-  source toggle on the Setup screen. The sidecar (`run_ws_server.py`, `EEG_SOURCE=sim` default) boots idle
-  (flat rest, IntentScore floored); pressing **Start Session** arms the `SessionSimulator`, which walks a
-  canonical arc (settle → calibration cueing → variable-depth MI trials with fatigue drift + occasional
-  artifacts), and **End Session** returns it to rest. Running `run_ws_server.py` standalone streams idle
-  until a `start_session` WS command arrives.
+- **Dev data stream:** to drive the games without a headset, open a patient in the console → **Start
+  session ▶** → keep the **Simulated EEG (dev)** toggle on the Signal-check step → advance to **Live**.
+  The sidecar (`run_ws_server.py`, `EEG_SOURCE=sim` default) boots idle (flat rest, IntentScore floored);
+  entering the Live step arms the `SessionSimulator`, which walks a canonical arc (settle → calibration
+  cueing → variable-depth MI trials with fatigue drift + occasional artifacts); **End session** returns it
+  to rest. Running `run_ws_server.py` standalone streams idle until a `start_session` WS command arrives.
 
 ## 5. Next up (priority order)
 
 1. **V2-2 vision pipeline** — the keystone. Patient `getUserMedia` → WebRTC publish → aiortc receive in
    the sidecar → MediaPipe → `kinematic_score` fusion; frame-drop/deny → EEG-only fallback; framing-check
    setup step; camera-link health panel. Unblocks Modes B/C, verified ROM, compensation penalty.
-2. **Engine control channel** — wire pause/rest/end/switch-mode from the console to the running engine.
+2. **Engine control channel** — End/Switch-mode + session arm/disarm are wired; still need **pause/rest**
+   (new sidecar command) and **marker-driven calibration** (LSL-marker → browser bridge).
 3. **Persistence** — sidecar FastAPI + SQLite/EDF; real console records + export.
 4. **On-head H1** — un-skip signal-quality test, confirm production µV/ERD thresholds.
 5. **V2-4 packaging** — electron-builder installer, cert provisioning, offline smoke test, re-measure p95.
