@@ -14,6 +14,8 @@ type Props = {
   sidecarState: SidecarState;
   qualityStore?: EegQualityStore;
   patient?: Patient;
+  onEndSession?: () => void;
+  onSwitchMode?: (mode: "band_power_only" | "csp_lda_blend") => void;
 };
 
 function fmt(n: number | null, digits = 1): string {
@@ -24,7 +26,7 @@ function fmt(n: number | null, digits = 1): string {
 // clinician can intervene without interpreting raw EEG: plain-language status
 // tiles, 8-channel quality, the patient-view mirror, ERD/laterality/kinematic
 // sub-scores, and the big IntentScore. specsv2 wireframe C3.
-export function LiveMonitor({ store, connectionState, sidecarState, qualityStore, patient }: Props) {
+export function LiveMonitor({ store, connectionState, sidecarState, qualityStore, patient, onEndSession, onSwitchMode }: Props) {
   const state = useScoreStore(store);
   const [elapsed, setElapsed] = useState(0);
   useEffect(() => {
@@ -36,6 +38,8 @@ export function LiveMonitor({ store, connectionState, sidecarState, qualityStore
   const mm = String(Math.floor(elapsed / 60)).padStart(2, "0");
   const ss = String(elapsed % 60).padStart(2, "0");
   const weights = latest?.classifierScore != null ? "(0.6 / 0.4)" : "";
+  const canSwitchMode = latest?.classifierScore != null;
+  const nextMode = latest?.mode === "csp_lda_blend" ? "band_power_only" : "csp_lda_blend";
 
   return (
     <div className="lm-root">
@@ -96,10 +100,17 @@ export function LiveMonitor({ store, connectionState, sidecarState, qualityStore
       </div>
 
       <footer className="lm-controls">
-        <button disabled>Switch mode ▾</button>
-        <button disabled>Pause / rest</button>
-        <button disabled className="lm-end">End session</button>
-        <span className="lm-note">controls disabled — control channel lands in V2-0b</span>
+        <button
+          disabled={!canSwitchMode || !onSwitchMode}
+          title={canSwitchMode ? "" : "No classifier loaded (band-power-only session)"}
+          onClick={() => onSwitchMode?.(nextMode)}
+        >
+          Switch mode ▾
+        </button>
+        <button disabled title="Pause/rest command not built yet">Pause / rest</button>
+        <button className="lm-end" disabled={!onEndSession} onClick={() => onEndSession?.()}>
+          End session
+        </button>
       </footer>
     </div>
   );
