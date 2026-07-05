@@ -1,6 +1,6 @@
 # NeuroReach — Development Status & TODOs
 
-_Last updated: 2026-07-03. Reference spec: [`docs/specs.md`](specs.md). Game design docs:
+_Last updated: 2026-07-05. Reference spec: [`docs/specs.md`](specs.md). Game design docs:
 [`gardengrow.md`](gardengrow.md), [`reachcollect.md`](reachcollect.md)._
 
 This is the **whole-project** status board across all three subsystems. Each subsystem section lists
@@ -13,8 +13,8 @@ lined up 🔜**. Detailed change history lives in git + claude-mem, not here.
 
 | Subsystem | State | Tests |
 |---|---|---|
-| `signal-engine/` (Python DSP + scoring + WS) | Core complete, mock/synthetic-validated; on-head validation pending | **59 passed, 6 skipped** (skips = opt-in live/on-head) |
-| `clinician-console/` (Electron + React, C1–C5 + LAN pairing) | UI complete on mock/in-memory data; no engine control channel or persistence yet | **88 passed** (25 files) + 2 live integration |
+| `signal-engine/` (Python DSP + scoring + WS) | Core complete, mock/synthetic-validated; on-head validation pending | **67 passed, 6 skipped** (skips = opt-in live/on-head) |
+| `clinician-console/` (Electron + React, C1–C5 + LAN pairing) | UI complete on mock/in-memory data; session start/end gates a dev EEG simulator; general engine control channel + persistence still pending | **93 passed** (26 files) + 2 live integration |
 | `patient-web/` (React + Vite patient game) | Welcome→Calibration→Garden/StarCatch→Summary + pairing gate; EEG-only | **58 passed** (19 files) + 2 live integration |
 
 **Milestone map (spec §15):** V2-0 foundation ✅ · V2-1 patient web ✅ · S1 LAN + pairing ✅ · **V2-2 remote
@@ -26,9 +26,9 @@ is blocked on it. Everything shipped so far is **EEG-only (Mode A, band-power)**
 
 Run all tests:
 ```bash
-conda run -n eeg python -m pytest signal-engine/tests/   # 59 passed, 6 skipped
+conda run -n eeg python -m pytest signal-engine/tests/   # 67 passed, 6 skipped
 cd patient-web        && npm run test                     # 58 passed
-cd clinician-console  && npm run test                     # 88 passed
+cd clinician-console  && npm run test                     # 93 passed
 ```
 
 ---
@@ -42,7 +42,7 @@ ERDCalculator (+CSP/LDA when reliable) → IntentScore fusion → 20 Hz WebSocke
 ### ✅ Implemented
 - **Acquisition** (`acquisition/`): `EEGInlet.get_chunk()` single aligned EEG+IMU pull; label-based +
   **positional fallback** for the real Unicorn bridge (type `Data`, no XML labels). `MockUnicornOutlet`
-  17-ch synthetic stream with `inject_erd()` / `inject_spike()` + virtual-MI driver.
+  17-ch synthetic stream with `inject_erd()` / `inject_spike()`.
 - **Preprocessing** (`preprocessing/`): `CausalFilterChain` (persistent-SOS causal) + offline `filtfilt`
   path; `DCOffsetRemover` (latched constant, no IIR re-excitation); `common_average_reference`;
   `AmplitudeGate` + `MovementGate` (run on **raw** pre-CAR data).
@@ -58,12 +58,18 @@ ERDCalculator (+CSP/LDA when reliable) → IntentScore fusion → 20 Hz WebSocke
 - **Scoring** (`scoring/`): `RingBuffer` (front-zero-padded windows); `IntentScoreEngine` (ERD +
   classifier blend, MODE A `0.4·ERD+0.6·clf`, per-session adaptive min-max, EMA α=0.15, artifact freeze);
   `ScoringService` (threaded pipeline, separate raw-gate buffer, non-blocking `output_queue`);
-  `signal_quality` (per-channel good/check/poor + MI trace → `eeg_quality` frame at 5 Hz).
+  `signal_quality` (per-channel good/check/poor + MI trace → `eeg_quality` frame at 5 Hz);
+  `SessionSimulator` (dev-mode scripted session arc — settle → calibration cueing → variable-depth MI
+  trials with fatigue drift + occasional artifacts; `arm()`/`disarm()`/`status()`, drives the mock only,
+  session-gated). Design: [`docs/superpowers/specs/2026-07-05-dev-mode-simulated-eeg-design.md`](superpowers/specs/2026-07-05-dev-mode-simulated-eeg-design.md).
 - **Server** (`server/`): `NeuroReachWSServer` (asyncio, thread-safe queue drain, 20 Hz broadcast
-  decoupled from producer, `ping`/`get_status`/`set_mode` dispatch, graceful client drop). `intent_score`
-  frame is byte-stable; `eeg_quality` on its own message type.
+  decoupled from producer, `ping`/`get_status`/`set_mode`/`start_session`/`end_session` dispatch, graceful
+  client drop). `start_session`/`end_session` arm/disarm the `SessionSimulator` via an optional
+  `session_controller` (per-client `session` reply, never broadcast). `intent_score` frame is byte-stable;
+  `eeg_quality` on its own message type. Entrypoint `run_ws_server.py` boots idle and selects source via
+  `EEG_SOURCE=sim` (default) or `live`.
 
-### 🧪 Tests available (`signal-engine/tests/`, 65 collected)
+### 🧪 Tests available (`signal-engine/tests/`, 73 collected)
 | File | # | Covers |
 |---|---|---|
 | `test_lsl_inlet.py` | 8 | channel ID, permuted slicing, chunk shape/dtype, IMU, positional fallback, timeout |
@@ -74,6 +80,9 @@ ERDCalculator (+CSP/LDA when reliable) → IntentScore fusion → 20 Hz WebSocke
 | `test_scoring_service.py` | 6 | smoke ≥40 results/3 s, spike suppression, EMA visible, `stop()` join, full-queue drop |
 | `test_signal_quality.py` | 5 | per-channel classification + MI trace frame |
 | `test_ws_server.py` | 9 | connect, broadcast rate, schema, multi-client parity, disconnect/reconnect, ping, unknown cmd |
+| `test_session_simulator.py` | 4 | phase boundaries, idle status, arm drives both MI channels + disarm stops, idempotent arm |
+| `test_ws_session_commands.py` | 3 | `start_session`/`end_session` route to controller + `session` reply; no-controller → `error` |
+| `test_session_gating.py` | 1 | end-to-end: score floors idle, rises after `start_session` (session gate drives IntentScore) |
 | `test_live_unicorn.py` | 6 | **skipped** unless `THALIS_LIVE_UNICORN=1` — stream metadata, live EEG/IMU, p95 latency, end-to-end |
 
 Latency validated off-head: **p95 ≈ 18 ms** (budget 250 ms), compute-only ≈ 1.5 ms.
@@ -85,8 +94,10 @@ Latency validated off-head: **p95 ≈ 18 ms** (budget 250 ms), compute-only ≈ 
 - **Per-patient versioned filter persistence** to disk not built (CSP/LDA fit in-memory only).
 - **Dead-channel handling** — off-head flat electrodes need a per-channel quality flag feeding the
   console "Check Cz contact" indicator (partially covered by `signal_quality`, not wired to a hard flag).
-- **Engine control channel** — `set_mode` exists, but pause/rest/end/switch-mode commands from the
-  console are not wired to the running engine.
+- **Engine control channel** — partial: `set_mode` + `start_session`/`end_session` (dev-sim gate) exist,
+  but pause/rest/switch-mode commands from the console are not wired to the running engine. Live-headset
+  source-switching is a stub (`EEG_SOURCE=live` binds the real `Data` stream / errors if absent; no
+  runtime mock⇔real reconfigure from the console toggle yet).
 - **FastAPI + SQLite/EDF persistence layer** (spec §11) not built.
 - **pytest markers** — live tests gated by env var, not a `-m live` marker; markers unregistered (warns).
 - **On-head numbers unverified** — µV amplitude and ERD magnitude were measured off-head (floating-
@@ -119,22 +130,28 @@ five-screen console. Data is **mock/in-memory** (seeded roster), no persistence.
   TTL); `scoreRelay` (forwards **only `intent_score`** to the patient); `signaling` (WebRTC SDP/ICE relay
   **contract + echo stub** — real aiortc peer is V2-2); `netUtil` (LAN-IPv4 detection). Wired via
   `config.ts` (`LAN_PORT=8443`), `main.ts` (start/end-session IPC), `preload.ts` (`window.neuroreach`).
+- **Session control channel** (`src/main/main.ts` + `sessionControl.ts`) — a persistent control socket to
+  the sidecar arms/disarms the dev-mode `SessionSimulator` on Start/End Session; `sessionControlCommand`
+  maps `source`+action → `start_session`/`end_session` (only `sim` start arms; end always disarms). Socket
+  reconnects like the score relay; outbound commands queue until open.
 - **Renderer C1–C5**: `Roster` (C1 searchable worklist) · `Setup` (C2 electrode map + live C3/Cz/C4 trace
   from the `eeg_quality` frame) · `LiveMonitor` (C3 score + 8-ch quality strip + sub-tiles) · `HistoryTrends`
   + `Assessments` (C4 KPI tiles, proxy-vs-clinical chart, clinical-scales table + CSV export) ·
   `ProtocolEditor` (C5 mode/weight, reach axis, trial structure, mini-games). Shell `App.tsx` view router
   (roster → setup → tabbed workspace); `PatientStore` in-memory seed.
-- **PairingPanel** (`renderer/PairingPanel.tsx`) — on the **Setup** screen: Start Session → QR (`qrcode`)
-  + code + "✓ Patient connected"; session identity from the selected patient.
+- **PairingPanel** (`renderer/PairingPanel.tsx`) — on the **Setup** screen: **Simulated EEG (dev) / Live
+  headset** source toggle (default sim) → Start Session → QR (`qrcode`) + code + "✓ Patient connected";
+  session identity from the selected patient; `source` flows via `SessionInfo` into the start-session IPC.
 - **Shared parsers** (`src/scoring/`) — `intentScoreMessage` (byte-identical to patient-web),
   `eegQualityMessage`, `scoreStore`, `eegQualityStore`; `net/scoreClient` WS adapter.
 
-### 🧪 Tests available (25 files, 88 unit + 2 live integration)
+### 🧪 Tests available (26 files, 93 unit + 2 live integration)
 - **Renderer:** `App`, `Roster`, `Setup`, `LiveMonitor`, `HistoryTrends`, `Assessments`, `ProtocolEditor`,
-  `PatientWorkspace`, `PairingPanel`.
+  `PatientWorkspace`, `PairingPanel` (incl. source toggle default sim + forwards live).
 - **Main/LAN:** `lanServer` (headless integration: fake sidecar → two mock WSS clients — pairs,
   single-claimant `session_taken`, `eeg_quality` never forwarded, bad code, foreign-origin rejected),
-  `cert`, `pairing`, `scoreRelay`, `signaling`, `netUtil`, `lanConfig`, `sidecar`.
+  `cert`, `pairing`, `scoreRelay`, `signaling`, `netUtil`, `lanConfig`, `sidecar`, `sessionControl`
+  (source+action → command mapping).
 - **Data/scoring:** `store`, `selectors`, `scoreStore`, `eegQualityStore`, `intentScoreMessage`,
   `eegQualityMessage`, `scoreClient`, `sanity`.
 - **Integration** (`integration/`, real sidecar): `sidecar.live` (asserts `intent_score` + `eeg_quality`
@@ -144,8 +161,9 @@ five-screen console. Data is **mock/in-memory** (seeded roster), no persistence.
 - Verification gates: `build:main` + `build:renderer` clean.
 
 ### ⚠️ Missing capabilities
-- **No engine control channel** — Switch mode / Pause / End buttons are disabled; no command path to the
-  running engine.
+- **Engine control channel partial** — Start/End Session now arm/disarm the dev-mode EEG simulator over a
+  control socket, but Switch mode / Pause / Rest buttons are still disabled; no command path for those to
+  the running engine.
 - **No persistence** — all data is in-memory mock; real records need the sidecar FastAPI + SQLite layer
   (spec §11), not built.
 - **WebRTC signaling is an echo stub** — no real aiortc peer, no camera-link health panel (V2-2).
@@ -230,9 +248,12 @@ preview, not yet published to the clinic.
   unblocked now; H2 needs the baseline block + filter versioning; H3 needs V2-2; H4 needs the console
   control channel + persistence + vision.
 - **`game-client/` (Unity)** is fully removed and ported to `patient-web/`. Do not re-add.
-- **Dev data stream:** to drive the games without a headset, run the mock sidecar
-  (`conda run -n eeg python signal-engine/run_ws_server.py`) — the virtual-MI driver cycles ERD 6 s on /
-  3 s rest so the score actually moves (`NEUROREACH_NO_MI=1` disables it).
+- **Dev data stream:** to drive the games without a headset, use the console's **Simulated EEG (dev)**
+  source toggle on the Setup screen. The sidecar (`run_ws_server.py`, `EEG_SOURCE=sim` default) boots idle
+  (flat rest, IntentScore floored); pressing **Start Session** arms the `SessionSimulator`, which walks a
+  canonical arc (settle → calibration cueing → variable-depth MI trials with fatigue drift + occasional
+  artifacts), and **End Session** returns it to rest. Running `run_ws_server.py` standalone streams idle
+  until a `start_session` WS command arrives.
 
 ## 5. Next up (priority order)
 
