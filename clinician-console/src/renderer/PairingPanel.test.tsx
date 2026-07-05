@@ -19,7 +19,24 @@ describe("PairingPanel", () => {
     render(<PairingPanel api={api} session={SESSION} />);
     fireEvent.click(screen.getByRole("button", { name: /start session/i }));
     await waitFor(() => expect(screen.getByText("ABC234")).toBeInTheDocument());
-    expect(api.startSession).toHaveBeenCalledWith(SESSION);
+    expect(api.startSession).toHaveBeenCalledWith({ ...SESSION, source: "sim" });
+  });
+
+  it("defaults to simulated source and forwards it on Start Session", async () => {
+    const api = fakeApi();
+    render(<PairingPanel api={api} session={SESSION} />);
+    fireEvent.click(screen.getByRole("button", { name: /start session/i }));
+    await waitFor(() => expect(screen.getByText("ABC234")).toBeInTheDocument());
+    expect(api.startSession).toHaveBeenCalledWith({ ...SESSION, source: "sim" });
+  });
+
+  it("forwards live source when toggled to Live headset", async () => {
+    const api = fakeApi();
+    render(<PairingPanel api={api} session={SESSION} />);
+    fireEvent.click(screen.getByRole("radio", { name: /live headset/i }));
+    fireEvent.click(screen.getByRole("button", { name: /start session/i }));
+    await waitFor(() => expect(screen.getByText("ABC234")).toBeInTheDocument());
+    expect(api.startSession).toHaveBeenCalledWith({ ...SESSION, source: "live" });
   });
 
   it("shows a connected indicator when a patient pairs", async () => {
