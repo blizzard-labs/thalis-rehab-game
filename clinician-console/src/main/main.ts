@@ -6,7 +6,7 @@ import { sidecarOptions, lanServerOptions, SIDECAR_WS_URL } from "./config";
 import { LanServer } from "./lan/lanServer";
 import type { RelaySocket } from "./lan/scoreRelay";
 import type { SessionInfo } from "./lan/pairing";
-import { sessionControlCommand } from "./sessionControl";
+import { sessionControlCommand, setModeCommand } from "./sessionControl";
 
 // repo root is two levels up from clinician-console/dist-main
 const REPO_ROOT = join(__dirname, "..", "..");
@@ -72,15 +72,19 @@ function startLan() {
   lan.start();
   openControlSocket();
 
-  ipcMain.handle("start-session", (_e, session: SessionInfo) => {
-    const result = lan!.startSession(session);
-    const cmd = sessionControlCommand(session.source, "start");
+  // Decoupled session lifecycle: open() mints the pairing code only; begin()
+  // arms the dev simulator (sim source only); end() disarms + closes pairing.
+  ipcMain.handle("session:open", (_e, session: SessionInfo) => lan!.startSession(session));
+  ipcMain.handle("session:begin", (_e, source: SessionInfo["source"]) => {
+    const cmd = sessionControlCommand(source, "start");
     if (cmd) sendControl(cmd);
-    return result;
   });
-  ipcMain.handle("end-session", () => {
+  ipcMain.handle("session:end", () => {
     sendControl(sessionControlCommand("sim", "end")!); // end always disarms
     return lan!.endSession();
+  });
+  ipcMain.handle("session:set-mode", (_e, mode: "band_power_only" | "csp_lda_blend") => {
+    sendControl(setModeCommand(mode));
   });
 }
 
