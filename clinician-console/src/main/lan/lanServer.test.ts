@@ -9,7 +9,7 @@ import { LanServer, type LanServerOptions } from "./lanServer";
 import type { RelaySocket } from "./scoreRelay";
 import type { SessionInfo } from "./pairing";
 
-const SESSION: SessionInfo = { patientFirstName: "Margaret", affectedSide: "left", mode: "band_power_only" };
+const SESSION: SessionInfo = { patientFirstName: "Margaret", affectedSide: "left", mode: "band_power_only", source: "sim" };
 
 // A fake sidecar: a real ws server we point the relay at, so we can push frames.
 function fakeSidecar(): Promise<{ url: string; push: (o: unknown) => void; close: () => void }> {

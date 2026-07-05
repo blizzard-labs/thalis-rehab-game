@@ -2,6 +2,7 @@ export type RelaySocket = {
   onmessage: ((ev: { data: any }) => void) | null;
   onclose: ((ev?: any) => void) | null;
   onopen: ((ev?: any) => void) | null;
+  send?(raw: string): void;
   close(): void;
 };
 

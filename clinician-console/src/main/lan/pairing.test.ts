@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { SessionPairing, CODE_ALPHABET, type SessionInfo } from "./pairing";
 
-const SESSION: SessionInfo = { patientFirstName: "Margaret", affectedSide: "left", mode: "band_power_only" };
+const SESSION: SessionInfo = { patientFirstName: "Margaret", affectedSide: "left", mode: "band_power_only", source: "sim" };
 
 function makeRng(seq: number[]) {
   let i = 0;

@@ -5,6 +5,7 @@ export type SessionInfo = {
   patientFirstName: string;
   affectedSide: "left" | "right";
   mode: string;
+  source: "sim" | "live";
 };
 
 type Active = { code: string; session: SessionInfo; mintedAt: number; socketId: string | null };

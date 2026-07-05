@@ -17,7 +17,9 @@ function pairingApi(): PairingApi | null {
   return nr && typeof nr.startSession === "function" ? nr : null;
 }
 
-function sessionInfoFor(patient: Patient): SessionInfo {
+// The EEG source (sim/live) is chosen by the PairingPanel toggle, not derived
+// from the patient, so it is omitted here and injected on Start Session.
+function sessionInfoFor(patient: Patient): Omit<SessionInfo, "source"> {
   return {
     patientFirstName: patient.name.split(" ")[0],
     affectedSide: patient.affectedSide.toLowerCase() as "left" | "right",

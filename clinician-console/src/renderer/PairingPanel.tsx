@@ -11,10 +11,17 @@ export type PairingApi = {
   onPatientDisconnected: (cb: () => void) => void;
 };
 
-export function PairingPanel({ api, session }: { api: PairingApi; session: SessionInfo }) {
+export function PairingPanel({
+  api,
+  session,
+}: {
+  api: PairingApi;
+  session: Omit<SessionInfo, "source">;
+}) {
   const [code, setCode] = useState<string | null>(null);
   const [qr, setQr] = useState<string | null>(null);
   const [connected, setConnected] = useState(false);
+  const [source, setSource] = useState<"sim" | "live">("sim");
 
   useEffect(() => {
     api.onPatientConnected(() => setConnected(true));
@@ -22,7 +29,7 @@ export function PairingPanel({ api, session }: { api: PairingApi; session: Sessi
   }, [api]);
 
   async function start() {
-    const { code, url } = await api.startSession(session);
+    const { code, url } = await api.startSession({ ...session, source });
     setCode(code);
     setQr(await QRCode.toDataURL(url));
   }
@@ -37,7 +44,29 @@ export function PairingPanel({ api, session }: { api: PairingApi; session: Sessi
   return (
     <section className="pairing-panel">
       {!code ? (
-        <button className="btn btn-primary" onClick={start}>Start Session</button>
+        <>
+          <fieldset className="source-toggle" aria-label="EEG source">
+            <label>
+              <input
+                type="radio"
+                name="eeg-source"
+                checked={source === "sim"}
+                onChange={() => setSource("sim")}
+              />
+              Simulated EEG (dev)
+            </label>
+            <label>
+              <input
+                type="radio"
+                name="eeg-source"
+                checked={source === "live"}
+                onChange={() => setSource("live")}
+              />
+              Live headset
+            </label>
+          </fieldset>
+          <button className="btn btn-primary" onClick={start}>Start Session</button>
+        </>
       ) : (
         <div className="pairing-active">
           {qr && <img className="pairing-qr" src={qr} alt="Session pairing QR code" width={180} height={180} />}
