@@ -49,6 +49,7 @@ class NeuroReachWSServer:
         port: int = 8765,
         broadcast_hz: float = 20.0,
         quality_hz: float = 5.0,
+        session_controller=None,
     ):
         self.scoring_service = scoring_service
         self.host = host
@@ -57,6 +58,9 @@ class NeuroReachWSServer:
         # Contact-quality / live-trace frames for the console C2 setup screen go
         # out on their own slower cadence; the score-frame contract is untouched.
         self.quality_hz = float(quality_hz)
+        # Optional dev-mode session gate (SessionSimulator). None on a real
+        # headset run; then start_session/end_session reply with an error.
+        self.session_controller = session_controller
 
         self.clients: set = set()
         self._last_result = None  # most recent IntentScoreResult (held value)
@@ -73,6 +77,8 @@ class NeuroReachWSServer:
             "ping": self._cmd_ping,
             "get_status": self._cmd_get_status,
             "set_mode": self._cmd_set_mode,
+            "start_session": self._cmd_start_session,
+            "end_session": self._cmd_end_session,
         }
 
     # ------------------------------------------------------------------ lifecycle
@@ -299,6 +305,23 @@ class NeuroReachWSServer:
             )
             return
         await self._send(websocket, self._status_payload())
+
+    async def _cmd_start_session(self, websocket, data) -> None:
+        await self._session_command(websocket, arm=True)
+
+    async def _cmd_end_session(self, websocket, data) -> None:
+        await self._session_command(websocket, arm=False)
+
+    async def _session_command(self, websocket, *, arm: bool) -> None:
+        ctrl = self.session_controller
+        if ctrl is None:
+            await self._send(websocket, {"type": "error", "message": "no session controller"})
+            return
+        if arm:
+            ctrl.arm()
+        else:
+            ctrl.disarm()
+        await self._send(websocket, {"type": "session", **ctrl.status()})
 
     def _status_payload(self) -> dict:
         return {
