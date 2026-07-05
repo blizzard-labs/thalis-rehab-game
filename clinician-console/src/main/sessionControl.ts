@@ -14,3 +14,7 @@ export function sessionControlCommand(
   if (action === "end") return JSON.stringify({ cmd: "end_session" });
   return source === "sim" ? JSON.stringify({ cmd: "start_session" }) : null;
 }
+
+export function setModeCommand(mode: "band_power_only" | "csp_lda_blend"): string {
+  return JSON.stringify({ cmd: "set_mode", mode });
+}
