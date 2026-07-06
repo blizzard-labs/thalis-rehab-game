@@ -65,9 +65,12 @@ ERDCalculator (+CSP/LDA when reliable) → IntentScore fusion → 20 Hz WebSocke
 - **Server** (`server/`): `NeuroReachWSServer` (asyncio, thread-safe queue drain, 20 Hz broadcast
   decoupled from producer, `ping`/`get_status`/`set_mode`/`start_session`/`end_session` dispatch, graceful
   client drop). `start_session`/`end_session` arm/disarm the `SessionSimulator` via an optional
-  `session_controller` (per-client `session` reply, never broadcast). `intent_score` frame is byte-stable;
-  `eeg_quality` on its own message type. Entrypoint `run_ws_server.py` boots idle and selects source via
-  `EEG_SOURCE=sim` (default) or `live`.
+  `session_controller` (per-client `session` reply, never broadcast) **and gate `intent_score` broadcast to
+  the active session** — with a controller present, no score frames reach any client (patient or console)
+  before `start_session` or after `end_session`; `eeg_quality` is never gated. Without a controller (real
+  headset/standalone) broadcasting is ungated. `intent_score` frame is byte-stable; `eeg_quality` on its
+  own message type. Entrypoint `run_ws_server.py` boots idle and selects source via `EEG_SOURCE=sim`
+  (default) or `live`.
 
 ### 🧪 Tests available (`signal-engine/tests/`, 73 collected)
 | File | # | Covers |
