@@ -1,5 +1,9 @@
 import { contextBridge, ipcRenderer } from "electron";
-import { SIDECAR_WS_URL } from "./config";
+
+// The preload runs sandboxed, so it must NOT import ./config (which pulls in
+// node:fs / crypto / selfsigned via cert.ts and would throw at load, wiping the
+// whole bridge). Keep this in sync with SIDECAR_WS_URL / SIDECAR_PORT in config.ts.
+const SIDECAR_WS_URL = "ws://localhost:8765";
 
 contextBridge.exposeInMainWorld("neuroreach", {
   sidecarWsUrl: SIDECAR_WS_URL,
