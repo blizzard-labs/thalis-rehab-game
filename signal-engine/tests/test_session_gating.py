@@ -50,6 +50,33 @@ def _mean_score(ws, duration_s):
     return sum(vals) / len(vals) if vals else 0.0
 
 
+def _count_frames(ws, duration_s):
+    deadline = time.monotonic() + duration_s
+    n = 0
+    while time.monotonic() < deadline:
+        try:
+            raw = ws.recv(timeout=0.3)
+        except TimeoutError:
+            continue
+        if json.loads(raw).get("type") == "intent_score":
+            n += 1
+    return n
+
+
+def test_intent_score_streams_only_during_active_session(gated_server):
+    with connect(URI) as ws:
+        idle = _count_frames(ws, 1.5)
+        ws.send(json.dumps({"cmd": "start_session"}))
+        time.sleep(1.0)
+        active = _count_frames(ws, 1.5)
+        ws.send(json.dumps({"cmd": "end_session"}))
+        _count_frames(ws, 0.6)  # drain any frames already in flight at end
+        after = _count_frames(ws, 1.5)
+    assert idle == 0, f"expected no frames before start_session, got {idle}"
+    assert active > 10, f"expected active frames after start_session, got {active}"
+    assert after == 0, f"expected streaming to stop after end_session, got {after}"
+
+
 def test_score_rises_only_after_start_session(gated_server):
     with connect(URI) as ws:
         idle = _mean_score(ws, 2.0)

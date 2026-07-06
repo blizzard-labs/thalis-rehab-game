@@ -61,6 +61,12 @@ class NeuroReachWSServer:
         # Optional dev-mode session gate (SessionSimulator). None on a real
         # headset run; then start_session/end_session reply with an error.
         self.session_controller = session_controller
+        # When a session controller is present, intent_score frames are only
+        # broadcast while a session is active (between start_session and
+        # end_session). This stops simulated scores from reaching the patient
+        # once the clinician exits the live session. Without a controller (real
+        # headset / standalone) broadcasting is never gated.
+        self._session_active = False
 
         self.clients: set = set()
         self._last_result = None  # most recent IntentScoreResult (held value)
@@ -191,6 +197,8 @@ class NeuroReachWSServer:
                 await asyncio.sleep(interval)
                 if self._last_result is None or not self.clients:
                     continue  # nothing to send / nobody listening -> keep ticking
+                if self.session_controller is not None and not self._session_active:
+                    continue  # session gated: no scores until start_session (dev sim)
                 payload = json.dumps(self._format(self._last_result))
                 await self._broadcast(payload)
         except asyncio.CancelledError:
@@ -321,6 +329,7 @@ class NeuroReachWSServer:
             ctrl.arm()
         else:
             ctrl.disarm()
+        self._session_active = arm
         await self._send(websocket, {"type": "session", **ctrl.status()})
 
     def _status_payload(self) -> dict:
