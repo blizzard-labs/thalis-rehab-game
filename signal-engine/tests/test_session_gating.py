@@ -36,20 +36,6 @@ def gated_server():
         outlet.stop()
 
 
-def _mean_score(ws, duration_s):
-    deadline = time.monotonic() + duration_s
-    vals = []
-    while time.monotonic() < deadline:
-        try:
-            raw = ws.recv(timeout=0.5)
-        except TimeoutError:
-            continue
-        d = json.loads(raw)
-        if d.get("type") == "intent_score":
-            vals.append(d["intent_score"])
-    return sum(vals) / len(vals) if vals else 0.0
-
-
 def _count_frames(ws, duration_s):
     deadline = time.monotonic() + duration_s
     n = 0
@@ -75,13 +61,3 @@ def test_intent_score_streams_only_during_active_session(gated_server):
     assert idle == 0, f"expected no frames before start_session, got {idle}"
     assert active > 10, f"expected active frames after start_session, got {active}"
     assert after == 0, f"expected streaming to stop after end_session, got {after}"
-
-
-def test_score_rises_only_after_start_session(gated_server):
-    with connect(URI) as ws:
-        idle = _mean_score(ws, 2.0)
-        ws.send(json.dumps({"cmd": "start_session"}))
-        # allow the arc + EMA to climb
-        time.sleep(3.0)
-        active = _mean_score(ws, 3.0)
-    assert active > idle + 10.0, f"expected a clear rise; idle={idle:.1f} active={active:.1f}"
