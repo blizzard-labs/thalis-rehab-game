@@ -9,6 +9,7 @@ import { PairingScene } from "./scenes/PairingScene";
 import { SessionStats } from "./session/SessionStats";
 import { config, readSessionCode } from "./config";
 import { usePatientLink } from "./net/usePatientLink";
+import { useCameraPublish } from "./net/useCameraPublish";
 
 type View = "pairing" | "welcome" | "calibration" | "modeselect" | "garden" | "stars" | "summary";
 
@@ -22,6 +23,9 @@ export default function App() {
   // its shared score store instead of each opening their own socket (a per-scene
   // localhost socket never reaches a remote patient over the LAN relay).
   const link = usePatientLink(code, wssUrl);
+  // Publish the patient camera over the paired socket's WebRTC signaling once
+  // paired and connected. Local/dev (no code) stays preview-only.
+  useCameraPublish(link, Boolean(code) && link.conn === "open");
   const paired = link.session;
   const [view, setView] = useState<View>(code ? "pairing" : "welcome");
   const identity = (code ? paired : null) ?? config.patient;
@@ -48,7 +52,8 @@ export default function App() {
         return (
           <CalibrationScene
             affectedSide={identity.affectedSide}
-            totalTrials={2 /* short demo block this round */}
+            totalTrials={2 /* per class → 4 cued trials; short demo block */}
+            baselineMs={3000 /* demo: real block is 60 s (spec §6 step 1) */}
             onComplete={() => setView("modeselect")}
           />
         );
