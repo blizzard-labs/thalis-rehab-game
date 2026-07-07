@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { describe, it, expect } from "vitest";
+import { render, screen } from "@testing-library/react";
 import { PairingScene } from "./PairingScene";
 import { readSessionCode } from "../config";
 
@@ -11,20 +11,13 @@ describe("readSessionCode", () => {
 });
 
 describe("PairingScene", () => {
-  it("shows connecting text, then calls onPaired", async () => {
-    const onPaired = vi.fn();
-    const socket: any = { onopen: null, onclose: null, onmessage: null, onerror: null, send: vi.fn(), close: vi.fn() };
-    render(
-      <PairingScene
-        code="ABC234"
-        wssUrl="wss://host:8443"
-        onPaired={onPaired}
-        createSocket={() => socket}
-      />,
-    );
+  it("shows connecting text while waiting for the handshake", () => {
+    render(<PairingScene error={null} />);
     expect(screen.getByText(/connecting to your session/i)).toBeInTheDocument();
-    socket.onopen?.({});
-    socket.onmessage?.({ data: JSON.stringify({ type: "paired", session: { patientFirstName: "Margaret", affectedSide: "left", mode: "band_power_only" } }) });
-    await waitFor(() => expect(onPaired).toHaveBeenCalled());
+  });
+
+  it("surfaces a pairing error to the patient", () => {
+    render(<PairingScene error="session_taken" />);
+    expect(screen.getByRole("alert")).toHaveTextContent(/session_taken/i);
   });
 });

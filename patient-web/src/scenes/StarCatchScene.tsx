@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { ReachModel } from "../reach/ReachModel";
 import type { SessionStats } from "../session/SessionStats";
-import { createScoreClient, type WsLike, type ConnectionState } from "../net/scoreClient";
+import type { ConnectionState } from "../net/scoreClient";
 import { CameraFeed } from "./CameraFeed";
-import { ScoreStore } from "../scoring/scoreStore";
+import type { ScoreStore } from "../scoring/scoreStore";
 import { config } from "../config";
 
 const prefersReducedMotion = () =>
@@ -33,13 +33,15 @@ export function StarCatchScene({
   stats,
   engagementThreshold,
   affectedSide = config.patient.affectedSide,
-  createSocket,
+  store,
+  conn = "connecting",
   onEnd,
 }: {
   stats: SessionStats;
   engagementThreshold: number;
   affectedSide?: "left" | "right";
-  createSocket?: (url: string) => WsLike;
+  store: ScoreStore;
+  conn?: ConnectionState;
   onEnd: () => void;
 }) {
   const [reach, setReach] = useState(0);
@@ -48,31 +50,17 @@ export function StarCatchScene({
   const [score, setScore] = useState(0);
   const [engaged, setEngaged] = useState(false);
   const [celebrate, setCelebrate] = useState(false);
-  const [conn, setConn] = useState<ConnectionState>("connecting");
 
   const model = useRef(new ReachModel());
-  const store = useRef(new ScoreStore());
   const lastTs = useRef<number | null>(null);
   const celebrateUntil = useRef(0);
-  const createSocketRef = useRef(createSocket);
-  createSocketRef.current = createSocket;
 
   useEffect(() => {
-    const socketFactory =
-      createSocketRef.current ?? ((url: string) => new WebSocket(url) as unknown as WsLike);
-    const client = createScoreClient({
-      url: config.wsUrl,
-      createSocket: socketFactory,
-      onFrame: (f) => { store.current.push(f); },
-      onState: setConn,
-    });
-    client.connect();
-
     let raf = 0;
     const tick = (ts: number) => {
       const dt = lastTs.current === null ? 0 : (ts - lastTs.current) / 1000;
       lastTs.current = ts;
-      const latest = store.current.latest();
+      const latest = store.latest();
       const s = latest ? latest.intentScore : 0;
       model.current.update(s / 100, dt);
       const isEngaged = s >= engagementThreshold;
@@ -93,9 +81,8 @@ export function StarCatchScene({
 
     return () => {
       cancelAnimationFrame(raf);
-      client.stop();
     };
-  }, [engagementThreshold, stats]);
+  }, [engagementThreshold, stats, store]);
 
   const reduced = prefersReducedMotion();
   const pct = Math.round(score);

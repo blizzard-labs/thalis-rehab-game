@@ -14,6 +14,7 @@ export type LanClientOptions = {
   onScoreFrame: (raw: string) => void;
   onPaired: (session: PairedSession) => void;
   onError: (reason: string) => void;
+  onClose?: () => void;
   scheduler?: (fn: () => void, ms: number) => void;
 };
 
@@ -44,6 +45,7 @@ export function createLanClient(opts: LanClientOptions) {
     };
     s.onclose = () => {
       socket = null;
+      opts.onClose?.();
     };
   }
 

@@ -94,6 +94,11 @@ export class LanServer extends EventEmitter {
     ws.on("close", () => {
       if (this.patientSocket === ws) {
         this.patientSocket = null;
+        // Free the pairing slot (keep the code valid) and tear down the relay so
+        // the same device can re-pair on reconnect instead of hitting session_taken.
+        this.pairing.releaseSocket();
+        this.relay?.stop();
+        this.relay = null;
         this.emit("patient-disconnected");
       }
     });

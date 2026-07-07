@@ -2,16 +2,13 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, act } from "@testing-library/react";
 import { GardenScene } from "./GardenScene";
 import { SessionStats } from "../session/SessionStats";
-import type { WsLike } from "../net/scoreClient";
+import { ScoreStore } from "../scoring/scoreStore";
 
-// A controllable fake socket + rAF/time control so we can drive the loop.
-function fakeSocket(): WsLike & { open(): void; send(s: number): void } {
-  const s: any = { onopen: null, onclose: null, onmessage: null, onerror: null, close: vi.fn() };
-  s.open = () => s.onopen?.({});
-  s.send = (v: number) =>
-    s.onmessage?.({ data: JSON.stringify({ type: "intent_score", intent_score: v, mode: "band_power_only", timestamp: 0 }) });
-  return s;
-}
+// Scenes are pure consumers of a shared ScoreStore now; drive the loop by
+// pushing frames into the store the App hook would otherwise fill.
+const frame = (v: number) => ({
+  intentScore: v, erdScore: null, classifierScore: null, isArtifact: false, mode: "band_power_only", timestamp: 0,
+});
 
 describe("GardenScene", () => {
   let raf: Array<FrameRequestCallback>;
@@ -36,34 +33,33 @@ describe("GardenScene", () => {
   }
 
   it("grows the flower as scores rise and flips the status pill at threshold", () => {
-    const sock = fakeSocket();
+    const store = new ScoreStore();
     render(
       <GardenScene
         stats={new SessionStats()}
         engagementThreshold={55}
-        createSocket={() => sock}
+        store={store}
+        conn="open"
         onEnd={() => {}}
       />,
     );
-    act(() => sock.open());
     const flower = screen.getByTestId("flower");
     const before = Number(flower.getAttribute("data-growth"));
 
-    act(() => sock.send(90));
+    act(() => store.push(frame(90)));
     pump(30, 100); // ~3 s of 100 ms frames at high score
     const after = Number(screen.getByTestId("flower").getAttribute("data-growth"));
     expect(after).toBeGreaterThan(before);
     expect(screen.getByTestId("status-pill")).toHaveAttribute("data-engaged", "true");
 
-    act(() => sock.send(10));
+    act(() => store.push(frame(10)));
     pump(5, 100);
     expect(screen.getByTestId("status-pill")).toHaveAttribute("data-engaged", "false");
   });
 
   it("ends the session on the End button", async () => {
     const onEnd = vi.fn();
-    const sock = fakeSocket();
-    render(<GardenScene stats={new SessionStats()} engagementThreshold={55} createSocket={() => sock} onEnd={onEnd} />);
+    render(<GardenScene stats={new SessionStats()} engagementThreshold={55} store={new ScoreStore()} conn="open" onEnd={onEnd} />);
     screen.getByRole("button", { name: /end session/i }).click();
     expect(onEnd).toHaveBeenCalledOnce();
   });

@@ -56,6 +56,15 @@ export class SessionPairing {
     return this.active?.socketId ?? null;
   }
 
+  /**
+   * Release the bound socket without ending the session, so the same code can
+   * be re-claimed after the patient drops (reconnect). Keeps single-claimant
+   * semantics: only frees the slot once the current holder is gone.
+   */
+  releaseSocket(): void {
+    if (this.active) this.active.socketId = null;
+  }
+
   session(): SessionInfo | null {
     return this.active && !this.expired() ? this.active.session : null;
   }

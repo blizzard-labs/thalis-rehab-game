@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { WelcomeScene } from "./scenes/WelcomeScene";
 import { CalibrationScene } from "./scenes/CalibrationScene";
 import { GameModeSelect } from "./scenes/GameModeSelect";
@@ -8,7 +8,7 @@ import { SummaryScene } from "./scenes/SummaryScene";
 import { PairingScene } from "./scenes/PairingScene";
 import { SessionStats } from "./session/SessionStats";
 import { config, readSessionCode } from "./config";
-import type { PairedSession } from "./net/lanClient";
+import { usePatientLink } from "./net/usePatientLink";
 
 type View = "pairing" | "welcome" | "calibration" | "modeselect" | "garden" | "stars" | "summary";
 
@@ -18,11 +18,20 @@ export default function App() {
   // in local/dev mode and boot straight to Welcome against the localhost sidecar.
   const code = useMemo(() => readSessionCode(), []);
   const wssUrl = useMemo(() => `wss://${window.location.host}`, []);
+  // One connection owned here and kept alive for the whole session; scenes read
+  // its shared score store instead of each opening their own socket (a per-scene
+  // localhost socket never reaches a remote patient over the LAN relay).
+  const link = usePatientLink(code, wssUrl);
+  const paired = link.session;
   const [view, setView] = useState<View>(code ? "pairing" : "welcome");
-  const [paired, setPaired] = useState<PairedSession | null>(null);
-  const identity = paired ?? config.patient;
-  const firstName = paired ? paired.patientFirstName : config.patient.firstName;
+  const identity = (code ? paired : null) ?? config.patient;
+  const firstName = code && paired ? paired.patientFirstName : config.patient.firstName;
   const stats = useMemo(() => new SessionStats(), []);
+
+  // Advance past the pairing gate once the LAN handshake lands.
+  useEffect(() => {
+    if (view === "pairing" && paired) setView("welcome");
+  }, [view, paired]);
 
   // Quit abandons the session and returns to Welcome, resetting accumulated
   // stats. A single persistent button (rendered below) drives this from every
@@ -32,13 +41,7 @@ export default function App() {
   const scene = (() => {
     switch (view) {
       case "pairing":
-        return (
-          <PairingScene
-            code={code!}
-            wssUrl={wssUrl}
-            onPaired={(s) => { setPaired(s); setView("welcome"); }}
-          />
-        );
+        return <PairingScene error={link.error} />;
       case "welcome":
         return <WelcomeScene firstName={firstName} onBegin={() => setView("calibration")} />;
       case "calibration":
@@ -57,6 +60,8 @@ export default function App() {
           <GardenScene
             stats={stats}
             engagementThreshold={config.engagementThreshold}
+            store={link.store}
+            conn={link.conn}
             onEnd={() => setView("summary")}
           />
         );
@@ -66,6 +71,8 @@ export default function App() {
             stats={stats}
             engagementThreshold={config.engagementThreshold}
             affectedSide={identity.affectedSide}
+            store={link.store}
+            conn={link.conn}
             onEnd={() => setView("summary")}
           />
         );

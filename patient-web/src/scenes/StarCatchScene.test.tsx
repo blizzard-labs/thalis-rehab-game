@@ -2,15 +2,11 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, act } from "@testing-library/react";
 import { StarCatchScene } from "./StarCatchScene";
 import { SessionStats } from "../session/SessionStats";
-import type { WsLike } from "../net/scoreClient";
+import { ScoreStore } from "../scoring/scoreStore";
 
-function fakeSocket(): WsLike & { open(): void; send(s: number): void } {
-  const s: any = { onopen: null, onclose: null, onmessage: null, onerror: null, close: vi.fn() };
-  s.open = () => s.onopen?.({});
-  s.send = (v: number) =>
-    s.onmessage?.({ data: JSON.stringify({ type: "intent_score", intent_score: v, mode: "band_power_only", timestamp: 0 }) });
-  return s;
-}
+const frame = (v: number) => ({
+  intentScore: v, erdScore: null, classifierScore: null, isArtifact: false, mode: "band_power_only", timestamp: 0,
+});
 
 describe("StarCatchScene", () => {
   let raf: Array<FrameRequestCallback>;
@@ -31,14 +27,13 @@ describe("StarCatchScene", () => {
 
   it("extends the reach and collects a star as scores stay high", () => {
     const stats = new SessionStats();
-    const sock = fakeSocket();
+    const store = new ScoreStore();
     render(
-      <StarCatchScene stats={stats} engagementThreshold={55} createSocket={() => sock} onEnd={() => {}} />,
+      <StarCatchScene stats={stats} engagementThreshold={55} store={store} conn="open" onEnd={() => {}} />,
     );
-    act(() => sock.open());
     const before = Number(screen.getByTestId("reach-hand").getAttribute("data-reach"));
 
-    act(() => sock.send(95));
+    act(() => store.push(frame(95)));
     pump(40, 100); // ~4 s of high score → reach saturates and a star collects
     const after = Number(screen.getByTestId("reach-hand").getAttribute("data-reach"));
 
@@ -49,8 +44,7 @@ describe("StarCatchScene", () => {
 
   it("ends the session on the End button", () => {
     const onEnd = vi.fn();
-    const sock = fakeSocket();
-    render(<StarCatchScene stats={new SessionStats()} engagementThreshold={55} createSocket={() => sock} onEnd={onEnd} />);
+    render(<StarCatchScene stats={new SessionStats()} engagementThreshold={55} store={new ScoreStore()} conn="open" onEnd={onEnd} />);
     screen.getByRole("button", { name: /end session/i }).click();
     expect(onEnd).toHaveBeenCalledOnce();
   });

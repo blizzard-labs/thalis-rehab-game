@@ -147,6 +147,29 @@ describe("LanServer", () => {
     b.ws.close();
   });
 
+  it("lets the same code re-pair after the patient drops (reconnect)", async () => {
+    sidecar = await fakeSidecar();
+    server = new LanServer(baseOpts());
+    await server.start();
+    const code = server.startSession(SESSION).code;
+
+    const a = connectPatient(server);
+    await a.open();
+    a.send({ type: "pair", code });
+    await a.waitFor("paired");
+    // Patient drops (Wi-Fi blip / sidecar restart); wait for the server to see it.
+    const gone = new Promise<void>((r) => server!.once("patient-disconnected", () => r()));
+    a.ws.close();
+    await gone;
+
+    const b = connectPatient(server);
+    await b.open();
+    b.send({ type: "pair", code });
+    const paired = await b.waitFor("paired"); // same code works again, no session_taken
+    expect(paired.type).toBe("paired");
+    b.ws.close();
+  });
+
   it("rejects a bad code", async () => {
     sidecar = await fakeSidecar();
     server = new LanServer(baseOpts());

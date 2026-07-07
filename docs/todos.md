@@ -14,8 +14,8 @@ lined up 🔜**. Detailed change history lives in git + claude-mem, not here.
 | Subsystem | State | Tests |
 |---|---|---|
 | `signal-engine/` (Python DSP + scoring + WS) | Core complete, mock/synthetic-validated; on-head validation pending | **67 passed, 6 skipped** (skips = opt-in live/on-head) |
-| `clinician-console/` (Electron + React, C1–C5 + LAN pairing) | Guided session stepper (Signal→Pair→Calibrate→Live); Sim/Live toggle + pairing surfaced; End/Switch-mode wired; persistence still pending | **109 passed** (31 files) + 2 live integration |
-| `patient-web/` (React + Vite patient game) | Welcome→Calibration→Garden/StarCatch→Summary + pairing gate; EEG-only | **58 passed** (19 files) + 2 live integration |
+| `clinician-console/` (Electron + React, C1–C5 + LAN pairing) | Guided session stepper (Signal→Pair→Calibrate→Live); Sim/Live toggle + pairing surfaced; End/Switch-mode wired; persistence still pending | **110 passed** (31 files) + 2 live integration |
+| `patient-web/` (React + Vite patient game) | Welcome→Calibration→Garden/StarCatch→Summary + pairing gate; EEG-only | **62 passed** (20 files) + 2 live integration |
 
 **Milestone map (spec §15):** V2-0 foundation ✅ · V2-1 patient web ✅ · S1 LAN + pairing ✅ · **V2-2 remote
 camera/WebRTC ⏳ next** · V2-3 clinical workflow ⏳ · V2-4 packaging/hardening ⏳.
@@ -27,8 +27,8 @@ is blocked on it. Everything shipped so far is **EEG-only (Mode A, band-power)**
 Run all tests:
 ```bash
 conda run -n eeg python -m pytest signal-engine/tests/   # 67 passed, 6 skipped
-cd patient-web        && npm run test                     # 58 passed
-cd clinician-console  && npm run test                     # 109 passed
+cd patient-web        && npm run test                     # 62 passed
+cd clinician-console  && npm run test                     # 110 passed
 ```
 
 ---
@@ -206,8 +206,10 @@ preview, not yet published to the clinic.
   sequencer — **cosmetic**, no marker bridge; clinician pre-cal "I'm ready" gate; blinking REC dot) ·
   `GameModeSelect` (Garden live; River disabled; Star Catcher live) · `GardenScene` (P3 illustrated
   full-bleed SVG flower, focus meter, status banner, camera overlay) · `StarCatchScene` (P4 reach avatar
-  toward star ROM target) · `SummaryScene` (P6 warm non-comparative recap) · `PairingScene` ("Connecting
-  to your session…" → advances on `paired`). `CameraFeed` selfie preview + REC.
+  toward star ROM target) · `SummaryScene` (P6 warm non-comparative recap) · `PairingScene` (presentational
+  "Connecting to your session…" / error; the connection itself lives in `usePatientLink`). `CameraFeed`
+  selfie preview + REC. Scenes are **pure score consumers** — they read a shared `ScoreStore` + `conn`
+  passed from App, not their own socket.
 - **Warm-up 3D hand viz** (`src/warmup/`): dual Shadow-Hand capsule renders (R3F v8/drei v9 pinned for
   React 18); affected side animates neutral→open→loop; pure motion logic TDD'd; `Canvas` mocked in jsdom.
 - **Logic layer** (fully unit-tested): `garden/PlantGrowthModel` (verbatim C# port: grow 0.8/s, wilt
@@ -215,15 +217,19 @@ preview, not yet published to the clinic.
   `scoring/intentScoreMessage` (shared `ScoreFrame` contract, byte-identical to console) · `scoring/scoreStore`
   (circular buffer, latest/recentAverage/streak) · `net/scoreClient` (WSS reconnect + backoff) ·
   `net/lanClient` (pair from `?c=`, route `paired`/`error`/`intent_score`, localhost dev fallback) ·
-  `session/SessionStats` (engaged-time + longest-streak).
-- **App router** (`App.tsx`) — `useState` scene machine sharing one `SessionStats`; boots to the pairing
-  gate when `?c=` present and takes patient identity from the paired ack (closes the hardcoded-"Margaret"
-  gap in the LAN path; `config.ts` remains the dev default).
+  `net/usePatientLink` (**one persistent session socket** lifted to App — remote `?c=` dials the LAN relay
+  `wss://<host>` and rides the *paired* socket for scores; no code → localhost sidecar; capped-backoff
+  reconnect feeds a shared `ScoreStore`) · `session/SessionStats` (engaged-time + longest-streak).
+- **App router** (`App.tsx`) — `useState` scene machine sharing one `SessionStats`; owns the `usePatientLink`
+  connection for the whole session, boots to the pairing gate when `?c=` present and takes patient identity
+  from the paired ack (closes the hardcoded-"Margaret" gap in the LAN path; `config.ts` remains the dev
+  default). Scenes previously each opened `ws://localhost:8765`, which never reached a **remote** patient
+  over the LAN relay (worked only same-machine) — fixed by the single lifted socket.
 
-### 🧪 Tests available (19 files, 58 unit + 2 live integration)
+### 🧪 Tests available (20 files, 62 unit + 2 live integration)
 - **Scenes:** `Welcome`, `Calibration`, `GameModeSelect`, `Garden`, `StarCatch`, `Summary`, `Pairing`.
 - **Logic:** `PlantGrowthModel`, `ReachModel`, `intentScoreMessage`, `scoreStore`, `scoreClient`,
-  `SessionStats`, `sanity`.
+  `usePatientLink` (remote-relay routing + reconnect + local fallback), `SessionStats`, `sanity`.
 - **Warm-up:** `warmupMotion`, `interpolation`, `useWarmupPose`.
 - **App:** flow `Welcome → Calibration → Garden → Summary`.
 - **Integration** (`integration/sidecar.live.test.ts`, real mock-EEG sidecar ~27 s boot): "mock MI grows
