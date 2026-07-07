@@ -54,9 +54,26 @@ describe("signalingRelay", () => {
       sendToPatient: vi.fn(),
     });
     relay.connect();
+    sidecar.onopen?.(); // socket opens -> outbox drains
 
     relay.sendToSidecar(JSON.stringify({ type: "webrtc-offer", sdp: "O" }));
 
+    expect(sidecar.sent).toContain(JSON.stringify({ type: "webrtc-offer", sdp: "O" }));
+  });
+
+  it("queues sends until the sidecar socket opens, then drains", () => {
+    const sidecar = fakeSocket();
+    const relay = createSignalingRelay({
+      sidecarWsUrl: "ws://x",
+      createSocket: () => sidecar,
+      sendToPatient: vi.fn(),
+    });
+    relay.connect();
+
+    relay.sendToSidecar(JSON.stringify({ type: "webrtc-offer", sdp: "O" }));
+    expect(sidecar.sent).toEqual([]); // not open yet
+
+    sidecar.onopen?.();
     expect(sidecar.sent).toContain(JSON.stringify({ type: "webrtc-offer", sdp: "O" }));
   });
 

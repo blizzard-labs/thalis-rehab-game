@@ -12,15 +12,36 @@ import type { SessionInfo } from "./pairing";
 const SESSION: SessionInfo = { patientFirstName: "Margaret", affectedSide: "left", mode: "band_power_only", source: "sim" };
 
 // A fake sidecar: a real ws server we point the relay at, so we can push frames.
-function fakeSidecar(): Promise<{ url: string; push: (o: unknown) => void; close: () => void }> {
+function fakeSidecar(): Promise<{
+  url: string;
+  push: (o: unknown) => void;
+  received: any[];
+  waitForReceived: (type: string) => Promise<any>;
+  close: () => void;
+}> {
   return new Promise((resolve) => {
     const wss = new WebSocketServer({ port: 0 }, () => {
       const port = (wss.address() as AddressInfo).port;
       const clients = new Set<WebSocket>();
-      wss.on("connection", (c) => { clients.add(c); c.on("close", () => clients.delete(c)); });
+      const received: any[] = [];
+      wss.on("connection", (c) => {
+        clients.add(c);
+        c.on("message", (d) => received.push(JSON.parse(d.toString())));
+        c.on("close", () => clients.delete(c));
+      });
       resolve({
         url: `ws://127.0.0.1:${port}`,
         push: (o) => clients.forEach((c) => c.send(JSON.stringify(o))),
+        received,
+        waitForReceived: (type: string) =>
+          new Promise<any>((res) => {
+            const check = () => {
+              const m = received.find((x) => x.type === type);
+              if (m) return res(m);
+              setTimeout(check, 10);
+            };
+            check();
+          }),
         close: () => wss.close(),
       });
     });
@@ -30,7 +51,13 @@ function fakeSidecar(): Promise<{ url: string; push: (o: unknown) => void; close
 // Node ws adapter matching the RelaySocket shape the relay expects.
 function nodeRelaySocket(url: string): RelaySocket {
   const ws = new WebSocket(url);
-  const s: RelaySocket = { onmessage: null, onclose: null, onopen: null, close: () => ws.close() };
+  const s: RelaySocket = {
+    onmessage: null,
+    onclose: null,
+    onopen: null,
+    send: (raw: string) => ws.send(raw),
+    close: () => ws.close(),
+  };
   ws.on("open", () => s.onopen?.());
   ws.on("message", (d) => s.onmessage?.({ data: d.toString() }));
   ws.on("close", () => s.onclose?.());
@@ -124,6 +151,40 @@ describe("LanServer", () => {
     sidecar.push({ type: "intent_score", intent_score: 50 });
     await p.waitFor("intent_score");
     expect(p.messages.find((m) => m.type === "eeg_quality")).toBeUndefined();
+    p.ws.close();
+  });
+
+  it("relays a paired patient's webrtc-offer to the sidecar", async () => {
+    sidecar = await fakeSidecar();
+    server = new LanServer(baseOpts());
+    await server.start();
+    const code = server.startSession(SESSION).code;
+
+    const p = connectPatient(server);
+    await p.open();
+    p.send({ type: "pair", code });
+    await p.waitFor("paired");
+
+    p.send({ type: "webrtc-offer", sdp: "OFFER" });
+    const offer = await sidecar.waitForReceived("webrtc-offer");
+    expect(offer.sdp).toBe("OFFER");
+    p.ws.close();
+  });
+
+  it("relays a sidecar webrtc-answer back to the paired patient", async () => {
+    sidecar = await fakeSidecar();
+    server = new LanServer(baseOpts());
+    await server.start();
+    const code = server.startSession(SESSION).code;
+
+    const p = connectPatient(server);
+    await p.open();
+    p.send({ type: "pair", code });
+    await p.waitFor("paired");
+
+    sidecar.push({ type: "webrtc-answer", sdp: "ANS" });
+    const answer = await p.waitFor("webrtc-answer");
+    expect(answer.sdp).toBe("ANS");
     p.ws.close();
   });
 

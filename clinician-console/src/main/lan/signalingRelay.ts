@@ -17,11 +17,20 @@ export function createSignalingRelay(opts: SignalingRelayOptions) {
   const schedule = opts.scheduler ?? ((fn, ms) => setTimeout(fn, ms));
   const reconnectMs = opts.reconnectMs ?? 1000;
   let socket: RelaySocket | null = null;
+  let ready = false;
   let stopped = false;
+  // Patient offer/ice can arrive before the localhost sidecar socket finishes
+  // opening; queue until it does, then drain (mirrors the control-socket outbox).
+  const outbox: string[] = [];
 
   function open() {
     const s = opts.createSocket(opts.sidecarWsUrl);
     socket = s;
+    ready = false;
+    s.onopen = () => {
+      ready = true;
+      while (outbox.length) s.send?.(outbox.shift()!);
+    };
     s.onmessage = (ev) => {
       const raw = String(ev.data);
       let parsed: any;
@@ -34,6 +43,7 @@ export function createSignalingRelay(opts: SignalingRelayOptions) {
     };
     s.onclose = () => {
       socket = null;
+      ready = false;
       if (stopped) return;
       schedule(open, reconnectMs);
     };
@@ -45,7 +55,11 @@ export function createSignalingRelay(opts: SignalingRelayOptions) {
       open();
     },
     sendToSidecar(raw: string) {
-      socket?.send?.(raw);
+      if (!ready || !socket) {
+        outbox.push(raw);
+        return;
+      }
+      socket.send?.(raw);
     },
     stop() {
       stopped = true;
