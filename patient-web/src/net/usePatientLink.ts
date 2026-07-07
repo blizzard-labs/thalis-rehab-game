@@ -4,12 +4,15 @@ import type { ConnectionState, WsLike } from "./scoreClient";
 import { parseIntentScoreMessage } from "../scoring/intentScoreMessage";
 import { ScoreStore } from "../scoring/scoreStore";
 import { config } from "../config";
+import type { SignalingMessage } from "./signaling";
 
 export type PatientLink = {
   store: ScoreStore;
   conn: ConnectionState;
   session: PairedSession | null;
   error: string | null;
+  sendSignaling: (msg: SignalingMessage) => void;
+  subscribeSignaling: (fn: (msg: SignalingMessage) => void) => void;
 };
 
 /**
@@ -34,6 +37,8 @@ export function usePatientLink(
   const [error, setError] = useState<string | null>(null);
   const factoryRef = useRef(createSocket);
   factoryRef.current = createSocket;
+  const clientRef = useRef<ReturnType<typeof createLanClient> | null>(null);
+  const signalingSubRef = useRef<((m: SignalingMessage) => void) | null>(null);
 
   useEffect(() => {
     let stopped = false;
@@ -61,6 +66,7 @@ export function usePatientLink(
           setConn("open");
         },
         onError: (reason) => setError(reason),
+        onSignaling: (m) => signalingSubRef.current?.(m),
         onClose: () => {
           if (stopped) return;
           setConn("reconnecting");
@@ -69,6 +75,7 @@ export function usePatientLink(
           timer = setTimeout(connect, delay);
         },
       });
+      clientRef.current = client;
       client.connect();
     };
     connect();
@@ -77,8 +84,18 @@ export function usePatientLink(
       stopped = true;
       if (timer) clearTimeout(timer);
       client?.stop();
+      clientRef.current = null;
     };
   }, [code, wssUrl]);
 
-  return { store: storeRef.current, conn, session, error };
+  return {
+    store: storeRef.current,
+    conn,
+    session,
+    error,
+    sendSignaling: (msg) => clientRef.current?.send(JSON.stringify(msg)),
+    subscribeSignaling: (fn) => {
+      signalingSubRef.current = fn;
+    },
+  };
 }

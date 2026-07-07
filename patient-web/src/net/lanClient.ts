@@ -1,4 +1,5 @@
 import type { WsLike } from "./scoreClient";
+import { isSignalingMessage, type SignalingMessage } from "./signaling";
 
 export type PairedSession = {
   patientFirstName: string;
@@ -14,6 +15,7 @@ export type LanClientOptions = {
   onScoreFrame: (raw: string) => void;
   onPaired: (session: PairedSession) => void;
   onError: (reason: string) => void;
+  onSignaling?: (msg: SignalingMessage) => void;
   onClose?: () => void;
   scheduler?: (fn: () => void, ms: number) => void;
 };
@@ -42,6 +44,7 @@ export function createLanClient(opts: LanClientOptions) {
       if (msg.type === "paired") opts.onPaired(msg.session as PairedSession);
       else if (msg.type === "error") opts.onError(msg.reason);
       else if (msg.type === "intent_score") opts.onScoreFrame(raw);
+      else if (isSignalingMessage(msg)) opts.onSignaling?.(msg);
     };
     s.onclose = () => {
       socket = null;
@@ -52,6 +55,9 @@ export function createLanClient(opts: LanClientOptions) {
   return {
     connect() {
       open();
+    },
+    send(raw: string) {
+      socket?.send?.(raw);
     },
     stop() {
       socket?.close();
