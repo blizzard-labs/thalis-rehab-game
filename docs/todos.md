@@ -14,7 +14,7 @@ lined up 🔜**. Detailed change history lives in git + claude-mem, not here.
 | Subsystem | State | Tests |
 |---|---|---|
 | `signal-engine/` (Python DSP + scoring + WS) | Core complete, mock/synthetic-validated; on-head validation pending | **67 passed, 6 skipped** (skips = opt-in live/on-head) |
-| `clinician-console/` (Electron + React, C1–C5 + LAN pairing) | Guided session stepper (Signal→Pair→Calibrate→Live); Sim/Live toggle + pairing surfaced; End/Switch-mode wired; persistence still pending | **106 passed** (30 files) + 2 live integration |
+| `clinician-console/` (Electron + React, C1–C5 + LAN pairing) | Guided session stepper (Signal→Pair→Calibrate→Live); Sim/Live toggle + pairing surfaced; End/Switch-mode wired; persistence still pending | **109 passed** (31 files) + 2 live integration |
 | `patient-web/` (React + Vite patient game) | Welcome→Calibration→Garden/StarCatch→Summary + pairing gate; EEG-only | **58 passed** (19 files) + 2 live integration |
 
 **Milestone map (spec §15):** V2-0 foundation ✅ · V2-1 patient web ✅ · S1 LAN + pairing ✅ · **V2-2 remote
@@ -28,7 +28,7 @@ Run all tests:
 ```bash
 conda run -n eeg python -m pytest signal-engine/tests/   # 67 passed, 6 skipped
 cd patient-web        && npm run test                     # 58 passed
-cd clinician-console  && npm run test                     # 106 passed
+cd clinician-console  && npm run test                     # 109 passed
 ```
 
 ---
@@ -140,8 +140,10 @@ five-screen console. Data is **mock/in-memory** (seeded roster), no persistence.
   frames; socket reconnects like the score relay; outbound commands queue until open.
 - **Guided session flow** (`renderer/SessionFlow.tsx` + `useSession.ts`) — a stepper **Signal check →
   Pair device → Calibrate → Live** launched from the workspace "Start session ▶". Steps: `SignalCheckStep`
-  (C2 electrode map + C3/Cz/C4 trace + **Simulated EEG / Live headset** toggle), `PairDeviceStep` (Start
-  Session → QR (`qrcode`) + code + waiting/✓-connected + dev-localhost note; **not hard-gated**),
+  (C2 electrode map + C3/Cz/C4 trace + **Simulated EEG / Live headset** toggle), `PairDeviceStep`
+  (**auto-mints** the code on entry — no Start Session button; QR (`qrcode`) + code + waiting/✓-connected +
+  dev-localhost note + **"Start on the patient's computer" join instructions** carrying the LAN URL;
+  minting opens pairing only, EEG streaming still begins in Live; **not hard-gated**),
   `CalibrateStep` (honest skippable placeholder), `LiveStep` (arms the sim on mount). `useSession` owns
   source/pairing/lifecycle over the `session:{open,begin,end,set-mode}` IPC; shows a desktop-app notice
   when `window.neuroreach` is absent. Sim **arms on entering Live**, not at pairing.

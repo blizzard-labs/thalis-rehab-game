@@ -44,9 +44,9 @@ describe("SessionFlow", () => {
 
     // Step 1 signal check
     fireEvent.click(screen.getByRole("button", { name: /next: pair device/i }));
-    // Step 2 pair
-    fireEvent.click(screen.getByRole("button", { name: /start session/i }));
-    await waitFor(() => expect(screen.getByText("ABC234")).toBeTruthy());
+    // Step 2 pair — code auto-mints on entry (no button)
+    await waitFor(() => expect(bridge.open).toHaveBeenCalled());
+    await waitFor(() => expect(screen.getByText("ABC234", { selector: ".pairing-code" })).toBeTruthy());
     fireEvent.click(screen.getByRole("button", { name: /continue/i }));
     // Step 3 calibrate
     fireEvent.click(screen.getByRole("button", { name: /continue to live/i }));
@@ -59,10 +59,10 @@ describe("SessionFlow", () => {
     expect(onExit).toHaveBeenCalled();
   });
 
-  it("shows a desktop-app notice and disables Start when the bridge is absent", () => {
+  it("shows a desktop-app notice and mints no code when the bridge is absent", () => {
     renderFlow(); // no bridge installed
     fireEvent.click(screen.getByRole("button", { name: /next: pair device/i }));
     expect(screen.getByText(/desktop app/i)).toBeTruthy();
-    expect((screen.getByRole("button", { name: /start session/i }) as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.queryByText(/start on the patient's computer/i)).toBeNull();
   });
 });

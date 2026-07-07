@@ -170,6 +170,34 @@ body { margin: 0; }
 .pairing-status { color: var(--muted); font-size: 14px; margin: 0; }
 .pairing-status--ok { color: var(--good); font-weight: 600; }
 
+.pairing-instructions {
+  margin-top: 20px;
+  padding: 16px 18px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  max-width: 560px;
+}
+.pairing-instructions-title {
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+.pairing-steps {
+  margin: 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.pairing-steps strong { color: var(--text); }
+.pairing-url {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--accent);
+  word-break: break-all;
+}
+
 /* Session stepper progress */
 .stepper { display: flex; gap: 8px; list-style: none; margin: 0; padding: 0; }
 .stepper-item {

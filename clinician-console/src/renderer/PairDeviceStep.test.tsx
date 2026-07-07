@@ -17,16 +17,26 @@ function renderStep(over: Partial<Parameters<typeof PairDeviceStep>[0]> = {}) {
 }
 
 describe("PairDeviceStep", () => {
-  it("calls onOpen when Start Session is clicked", () => {
+  it("auto-mints the pairing code on mount when the bridge is ready", async () => {
     const { props } = renderStep();
-    fireEvent.click(screen.getByRole("button", { name: /start session/i }));
-    expect(props.onOpen).toHaveBeenCalled();
+    await waitFor(() => expect(props.onOpen).toHaveBeenCalled());
+  });
+
+  it("does not auto-mint once a code already exists", () => {
+    const { props } = renderStep({ code: "ABC234", url: "https://x/?c=ABC234" });
+    expect(props.onOpen).not.toHaveBeenCalled();
   });
 
   it("shows the code and a QR once a code exists", async () => {
     renderStep({ code: "ABC234", url: "https://x/?c=ABC234" });
-    expect(screen.getByText("ABC234")).toBeTruthy();
+    expect(screen.getByText("ABC234", { selector: ".pairing-code" })).toBeTruthy();
     await waitFor(() => expect(screen.getByAltText(/pairing qr/i)).toBeTruthy());
+  });
+
+  it("shows join instructions with the patient URL once a code exists", () => {
+    renderStep({ code: "ABC234", url: "https://x/?c=ABC234" });
+    expect(screen.getByText(/start on the patient's computer/i)).toBeTruthy();
+    expect(screen.getByText("https://x/?c=ABC234")).toBeTruthy();
   });
 
   it("reflects patient-connected status", () => {
