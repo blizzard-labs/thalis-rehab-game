@@ -266,3 +266,22 @@ def test_latest_quality_snapshot_after_run(mock_outlet):
     finally:
         service.stop()
         inlet.close()
+
+
+# ------------------------------------------------------- V2-2b kinematic source
+
+def test_fresh_kinematic_forwarded_stale_dropped():
+    from vision.kinematic_worker import LatestKinematic
+    from vision.types import KinematicResult
+
+    src = LatestKinematic()
+    # Exercise the staleness gate directly for determinism (no live loop needed).
+    svc = ScoringService.__new__(ScoringService)
+    svc._kinematic_source = src
+    svc.kinematic_staleness_s = 0.3
+
+    src.set(KinematicResult(70.0, 0.0, False, True, True, time.time() - 5.0))  # stale
+    assert svc._read_kinematic() is None
+
+    src.set(KinematicResult(70.0, 0.0, False, True, True, time.time()))        # fresh
+    assert svc._read_kinematic() is not None

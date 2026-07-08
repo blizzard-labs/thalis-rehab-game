@@ -48,6 +48,9 @@ class ScoringService:
         output_queue: "queue.Queue[IntentScoreResult]",
         update_rate_hz: float = 20.0,
         chunk_size: int = 12,
+        kinematic_source=None,
+        kinematic_worker=None,
+        kinematic_staleness_s: float = 0.3,
     ):
         self.eeg_inlet = eeg_inlet
         self.amplitude_gate = amplitude_gate
@@ -57,6 +60,10 @@ class ScoringService:
         self.output_queue = output_queue
         self.update_rate_hz = float(update_rate_hz)
         self.chunk_size = int(chunk_size)
+        # Kinematic (vision) fusion source — optional; EEG-only when absent.
+        self._kinematic_source = kinematic_source
+        self._kinematic_worker = kinematic_worker
+        self.kinematic_staleness_s = float(kinematic_staleness_s)
 
         self.fs = int(self.engine.fs)
         n_ch = len(self.engine.eeg_channel_labels)
@@ -79,6 +86,20 @@ class ScoringService:
         the first scoring tick. See ``scoring.signal_quality``."""
         return self._latest_quality
 
+    def _read_kinematic(self):
+        """Freshest KinematicResult, or ``None`` if absent/stale.
+
+        A result older than ``kinematic_staleness_s`` is an arrival gap — absent
+        evidence, never fabricated as stillness or movement (spec §7.3)."""
+        if self._kinematic_source is None:
+            return None
+        result = self._kinematic_source.get()
+        if result is None:
+            return None
+        if (time.time() - result.timestamp) > self.kinematic_staleness_s:
+            return None
+        return result
+
     # ------------------------------------------------------------------ lifecycle
 
     def start(self) -> "ScoringService":
@@ -90,10 +111,14 @@ class ScoringService:
             target=self._run, name="ScoringService", daemon=True
         )
         self._thread.start()
+        if self._kinematic_worker is not None:
+            self._kinematic_worker.start()
         logger.info("ScoringService started (%.1f Hz)", self.update_rate_hz)
         return self
 
     def stop(self, join_timeout: float = 2.0) -> None:
+        if self._kinematic_worker is not None:
+            self._kinematic_worker.stop()
         self._stop.set()
         if self._thread is not None:
             self._thread.join(timeout=join_timeout)
@@ -138,7 +163,9 @@ class ScoringService:
                     continue
                 self._last_score_time = now
 
-                result = self.engine.compute(self.ring_buffer, artifact_clean)
+                result = self.engine.compute(
+                    self.ring_buffer, artifact_clean, kinematic=self._read_kinematic()
+                )
                 self._publish(result)
                 self._update_quality(gate_window)
         except Exception:

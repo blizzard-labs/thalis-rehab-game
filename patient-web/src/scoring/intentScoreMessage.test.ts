@@ -32,3 +32,31 @@ describe("parseIntentScoreMessage", () => {
     expect(parseIntentScoreMessage(JSON.stringify({ type: "intent_score" })).ok).toBe(false);
   });
 });
+
+describe("parseIntentScoreMessage kinematic fields (V2-2b)", () => {
+  it("parses kinematic_score and compensation_flag when present", () => {
+    const raw = JSON.stringify({
+      type: "intent_score", intent_score: 60, erd_score: 40, classifier_score: null,
+      is_artifact: false, mode: "band_power_only", kinematic_score: 72.5,
+      compensation_flag: true, timestamp: 123,
+    });
+    const res = parseIntentScoreMessage(raw);
+    expect(res.ok).toBe(true);
+    if (res.ok) {
+      expect(res.frame.kinematicScore).toBe(72.5);
+      expect(res.frame.compensationFlag).toBe(true);
+    }
+  });
+  it("defaults kinematic fields when absent (back-compat)", () => {
+    const raw = JSON.stringify({
+      type: "intent_score", intent_score: 60, is_artifact: false,
+      mode: "band_power_only", timestamp: 1,
+    });
+    const res = parseIntentScoreMessage(raw);
+    expect(res.ok).toBe(true);
+    if (res.ok) {
+      expect(res.frame.kinematicScore).toBe(null);
+      expect(res.frame.compensationFlag).toBe(false);
+    }
+  });
+});

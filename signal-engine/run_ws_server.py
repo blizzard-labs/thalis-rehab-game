@@ -26,6 +26,9 @@ from scoring.scoring_service import ScoringService
 from scoring.session_simulator import SessionSimulator
 from server.ws_server import NeuroReachWSServer
 from vision.frame_sink import VideoFrameSink
+from vision.kinematic_engine import KinematicScoreEngine
+from vision.kinematic_worker import KinematicWorker, LatestKinematic
+from vision.pose_estimator import MediaPipePoseEstimator
 from vision.webrtc_receiver import WebRTCReceiver
 
 FS = 250
@@ -110,6 +113,24 @@ def main():
     frame_sink = VideoFrameSink()
     receiver = WebRTCReceiver(frame_sink)
 
+    # Vision kinematic pipeline (V2-2b). The worker only runs once the scoring
+    # service starts (inside srv.start()), so the 2 s ERD baseline stays clean.
+    # MediaPipe absent / model load failure -> EEG-only scoring, no kinematic.
+    latest_kin = LatestKinematic()
+    kin_engine = KinematicScoreEngine(affected_side="right")
+    try:
+        estimator = MediaPipePoseEstimator()
+    except Exception as exc:
+        print(f"MediaPipe unavailable ({exc}); running EEG-only (no kinematic scoring).")
+        estimator = None
+
+    worker = None
+    if estimator is not None:
+        worker = KinematicWorker(frame_sink, estimator, kin_engine, latest_kin, rate_hz=15.0)
+        svc._kinematic_source = latest_kin
+        svc._kinematic_worker = worker
+        svc.engine.set_session_mode("B")   # camera present -> blended default
+
     srv = NeuroReachWSServer(
         svc,
         host="localhost",
@@ -117,6 +138,7 @@ def main():
         broadcast_hz=20.0,
         session_controller=sim,
         webrtc_receiver=receiver,
+        kinematic_worker=worker,
     )
     print("WS server starting on ws://localhost:8765 (Ctrl-C to stop)")
     try:

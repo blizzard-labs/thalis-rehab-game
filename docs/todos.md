@@ -1,6 +1,6 @@
 # NeuroReach — Development Status & TODOs
 
-_Last updated: 2026-07-07. Reference spec: [`docs/specs.md`](specs.md). Game design docs:
+_Last updated: 2026-07-08. Reference spec: [`docs/specs.md`](specs.md). Game design docs:
 [`gardengrow.md`](gardengrow.md), [`reachcollect.md`](reachcollect.md)._
 
 This is the **whole-project** status board across all three subsystems. Each subsystem section lists
@@ -13,26 +13,28 @@ lined up 🔜**. Detailed change history lives in git + claude-mem, not here.
 
 | Subsystem | State | Tests |
 |---|---|---|
-| `signal-engine/` (Python DSP + scoring + WS) | Core complete, mock/synthetic-validated; WebRTC camera receive (aiortc) landed; on-head validation pending | **76 passed, 6 skipped** (+1 opt-in live) |
-| `clinician-console/` (Electron + React, C1–C5 + LAN pairing) | Guided session stepper (Signal→Pair→Calibrate→Live); Sim/Live toggle + pairing surfaced; **real WebRTC signaling relay** (echo stub gone); End/Switch-mode wired; persistence still pending | **116 passed** (32 files) + 2 live integration |
-| `patient-web/` (React + Vite patient game) | Welcome→Calibration→Garden/StarCatch→Summary + pairing gate; **camera publish over WebRTC** for paired sessions | **76 passed** (23 files) + 2 live integration |
+| `signal-engine/` (Python DSP + scoring + WS) | Core complete, mock/synthetic-validated; WebRTC camera receive (aiortc) + **MediaPipe kinematic scoring fused into IntentScore (V2-2b)** landed; on-head validation pending | **101 passed, 6 skipped** (+2 opt-in live) |
+| `clinician-console/` (Electron + React, C1–C5 + LAN pairing) | Guided session stepper (Signal→Pair→Calibrate→Live); Sim/Live toggle + pairing surfaced; **real WebRTC signaling relay** (echo stub gone); End/Switch-mode wired; persistence still pending | **118 passed** (32 files) + 2 live integration |
+| `patient-web/` (React + Vite patient game) | Welcome→Calibration→Garden/StarCatch→Summary + pairing gate; **camera publish over WebRTC** for paired sessions | **78 passed** (23 files) + 2 live integration |
 
 **Milestone map (spec §15):** V2-0 foundation ✅ · V2-1 patient web ✅ · S1 LAN + pairing ✅ · **V2-2a WebRTC
-transport spine ✅** · V2-2b vision/kinematics ⏳ next · V2-2c fusion/UX ⏳ · V2-3 clinical workflow ⏳ ·
-V2-4 packaging/hardening ⏳.
+transport spine ✅** · **V2-2b vision/kinematics ✅** · V2-2c fusion-UX/health-panel ⏳ next · V2-3 clinical
+workflow ⏳ · V2-4 packaging/hardening ⏳.
 
-**The vision transport spine now works end-to-end** (patient `getUserMedia` → WebRTC → console signaling
-relay → sidecar `aiortc` → decoded frames in `VideoFrameSink`). The remaining vision gap is
-**MediaPipe → `kinematic_score`** (V2-2b) and its **fusion + health-panel UX** (V2-2c). Until those land,
-scoring is still **EEG-only (Mode A, band-power)** — no verified-ROM, covert-MI validity gate, or
-compensation penalty yet. Design/plan:
-[`docs/superpowers/specs/2026-07-07-v2-2a-webrtc-transport-spine-design.md`](superpowers/specs/2026-07-07-v2-2a-webrtc-transport-spine-design.md).
+**The vision pipeline now scores end-to-end** (patient `getUserMedia` → WebRTC → console signaling relay →
+sidecar `aiortc` → `VideoFrameSink` → MediaPipe Pose+Hands → kinematic features → `kinematic_score`, fused
+into `IntentScore` per Mode A/B/C with a trunk-lean compensation penalty). The remaining vision work is
+**V2-2c UX**: console health panel (WebRTC state, frame rate, "vision degraded — EEG-only"), the
+framing-check setup step, rendering the new kinematic frame fields, and covert-MI trial-invalidation /
+classifier-training-exclusion. Designs/plans:
+[`2026-07-07-v2-2a-webrtc-transport-spine-design.md`](superpowers/specs/2026-07-07-v2-2a-webrtc-transport-spine-design.md),
+[`2026-07-07-v2-2b-kinematic-scoring-design.md`](superpowers/specs/2026-07-07-v2-2b-kinematic-scoring-design.md).
 
 Run all tests:
 ```bash
-conda run -n eeg python -m pytest signal-engine/tests/ -m "not live"   # 76 passed, 6 skipped
-cd patient-web        && npm run test                                  # 76 passed
-cd clinician-console  && npm run test                                  # 116 passed
+conda run -n eeg python -m pytest signal-engine/tests/ -m "not live"   # 101 passed, 6 skipped
+cd patient-web        && npm run test                                  # 78 passed
+cd clinician-console  && npm run test                                  # 118 passed
 ```
 
 ---
@@ -77,13 +79,22 @@ ERDCalculator (+CSP/LDA when reliable) → IntentScore fusion → 20 Hz WebSocke
   receiver and replies `webrtc-answer`. Entrypoint `run_ws_server.py` boots idle and selects source via
   `EEG_SOURCE=sim` (default) or `live`; builds the `VideoFrameSink` + `WebRTCReceiver` after the scoring
   service (baseline-before-simulator boot order preserved).
-- **Vision** (`vision/`, V2-2a transport spine): `WebRTCReceiver` (`aiortc` answerer, injectable peer
-  factory — patient camera track → decoded frames); `VideoFrameSink` (bounded latest-frame buffer,
-  drop-oldest, monotonic `frame_count` for the camera-link health check). Signaling rides the paired LAN
-  socket. **No MediaPipe / `kinematic_score` yet** (V2-2b). Design:
-  [`docs/superpowers/specs/2026-07-07-v2-2a-webrtc-transport-spine-design.md`](superpowers/specs/2026-07-07-v2-2a-webrtc-transport-spine-design.md).
+- **Vision** (`vision/`, V2-2a transport + V2-2b kinematics): `WebRTCReceiver` (`aiortc` answerer,
+  injectable peer factory — patient camera track → decoded frames); `VideoFrameSink` (bounded latest-frame
+  buffer, drop-oldest, monotonic `frame_count`). **V2-2b:** `pose_estimator` (injectable `PoseEstimator`
+  Protocol + `MediaPipePoseEstimator` Pose+Hands, lazy import); `kinematics` (pure joint-angle / reach /
+  trunk-displacement / jerk / affected-side mirror); `rest_pose` (5 s median rest calibration);
+  `kinematic_engine` (adaptive rest→max ROM score + compensation penalty/flag + visibility/last-known-good
+  absent gating); `kinematic_worker` (background thread pulls the sink, dedups stale frames, publishes to a
+  thread-safe `LatestKinematic`; rest-calibration mode). `ScoringService` reads the latest kinematic
+  (staleness-gated → absent) and `IntentScoreEngine` blends it per Mode A/B/C
+  (`w_eeg·EEG + w_kin·Kin − Penalty`); absent/invalid pose falls back to EEG-only. `calibrate_pose` WS
+  command + `fusion_mode`/`affected_side` on `set_mode`; `intent_score` frame carries nullable
+  `kinematic_score` + `compensation_flag`. Designs:
+  [`2026-07-07-v2-2a-webrtc-transport-spine-design.md`](superpowers/specs/2026-07-07-v2-2a-webrtc-transport-spine-design.md),
+  [`2026-07-07-v2-2b-kinematic-scoring-design.md`](superpowers/specs/2026-07-07-v2-2b-kinematic-scoring-design.md).
 
-### 🧪 Tests available (`signal-engine/tests/`, 83 collected)
+### 🧪 Tests available (`signal-engine/tests/`, 109 collected)
 | File | # | Covers |
 |---|---|---|
 | `test_lsl_inlet.py` | 8 | channel ID, permuted slicing, chunk shape/dtype, IMU, positional fallback, timeout |
@@ -91,9 +102,9 @@ ERDCalculator (+CSP/LDA when reliable) → IntentScore fusion → 20 Hz WebSocke
 | `test_erd.py` | 6 | ERD on injected channel, laterality sign, pre-cal guard, band-power shape |
 | `test_calibration.py` | 5 | dataset shape/balance/no-long-runs, wall-clock timing, clean abort, `label_encode` |
 | `test_classifier.py` | 8 | strong-pattern CV>0.65, noise gate `is_reliable=False`, save/load round-trip, `mi_score∈[0,100]` |
-| `test_scoring_service.py` | 6 | smoke ≥40 results/3 s, spike suppression, EMA visible, `stop()` join, full-queue drop |
+| `test_scoring_service.py` | 7 | smoke ≥40 results/3 s, spike suppression, EMA visible, `stop()` join, full-queue drop, kinematic staleness gate |
 | `test_signal_quality.py` | 5 | per-channel classification + MI trace frame |
-| `test_ws_server.py` | 9 | connect, broadcast rate, schema, multi-client parity, disconnect/reconnect, ping, unknown cmd |
+| `test_ws_server.py` | 11 | connect, broadcast rate, schema, multi-client parity, disconnect/reconnect, ping, unknown cmd, kinematic frame fields, calibrate_pose-no-worker |
 | `test_session_simulator.py` | 4 | phase boundaries, idle status, arm drives both MI channels + disarm stops, idempotent arm |
 | `test_ws_session_commands.py` | 3 | `start_session`/`end_session` route to controller + `session` reply; no-controller → `error` |
 | `test_session_gating.py` | 1 | end-to-end: score floors idle, rises after `start_session` (session gate drives IntentScore) |
@@ -102,16 +113,27 @@ ERDCalculator (+CSP/LDA when reliable) → IntentScore fusion → 20 Hz WebSocke
 | `test_webrtc_receiver.py` | 4 | offer→answer + setRemote, ice parse/forward, null-ice ignore, close clears sink (fake peer) |
 | `test_ws_server_signaling.py` | 3 | offer→answer on same socket, ice→receiver, no-receiver silent no-op |
 | `test_webrtc_live.py` | 1 | `@pytest.mark.live` — real `aiortc` loopback offerer→receiver, frames land in sink (deselected on CI) |
+| `test_kinematics.py` | 6 | joint angle, side mirror, reach extent, trunk displacement, jerk, result fields |
+| `test_rest_pose.py` | 3 | median rest build, insufficient-frame guard, low-visibility frames ignored |
+| `test_kinematic_engine.py` | 5 | ROM rises with reach, trunk-lean penalty+flag, absent→invalid, all-low-visibility→invalid, last-known-good bridge |
+| `test_kinematic_worker.py` | 3 | publishes latest result, stale sink not reprocessed, begin_calibration sets rest pose (fake estimator) |
+| `test_intent_score.py` | 5 | Mode A ignores kinematic, Mode C kinematic dominates, absent→EEG-only, compensation penalty subtracts, two-arg back-compat |
+| `test_pose_estimator_live.py` | 1 | `@pytest.mark.live` — real `MediaPipePoseEstimator` yields (33,4) landmarks or None (deselected on CI) |
 
 Latency validated off-head: **p95 ≈ 18 ms** (budget 250 ms), compute-only ≈ 1.5 ms.
 
 ### ⚠️ Missing capabilities
-- **Vision scoring absent (V2-2b/2-2c)** — transport spine done (`aiortc` receive → `VideoFrameSink`),
-  but no MediaPipe, no kinematic features, no `kinematic_score`. Fusion still runs EEG-only (`w_kin=0`).
-  Blocks Modes B/C, covert-MI validity gate, compensation penalty. Also missing: rest-pose calibration
-  (5 s) + framing-check setup step, and unifying the publisher stream with the `CameraFeed` preview.
-- **`aiortc` dependency** installed into the `eeg` env but not pinned in any tracked manifest (repo has no
-  requirements/environment file); Windows-clinic install validation deferred to V2-4 packaging.
+- **Vision UX absent (V2-2c)** — kinematic scoring + fusion now land (V2-2b), but the console **health
+  panel** (WebRTC state, frame rate, "vision degraded — EEG-only"), the **framing-check** setup step,
+  **rendering** the new `kinematic_score`/`compensation_flag` frame fields, and **covert-MI
+  trial-invalidation / classifier-training-exclusion** (needs per-trial covert-vs-attempted context the RT
+  path doesn't model yet) are still to build. Also: unify the publisher stream with the `CameraFeed`
+  preview (single `getUserMedia`), and validate joint angles against a goniometer on a remote stream.
+- **`aiortc` + `mediapipe` dependencies** installed into the `eeg` env but not pinned in any tracked
+  manifest (repo has no requirements/environment file). **`mediapipe` is pinned to `0.10.14`** out of
+  necessity — 0.10.35 dropped the legacy `mp.solutions` API (Tasks-API-only, needs downloaded `.task`
+  model bundles); the estimator uses `mp.solutions.pose`/`hands`. Windows-clinic install validation and a
+  tracked manifest deferred to V2-4 packaging.
 - **60 s baseline-rest block** not built (orchestrator collects MI trials only).
 - **Per-patient versioned filter persistence** to disk not built (CSP/LDA fit in-memory only).
 - **Dead-channel handling** — off-head flat electrodes need a per-channel quality flag feeding the
@@ -270,10 +292,11 @@ WebRTC** to the sidecar for paired sessions (transport only — no `kinematic_sc
 ### ⚠️ Missing capabilities
 - **P2 Calibration is cosmetic** — client-timed, NOT marker-driven; no mechanism forwards the Python LSL
   marker stream to the browser.
-- **Camera publish transport-only** — `cameraPublisher`/`useCameraPublish` publish the track to the
-  sidecar `aiortc` receiver, but nothing consumes it yet: no `kinematic_score`, so P4 verified-ROM and P5
-  compensation overlay stay blocked (V2-2b/2-2c). The publisher acquires its own stream; unifying it with
-  the `CameraFeed` preview (single stream) is deferred to the V2-2b framing-check step.
+- **Camera publish consumed by the sidecar (V2-2b)** — `cameraPublisher`/`useCameraPublish` publish the
+  track to the sidecar `aiortc` receiver, which now feeds MediaPipe → `kinematic_score` fused into
+  IntentScore. Patient-side UX for it is **V2-2c**: no framing-check step, no verified-ROM (P4) / compensation
+  overlay (P5) rendering, and the publisher still acquires its own `getUserMedia` stream separate from the
+  `CameraFeed` preview (unify to a single stream in V2-2c).
 - **Reach & Collect is Phase-A only** — single fixed direction/target driven by IntentScore magnitude;
   cued-direction (Phase B) and verified-ROM (Phase C) not built (see `reachcollect.md`).
 - **PixiJS deferred** — all scenes are React + SVG/CSS.
@@ -297,8 +320,9 @@ WebRTC** to the sidecar for paired sessions (transport only — no `kinematic_sc
   Any change to the frame must update both. `eeg_quality` is clinician-side only and must never reach the
   patient channel (enforced by `scoreRelay` + `lan.live.test.ts`).
 - **On-head hardware schedule** (spec §13.6): four gated sessions H1–H4. H1 (signal/ERD ground-truth) is
-  unblocked now; H2 needs the baseline block + filter versioning; H3 needs V2-2; H4 needs the console
-  control channel + persistence + vision.
+  unblocked now; H2 needs the baseline block + filter versioning; H3 needs V2-2c UX + goniometer
+  ground-truth (kinematic scoring itself now lands, V2-2b); H4 needs the console control channel +
+  persistence + vision.
 - **`game-client/` (Unity)** is fully removed and ported to `patient-web/`. Do not re-add.
 - **Dev data stream:** to drive the games without a headset, open a patient in the console → **Start
   session ▶** → keep the **Simulated EEG (dev)** toggle on the Signal-check step → advance to **Live**.
@@ -309,12 +333,13 @@ WebRTC** to the sidecar for paired sessions (transport only — no `kinematic_sc
 
 ## 5. Next up (priority order)
 
-1. **V2-2b vision & kinematics** — the keystone, now unblocked by the V2-2a transport spine. Consume the
-   `VideoFrameSink` with MediaPipe Pose/Hands → joint angles, trunk displacement, jerk → `kinematic_score`;
-   rest-pose calibration (5 s) + framing-check setup step; confidence / last-known-good gating. Then
-   **V2-2c fusion & UX**: wire `kinematic_score` into `IntentScoreEngine` (Modes B/C, compensation
-   penalty); camera-link health panel; frame-drop/deny → EEG-only fallback surfaced both sides. Unblocks
-   Modes B/C, verified ROM, compensation penalty.
+1. **V2-2c vision UX** — the scoring engine is done (V2-2b: MediaPipe → `kinematic_score` fused into
+   IntentScore per Mode A/B/C + compensation penalty, all absent-evidence-gated). Remaining: console
+   **camera-link health panel** (WebRTC state, frame rate, "vision degraded — EEG-only"); **framing-check**
+   setup step; **render** the new `kinematic_score`/`compensation_flag` frame fields (verified-ROM P4 +
+   compensation overlay P5); wire `calibrate_pose`/`fusion_mode`/`affected_side` to console controls; unify
+   the patient publisher stream with the `CameraFeed` preview; **covert-MI trial-invalidation /
+   training-exclusion** once per-trial context exists.
 2. **Engine control channel** — End/Switch-mode + session arm/disarm are wired; still need **pause/rest**
    (new sidecar command) and **marker-driven calibration** (LSL-marker → browser bridge).
 3. **Persistence** — sidecar FastAPI + SQLite/EDF; real console records + export.

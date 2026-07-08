@@ -51,6 +51,7 @@ class NeuroReachWSServer:
         quality_hz: float = 5.0,
         session_controller=None,
         webrtc_receiver=None,
+        kinematic_worker=None,
     ):
         self.scoring_service = scoring_service
         self.host = host
@@ -65,6 +66,9 @@ class NeuroReachWSServer:
         # Optional aiortc receiver for the patient camera track. None on a real
         # headset / standalone run; then webrtc-* signaling is silently ignored.
         self.webrtc_receiver = webrtc_receiver
+        # Optional kinematic worker (V2-2b vision). None on a real headset /
+        # standalone run; then calibrate_pose replies with an error.
+        self.kinematic_worker = kinematic_worker
         # When a session controller is present, intent_score frames are only
         # broadcast while a session is active (between start_session and
         # end_session). This stops simulated scores from reaching the patient
@@ -89,6 +93,7 @@ class NeuroReachWSServer:
             "set_mode": self._cmd_set_mode,
             "start_session": self._cmd_start_session,
             "end_session": self._cmd_end_session,
+            "calibrate_pose": self._cmd_calibrate_pose,
         }
 
     # ------------------------------------------------------------------ lifecycle
@@ -251,6 +256,8 @@ class NeuroReachWSServer:
             "classifier_score": result.classifier_score,
             "is_artifact": bool(result.is_artifact),
             "mode": self._current_mode(),
+            "kinematic_score": getattr(result, "kinematic_score", None),
+            "compensation_flag": bool(getattr(result, "compensation_flag", False)),
             "timestamp": result.timestamp,
         }
 
@@ -318,22 +325,50 @@ class NeuroReachWSServer:
     async def _cmd_set_mode(self, websocket, data) -> None:
         mode = data.get("mode")
         eng = self.scoring_service.engine
-        if mode == "csp_lda_blend":
-            if eng.online_classifier is None:
+        # Classifier mode (band_power_only / csp_lda_blend) — optional; a message
+        # carrying only fusion_mode/affected_side leaves it unchanged.
+        if mode is not None:
+            if mode == "csp_lda_blend":
+                if eng.online_classifier is None:
+                    await self._send(
+                        websocket,
+                        {"type": "error", "message": "no classifier available for csp_lda_blend"},
+                    )
+                    return
+                eng.classifier_reliable = True
+            elif mode == "band_power_only":
+                eng.classifier_reliable = False
+            else:
                 await self._send(
-                    websocket,
-                    {"type": "error", "message": "no classifier available for csp_lda_blend"},
+                    websocket, {"type": "error", "message": f"invalid mode: {mode}"}
                 )
                 return
-            eng.classifier_reliable = True
-        elif mode == "band_power_only":
-            eng.classifier_reliable = False
-        else:
-            await self._send(
-                websocket, {"type": "error", "message": f"invalid mode: {mode}"}
-            )
-            return
+        # Fusion session mode (A/B/C) — controls the EEG/kinematic weight blend.
+        fusion_mode = data.get("fusion_mode")
+        if fusion_mode is not None:
+            try:
+                eng.set_session_mode(fusion_mode)
+            except ValueError:
+                await self._send(
+                    websocket,
+                    {"type": "error", "message": f"invalid fusion_mode: {fusion_mode}"},
+                )
+                return
+        # Affected side mirrors the kinematic landmark selection.
+        side = data.get("affected_side")
+        if side in ("left", "right") and self.kinematic_worker is not None:
+            self.kinematic_worker.engine.affected_side = side
         await self._send(websocket, self._status_payload())
+
+    async def _cmd_calibrate_pose(self, websocket, data) -> None:
+        worker = self.kinematic_worker
+        if worker is None:
+            await self._send(websocket, {"type": "error", "message": "no kinematic worker"})
+            return
+        worker.begin_calibration()
+        await self._send(
+            websocket, {"type": "pose_calibration", "status": worker.calibration_status()}
+        )
 
     async def _cmd_start_session(self, websocket, data) -> None:
         await self._session_command(websocket, arm=True)
