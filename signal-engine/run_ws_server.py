@@ -29,6 +29,7 @@ from vision.frame_sink import VideoFrameSink
 from vision.kinematic_engine import KinematicScoreEngine
 from vision.kinematic_worker import KinematicWorker, LatestKinematic
 from vision.pose_estimator import MediaPipePoseEstimator
+from vision.vision_health import VisionHealthMonitor
 from vision.webrtc_receiver import WebRTCReceiver
 
 FS = 250
@@ -131,6 +132,14 @@ def main():
         svc._kinematic_worker = worker
         svc.engine.set_session_mode("B")   # camera present -> blended default
 
+    # Camera-link health sampler (V2-2c). Only meaningful with the vision
+    # pipeline present; EEG-only boot leaves it None so no vision_health frame.
+    vision_monitor = None
+    if worker is not None:
+        vision_monitor = VisionHealthMonitor(
+            receiver, frame_sink, latest_kin, svc.engine
+        )
+
     srv = NeuroReachWSServer(
         svc,
         host="localhost",
@@ -139,6 +148,7 @@ def main():
         session_controller=sim,
         webrtc_receiver=receiver,
         kinematic_worker=worker,
+        vision_health_monitor=vision_monitor,
     )
     print("WS server starting on ws://localhost:8765 (Ctrl-C to stop)")
     try:
