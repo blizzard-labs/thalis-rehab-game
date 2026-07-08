@@ -3,6 +3,7 @@ import { PlantGrowthModel } from "../garden/PlantGrowthModel";
 import type { SessionStats } from "../session/SessionStats";
 import type { ConnectionState } from "../net/scoreClient";
 import { CameraFeed } from "./CameraFeed";
+import { KinematicOverlay } from "./KinematicOverlay";
 import type { ScoreStore } from "../scoring/scoreStore";
 
 const prefersReducedMotion = () =>
@@ -82,6 +83,7 @@ export function GardenScene({
 
   return (
     <main className={`scene scene--garden${reduced ? " reduced-motion" : ""}`}>
+      <KinematicOverlay store={store} />
       <div className="garden-banner" data-engaged={engaged}>
         <span className="status-pill" data-testid="status-pill" data-engaged={engaged}>
           {engaged ? "Good focus — keep going" : "Keep imagining — it's growing"}
