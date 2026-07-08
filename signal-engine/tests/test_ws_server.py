@@ -189,3 +189,21 @@ def test_eeg_quality_broadcast(ws_server):
         assert c["quality"] in ("good", "check", "poor")
     assert "C3" in data["trace"] and len(data["trace"]["C3"]) > 0
     assert isinstance(data["timestamp"], float)
+
+
+# ------------------------------------------------------- V2-2b kinematic fields
+
+def test_intent_frame_carries_kinematic_fields(ws_server):
+    with connect(URI) as ws:
+        msgs = _collect(ws, 2.0)
+    assert msgs, "no intent_score frame observed"
+    assert "kinematic_score" in msgs[0]
+    assert "compensation_flag" in msgs[0]
+
+
+def test_calibrate_pose_without_worker_errors(ws_server):
+    with connect(URI) as ws:
+        ws.send(json.dumps({"cmd": "calibrate_pose"}))
+        reply = _recv_type(ws, "error", 2.0)
+    assert reply is not None
+    assert "worker" in reply["message"]
