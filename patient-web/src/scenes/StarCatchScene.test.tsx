@@ -5,7 +5,7 @@ import { SessionStats } from "../session/SessionStats";
 import { ScoreStore } from "../scoring/scoreStore";
 
 const frame = (v: number) => ({
-  intentScore: v, erdScore: null, classifierScore: null, isArtifact: false, mode: "band_power_only", timestamp: 0,
+  intentScore: v, erdScore: null, classifierScore: null, kinematicScore: null, compensationFlag: false, isArtifact: false, mode: "band_power_only", timestamp: 0,
 });
 
 describe("StarCatchScene", () => {
