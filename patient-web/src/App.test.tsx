@@ -29,6 +29,9 @@ describe("App flow", () => {
     expect(screen.getByText(/ready to play/i)).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: /let's begin/i }));
+    // V2-2c framing-check step sits between Welcome and Calibration. jsdom has
+    // no camera, so advance via the always-available skip path.
+    await user.click(screen.getByTestId("framing-skip"));
     expect(screen.getByTestId("calibration")).toBeInTheDocument();
 
     // Clinician pre-calibration gate: the cue sequence is held until "I'm ready".

@@ -6,12 +6,13 @@ import { GardenScene } from "./scenes/GardenScene";
 import { StarCatchScene } from "./scenes/StarCatchScene";
 import { SummaryScene } from "./scenes/SummaryScene";
 import { PairingScene } from "./scenes/PairingScene";
+import { FramingCheckScene } from "./scenes/FramingCheckScene";
 import { SessionStats } from "./session/SessionStats";
 import { config, readSessionCode } from "./config";
 import { usePatientLink } from "./net/usePatientLink";
 import { useCameraPublish } from "./net/useCameraPublish";
 
-type View = "pairing" | "welcome" | "calibration" | "modeselect" | "garden" | "stars" | "summary";
+type View = "pairing" | "welcome" | "framing" | "calibration" | "modeselect" | "garden" | "stars" | "summary";
 
 export default function App() {
   // A pairing code in the URL (`?c=`) means this device was launched from the
@@ -47,7 +48,9 @@ export default function App() {
       case "pairing":
         return <PairingScene error={link.error} />;
       case "welcome":
-        return <WelcomeScene firstName={firstName} onBegin={() => setView("calibration")} />;
+        return <WelcomeScene firstName={firstName} onBegin={() => setView("framing")} />;
+      case "framing":
+        return <FramingCheckScene onConfirm={() => setView("calibration")} />;
       case "calibration":
         return (
           <CalibrationScene
