@@ -3,6 +3,7 @@ import { render, screen } from "@testing-library/react";
 import { LiveStep } from "./LiveStep";
 import { ScoreStore } from "../scoring/scoreStore";
 import { EegQualityStore } from "../scoring/eegQualityStore";
+import { VisionHealthStore } from "../scoring/visionHealthStore";
 import { PatientStore } from "../data/store";
 
 const margaret = new PatientStore().get("#0421")!;
@@ -13,6 +14,7 @@ it("arms the session once on mount and renders the monitor", () => {
     <LiveStep
       scoreStore={new ScoreStore()}
       qualityStore={new EegQualityStore()}
+      visionHealthStore={new VisionHealthStore()}
       connectionState="open"
       sidecarState="ready"
       patient={margaret}

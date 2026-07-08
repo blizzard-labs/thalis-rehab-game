@@ -3,6 +3,7 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { SessionFlow } from "./SessionFlow";
 import { ScoreStore } from "../scoring/scoreStore";
 import { EegQualityStore } from "../scoring/eegQualityStore";
+import { VisionHealthStore } from "../scoring/visionHealthStore";
 import { PatientStore } from "../data/store";
 
 const margaret = new PatientStore().get("#0421")!;
@@ -27,6 +28,7 @@ function renderFlow() {
       patient={margaret}
       scoreStore={new ScoreStore()}
       qualityStore={new EegQualityStore()}
+      visionHealthStore={new VisionHealthStore()}
       connectionState="open"
       sidecarState="ready"
       onExit={onExit}

@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { PatientStore } from "../data/store";
 import type { ScoreStore } from "../scoring/scoreStore";
 import type { EegQualityStore } from "../scoring/eegQualityStore";
+import type { VisionHealthStore } from "../scoring/visionHealthStore";
 import type { ConnectionState } from "../net/scoreClient";
 import type { SidecarState } from "../main/sidecar";
 import { Roster } from "./Roster";
@@ -12,6 +13,7 @@ type Props = {
   patientStore: PatientStore;
   scoreStore: ScoreStore;
   qualityStore: EegQualityStore;
+  visionHealthStore: VisionHealthStore;
   connectionState: ConnectionState;
   sidecarState: SidecarState;
 };
@@ -24,7 +26,7 @@ type View =
 // Top-level console shell + navigation. Lightweight view-state router (no
 // react-router dependency): roster (C1) → guided session flow → patient
 // workspace holding the between-session review tabs (C4/C5).
-export function App({ patientStore, scoreStore, qualityStore, connectionState, sidecarState }: Props) {
+export function App({ patientStore, scoreStore, qualityStore, visionHealthStore, connectionState, sidecarState }: Props) {
   const [view, setView] = useState<View>({ name: "roster" });
 
   return (
@@ -45,6 +47,7 @@ export function App({ patientStore, scoreStore, qualityStore, connectionState, s
           patient={patientStore.get(view.id)!}
           scoreStore={scoreStore}
           qualityStore={qualityStore}
+          visionHealthStore={visionHealthStore}
           connectionState={connectionState}
           sidecarState={sidecarState}
           onExit={() => setView({ name: "workspace", id: view.id, tab: "history" })}
