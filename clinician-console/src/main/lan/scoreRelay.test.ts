@@ -8,7 +8,7 @@ function fakeSocket(): RelaySocket & { emit: (data: string) => void } {
 }
 
 describe("createScoreRelay", () => {
-  it("forwards intent_score frames verbatim and drops eeg_quality", () => {
+  it("forwards intent_score frames verbatim and drops clinician-only frames", () => {
     const sock = fakeSocket();
     const sent: string[] = [];
     const relay = createScoreRelay({
@@ -20,6 +20,8 @@ describe("createScoreRelay", () => {
     const scoreFrame = JSON.stringify({ type: "intent_score", intent_score: 72.3 });
     sock.emit(scoreFrame);
     sock.emit(JSON.stringify({ type: "eeg_quality", channels: [] }));
+    // vision_health is clinician-only and must never reach the patient (V2-2c).
+    sock.emit(JSON.stringify({ type: "vision_health", connection: "connected" }));
     sock.emit("not json");
     expect(sent).toEqual([scoreFrame]);
   });
