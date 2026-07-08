@@ -77,7 +77,14 @@ export function SessionFlow(props: Props) {
         />
       )}
       {step === "calibrate" && (
-        <CalibrateStep onNext={() => go("live")} onBack={() => go("pair")} />
+        <CalibrateStep
+          onNext={() => go("live")}
+          onBack={() => go("pair")}
+          onFusionMode={s.setFusionMode}
+          onAffectedSide={s.setAffectedSide}
+          onCalibratePose={s.calibratePose}
+          defaultSide={patient.affectedSide.toLowerCase() as "left" | "right"}
+        />
       )}
       {step === "live" && (
         <LiveStep

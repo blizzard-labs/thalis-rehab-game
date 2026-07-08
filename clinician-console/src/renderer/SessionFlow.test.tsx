@@ -14,6 +14,9 @@ function installBridge() {
     begin: vi.fn().mockResolvedValue(undefined),
     end: vi.fn().mockResolvedValue(undefined),
     setMode: vi.fn().mockResolvedValue(undefined),
+    setFusionMode: vi.fn().mockResolvedValue(undefined),
+    setAffectedSide: vi.fn().mockResolvedValue(undefined),
+    calibratePose: vi.fn().mockResolvedValue(undefined),
     onPatientConnected: vi.fn(),
     onPatientDisconnected: vi.fn(),
   };
