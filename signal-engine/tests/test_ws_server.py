@@ -207,3 +207,47 @@ def test_calibrate_pose_without_worker_errors(ws_server):
         reply = _recv_type(ws, "error", 2.0)
     assert reply is not None
     assert "worker" in reply["message"]
+
+
+# --------------------------------------------------- V2-2c vision_health frame
+
+class _FakeVisionMonitor:
+    def sample(self):
+        return {"connection": "connected", "fps": 14.0,
+                "kinematic_active": True, "degraded": False}
+
+
+def test_vision_health_frame_broadcast():
+    """A server with a VisionHealthMonitor broadcasts a clinician-only
+    vision_health frame; the intent_score contract stays untouched."""
+    outlet = MockUnicornOutlet(seed=13)
+    outlet.start()
+    time.sleep(0.3)
+    service, _q, inlet = make_scoring_service(outlet)
+    server = NeuroReachWSServer(
+        service, host=HOST, port=8771, broadcast_hz=20.0,
+        vision_health_monitor=_FakeVisionMonitor(), vision_health_hz=50.0,
+    )
+    server.start_background()
+    try:
+        with connect("ws://localhost:8771") as ws:
+            frame = _recv_type(ws, "vision_health", timeout_s=2.0)
+    finally:
+        server.stop()
+        inlet.close()
+        outlet.stop()
+
+    assert frame is not None, "no vision_health frame received"
+    assert frame["type"] == "vision_health"
+    assert frame["connection"] == "connected"
+    assert frame["fps"] == 14.0
+    assert frame["kinematic_active"] is True
+    assert frame["degraded"] is False
+    assert isinstance(frame["timestamp"], float)
+
+
+def test_no_vision_health_without_monitor(ws_server):
+    """The default server (no monitor) never emits a vision_health frame."""
+    with connect(URI) as ws:
+        got = _recv_type(ws, "vision_health", timeout_s=0.5)
+    assert got is None
