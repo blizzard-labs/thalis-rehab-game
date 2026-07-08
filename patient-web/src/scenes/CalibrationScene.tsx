@@ -7,41 +7,70 @@ const DURATIONS: Record<Phase, () => number> = {
   fixation: () => 2000,
   cue: () => 1250,
   imagine: () => 4000,
-  rest: () => 2000 + Math.random() * 1000, // 2–3 s
+  rest: () => 2000 + Math.random() * 1000, // 2–3 s randomized ITI
 };
 const ORDER: Phase[] = ["fixation", "cue", "imagine", "rest"];
 
+const otherSide = (s: "left" | "right"): "left" | "right" =>
+  s === "left" ? "right" : "left";
+
 /**
- * Cosmetic Graz cue sequencer (spec §6). NOT wired to the real
+ * Cosmetic Graz calibration sequencer (spec §6). NOT wired to the real
  * CalibrationOrchestrator / LSL marker stream — no marker channel reaches the
  * browser yet (see docs/superpowers/specs/2026-06-25-patient-web-prototype-design.md §5.2).
- * It demonstrates the paradigm only; real wiring lands with the LAN server.
+ * It renders the paradigm only; real marker wiring lands with the LAN server.
+ *
+ * Block structure (spec §6):
+ *   1. Baseline rest — a single `baselineMs` (60 s default) eyes-open fixation
+ *      capture for the resting spectral baseline, once, before any cued trial.
+ *   2. Cued trials — a 2-class block (affected vs unaffected hand). Each trial is
+ *      2 s fixation → 1.25 s cue → 4 s kinesthetic imagery → 2–3 s ITI rest, and
+ *      the cued side alternates affected → unaffected every trial. `totalTrials`
+ *      is the count PER CLASS, so the block runs `totalTrials × 2` cued trials.
  */
 export function CalibrationScene({
   affectedSide,
   totalTrials = 20,
+  baselineMs = 60000,
   onComplete,
 }: {
   affectedSide: "left" | "right";
+  /** Cued trials PER CLASS (spec §6 step 2: ≈20 per class). */
   totalTrials?: number;
+  /** Baseline eyes-open rest window (spec §6 step 1: 60 s). */
+  baselineMs?: number;
   onComplete: () => void;
 }) {
+  // Two classes (affected / unaffected) interleaved across the block.
+  const total = totalTrials * 2;
+
+  const [inBaseline, setInBaseline] = useState(true);
   const [trial, setTrial] = useState(1);
   const [phaseIdx, setPhaseIdx] = useState(0);
   const [paused, setPaused] = useState(false);
-  // Clinician gate: the cue sequence (and recording) is held until the clinician
-  // confirms pre-calibration setup — electrode contact, camera position, patient
-  // profile — by pressing "I'm ready".
+  // Clinician gate: baseline + cue sequence (and recording) are held until the
+  // clinician confirms pre-calibration setup — electrode contact, camera
+  // position, patient profile — by pressing "I'm ready".
   const [ready, setReady] = useState(false);
   const done = useRef(false);
   const phase = ORDER[phaseIdx];
 
+  // Step 1: a single baseline-rest window before the first cued trial. Gated on
+  // `ready` so the 60 s of "resting" EEG is only captured once the clinician has
+  // confirmed the montage — matching the signal-engine's clean-rest baseline pull.
   useEffect(() => {
-    if (done.current || paused || !ready) return;
+    if (done.current || paused || !ready || !inBaseline) return;
+    const t = setTimeout(() => setInBaseline(false), baselineMs);
+    return () => clearTimeout(t);
+  }, [ready, paused, inBaseline, baselineMs]);
+
+  // Step 2: cued-trial phase sequencer, runs once the baseline completes.
+  useEffect(() => {
+    if (done.current || paused || !ready || inBaseline) return;
     const t = setTimeout(() => {
       if (phaseIdx < ORDER.length - 1) {
         setPhaseIdx(phaseIdx + 1);
-      } else if (trial < totalTrials) {
+      } else if (trial < total) {
         setTrial(trial + 1);
         setPhaseIdx(0);
       } else {
@@ -50,22 +79,35 @@ export function CalibrationScene({
       }
     }, DURATIONS[phase]());
     return () => clearTimeout(t);
-  }, [phase, phaseIdx, trial, totalTrials, onComplete, paused, ready]);
+  }, [phase, phaseIdx, trial, total, onComplete, paused, ready, inBaseline]);
+
+  // 2-class block: the cued side alternates affected (odd trials) → unaffected
+  // (even trials) so both hemispheres are sampled for CSP/LDA training.
+  const cuedSide = trial % 2 === 1 ? affectedSide : otherSide(affectedSide);
 
   // Motor-imagery window: the cue lead-in plus the imagine phase. The text box
-  // turns green here to signal "imagine now".
-  const isMI = phase === "cue" || phase === "imagine";
-  const headline = isMI
-    ? `Imagine closing your ${affectedSide} hand`
-    : phase === "rest"
-      ? "Rest"
-      : "Get ready…";
+  // turns green here to signal "imagine now". Never during the baseline rest.
+  const isMI = !inBaseline && (phase === "cue" || phase === "imagine");
+  const dataPhase = inBaseline ? "baseline" : phase;
+
+  const headline = inBaseline
+    ? "Relax — eyes open, stay still"
+    : isMI
+      ? `Imagine closing your ${cuedSide} hand`
+      : phase === "rest"
+        ? "Rest"
+        : "Get ready…";
+  const subline = inBaseline
+    ? "Recording your resting baseline"
+    : isMI
+      ? "feel the movement — don't actually move"
+      : " ";
 
   return (
-    <main className="scene scene--calibration" data-testid="calibration" data-phase={phase}>
+    <main className="scene scene--calibration" data-testid="calibration" data-phase={dataPhase}>
       {/* Pre-calibration gate: thin green bar centered on top. The clinician
           checks electrode contact, camera position, and patient profile, then
-          presses it to start the cue sequence. It disappears once pressed. */}
+          presses it to start baseline + the cue sequence. It disappears once pressed. */}
       {!ready && (
         <button
           type="button"
@@ -81,17 +123,22 @@ export function CalibrationScene({
           vertically centered against the whole group. */}
       <div className="cal-stage">
         <div className="cal-main">
-          <div className="cal-header">Warm-up · trial {trial} of {totalTrials}</div>
+          <div className="cal-header">
+            {inBaseline ? "Baseline rest" : `Calibration · trial ${trial} of ${total}`}
+          </div>
 
           {/* Fixed-size text box: always rendered so the layout never reflows
               between rest and MI. Grey by default, green during motor imagery. */}
           <div className="cal-textbox" data-mi={isMI}>
             <h1 className="cal-cue">{headline}</h1>
             {/* Reserve the caption line height even when empty to keep height stable. */}
-            <p className="cal-sub">{isMI ? "feel the movement — don't actually move" : " "}</p>
+            <p className="cal-sub">{subline}</p>
           </div>
 
-          <WarmupHands phase={phase} activeSide={affectedSide} />
+          <WarmupHands
+            phase={inBaseline ? "rest" : phase}
+            activeSide={inBaseline ? affectedSide : cuedSide}
+          />
         </div>
 
         <CameraFeed recording={ready} />
@@ -106,7 +153,7 @@ export function CalibrationScene({
         >
           {paused ? "Resume" : "Pause"}
         </button>
-        {/* Dev-only: skip the cue block and jump straight to mode select. */}
+        {/* Dev-only: skip the block and jump straight to mode select. */}
         <button
           type="button"
           className="cal-ctl-btn cal-ctl-btn--skip"

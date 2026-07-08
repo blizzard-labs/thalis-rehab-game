@@ -36,12 +36,13 @@ describe("App flow", () => {
 
     // CalibrationScene uses chained useEffect timeouts: each new timeout is
     // only registered after React flushes the previous state update, so a
-    // single advanceTimersByTime(60000) misses every timer after the first.
+    // single advanceTimersByTime misses every timer after the first.
     // Fix: step through each phase individually so act() flushes between steps.
-    // App passes totalTrials={2} → 2 trials × 4 phases = 8 act() steps.
-    // Phase durations (Math.random=0 ⟹ rest = 2000 ms exactly):
-    //   fixation 2000 | cue 1250 | imagine 4000 | rest 2000  (×2 trials)
-    const phases = [2000, 1250, 4000, 2000, 2000, 1250, 4000, 2000];
+    // App passes baselineMs={3000} then totalTrials={2} → 2 classes ⟹ 4 cued
+    // trials × 4 phases. Phase durations (Math.random=0 ⟹ rest = 2000 ms):
+    //   baseline 3000 | (fixation 2000 | cue 1250 | imagine 4000 | rest 2000) ×4
+    const trial = [2000, 1250, 4000, 2000];
+    const phases = [3000, ...trial, ...trial, ...trial, ...trial];
     for (const ms of phases) {
       act(() => { vi.advanceTimersByTime(ms); });
     }
