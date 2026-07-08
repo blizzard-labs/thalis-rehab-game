@@ -52,6 +52,8 @@ class NeuroReachWSServer:
         session_controller=None,
         webrtc_receiver=None,
         kinematic_worker=None,
+        vision_health_monitor=None,
+        vision_health_hz: float = 2.0,
     ):
         self.scoring_service = scoring_service
         self.host = host
@@ -69,6 +71,10 @@ class NeuroReachWSServer:
         # Optional kinematic worker (V2-2b vision). None on a real headset /
         # standalone run; then calibrate_pose replies with an error.
         self.kinematic_worker = kinematic_worker
+        # Optional camera-link health sampler (V2-2c). None on a real headset /
+        # standalone / EEG-only boot; then no vision_health frame is emitted.
+        self.vision_health_monitor = vision_health_monitor
+        self.vision_health_hz = float(vision_health_hz)
         # When a session controller is present, intent_score frames are only
         # broadcast while a session is active (between start_session and
         # end_session). This stops simulated scores from reaching the patient
@@ -142,6 +148,8 @@ class NeuroReachWSServer:
             asyncio.ensure_future(self._broadcast_loop()),
             asyncio.ensure_future(self._quality_loop()),
         ]
+        if self.vision_health_monitor is not None:
+            self._tasks.append(asyncio.ensure_future(self._vision_health_loop()))
         logger.info("NeuroReachWSServer listening on ws://%s:%d", self.host, self.port)
         self._ready.set()
 
@@ -227,6 +235,24 @@ class NeuroReachWSServer:
                 if snap is None:
                     continue
                 payload = json.dumps({"type": "eeg_quality", **snap})
+                await self._broadcast(payload)
+        except asyncio.CancelledError:
+            pass
+
+    async def _vision_health_loop(self) -> None:
+        """Broadcast the camera-link health snapshot on its own slow cadence, as a
+        distinct clinician-only message type. Never gated by the session — the
+        LAN relay allowlists intent_score, so this never reaches the patient."""
+        interval = 1.0 / self.vision_health_hz
+        try:
+            while not self._shutdown:
+                await asyncio.sleep(interval)
+                if not self.clients:
+                    continue
+                snap = self.vision_health_monitor.sample()
+                payload = json.dumps(
+                    {"type": "vision_health", **snap, "timestamp": time.time()}
+                )
                 await self._broadcast(payload)
         except asyncio.CancelledError:
             pass

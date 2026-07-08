@@ -17,4 +17,23 @@ describe("CalibrateStep", () => {
     fireEvent.click(screen.getByRole("button", { name: /continue/i }));
     expect(onNext).toHaveBeenCalled();
   });
+
+  it("emits fusion mode, affected side, and calibrate pose", () => {
+    const onFusionMode = vi.fn();
+    const onAffectedSide = vi.fn();
+    const onCalibratePose = vi.fn();
+    render(
+      <CalibrateStep
+        onNext={() => {}} onBack={() => {}}
+        onFusionMode={onFusionMode} onAffectedSide={onAffectedSide}
+        onCalibratePose={onCalibratePose} defaultSide="right"
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /mode c/i }));
+    expect(onFusionMode).toHaveBeenCalledWith("C");
+    fireEvent.click(screen.getByRole("button", { name: /^left$/i }));
+    expect(onAffectedSide).toHaveBeenCalledWith("left");
+    fireEvent.click(screen.getByRole("button", { name: /calibrate rest pose/i }));
+    expect(onCalibratePose).toHaveBeenCalled();
+  });
 });

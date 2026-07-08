@@ -6,6 +6,9 @@ type NeuroreachBridge = {
   begin(source: SessionInfo["source"]): Promise<void>;
   end(): Promise<void>;
   setMode(mode: "band_power_only" | "csp_lda_blend"): Promise<void>;
+  setFusionMode(mode: "A" | "B" | "C"): Promise<void>;
+  setAffectedSide(side: "left" | "right"): Promise<void>;
+  calibratePose(): Promise<void>;
   onPatientConnected(cb: () => void): void;
   onPatientDisconnected(cb: () => void): void;
 };
@@ -57,5 +60,20 @@ export function useSession() {
     await nr.setMode(mode);
   }, [nr]);
 
-  return { source, setSource, code, url, connected, bridgeReady, open, begin, end, setMode };
+  const setFusionMode = useCallback(async (mode: "A" | "B" | "C") => {
+    if (!nr) return;
+    await nr.setFusionMode(mode);
+  }, [nr]);
+
+  const setAffectedSide = useCallback(async (side: "left" | "right") => {
+    if (!nr) return;
+    await nr.setAffectedSide(side);
+  }, [nr]);
+
+  const calibratePose = useCallback(async () => {
+    if (!nr) return;
+    await nr.calibratePose();
+  }, [nr]);
+
+  return { source, setSource, code, url, connected, bridgeReady, open, begin, end, setMode, setFusionMode, setAffectedSide, calibratePose };
 }

@@ -3,9 +3,11 @@ import type { ScoreStore } from "../scoring/scoreStore";
 import type { ConnectionState } from "../net/scoreClient";
 import type { SidecarState } from "../main/sidecar";
 import type { EegQualityStore } from "../scoring/eegQualityStore";
+import type { VisionHealthStore } from "../scoring/visionHealthStore";
 import type { Patient } from "../data/types";
 import { useScoreStore } from "./useScoreStore";
 import { useEegQualityStore } from "./useEegQualityStore";
+import { VisionHealthPanel } from "./VisionHealthPanel";
 import "./LiveMonitor.css";
 
 type Props = {
@@ -13,6 +15,7 @@ type Props = {
   connectionState: ConnectionState;
   sidecarState: SidecarState;
   qualityStore?: EegQualityStore;
+  visionHealthStore?: VisionHealthStore;
   patient?: Patient;
   onEndSession?: () => void;
   onSwitchMode?: (mode: "band_power_only" | "csp_lda_blend") => void;
@@ -26,7 +29,7 @@ function fmt(n: number | null, digits = 1): string {
 // clinician can intervene without interpreting raw EEG: plain-language status
 // tiles, 8-channel quality, the patient-view mirror, ERD/laterality/kinematic
 // sub-scores, and the big IntentScore. specsv2 wireframe C3.
-export function LiveMonitor({ store, connectionState, sidecarState, qualityStore, patient, onEndSession, onSwitchMode }: Props) {
+export function LiveMonitor({ store, connectionState, sidecarState, qualityStore, visionHealthStore, patient, onEndSession, onSwitchMode }: Props) {
   const state = useScoreStore(store);
   const [elapsed, setElapsed] = useState(0);
   useEffect(() => {
@@ -68,6 +71,10 @@ export function LiveMonitor({ store, connectionState, sidecarState, qualityStore
           <span className="lm-tile-value">Watch</span>
         </div>
       </div>
+
+      {visionHealthStore && (
+        <VisionHealthPanel visionHealthStore={visionHealthStore} scoreStore={store} />
+      )}
 
       <div className="grid-2">
         <div className="panel">

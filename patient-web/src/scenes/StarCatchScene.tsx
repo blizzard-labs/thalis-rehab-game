@@ -3,6 +3,7 @@ import { ReachModel } from "../reach/ReachModel";
 import type { SessionStats } from "../session/SessionStats";
 import type { ConnectionState } from "../net/scoreClient";
 import { CameraFeed } from "./CameraFeed";
+import { KinematicOverlay } from "./KinematicOverlay";
 import type { ScoreStore } from "../scoring/scoreStore";
 import { config } from "../config";
 
@@ -95,6 +96,7 @@ export function StarCatchScene({
 
   return (
     <main className={`scene scene--stars${reduced ? " reduced-motion" : ""}`} data-testid="starcatch">
+      <KinematicOverlay store={store} />
       <div className="stars-banner" data-engaged={engaged}>
         <span className="status-pill" data-testid="status-pill" data-engaged={engaged}>
           {engaged ? "Great reaching — keep going" : "Reach up toward the star"}

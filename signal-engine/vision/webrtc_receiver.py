@@ -83,6 +83,16 @@ class WebRTCReceiver:
             self._pc = None
         self._sink.clear()
 
+    def connection_state(self) -> str:
+        """Current RTCPeerConnection state, or "closed" before any peer exists.
+
+        Used by the VisionHealthMonitor to surface camera-link health without
+        the receiver having to know about the WS frame schema.
+        """
+        if self._pc is None:
+            return "closed"
+        return str(getattr(self._pc, "connectionState", "closed"))
+
     # -- helpers; aiortc types imported lazily so unit tests stay hermetic ----
 
     def _remote_desc(self, sdp: str):

@@ -93,3 +93,16 @@ def test_close_closes_peer_and_clears_sink():
     asyncio.run(rx.close())
     assert peer.closed is True
     assert sink.latest() is None
+
+
+def test_connection_state_closed_before_peer():
+    rx = WebRTCReceiver(VideoFrameSink())
+    assert rx.connection_state() == "closed"
+
+
+def test_connection_state_reads_pc_when_present():
+    peer = FakePeer()
+    peer.connectionState = "connected"
+    rx = WebRTCReceiver(VideoFrameSink(), pc_factory=lambda: peer)
+    rx._ensure_pc()
+    assert rx.connection_state() == "connected"

@@ -6,7 +6,7 @@ import { sidecarOptions, lanServerOptions, SIDECAR_WS_URL } from "./config";
 import { LanServer } from "./lan/lanServer";
 import type { RelaySocket } from "./lan/scoreRelay";
 import type { SessionInfo } from "./lan/pairing";
-import { sessionControlCommand, setModeCommand } from "./sessionControl";
+import { sessionControlCommand, setModeCommand, fusionModeCommand, affectedSideCommand, calibratePoseCommand } from "./sessionControl";
 
 // repo root is two levels up from clinician-console/dist-main
 const REPO_ROOT = join(__dirname, "..", "..");
@@ -85,6 +85,15 @@ function startLan() {
   });
   ipcMain.handle("session:set-mode", (_e, mode: "band_power_only" | "csp_lda_blend") => {
     sendControl(setModeCommand(mode));
+  });
+  ipcMain.handle("session:set-fusion-mode", (_e, mode: "A" | "B" | "C") => {
+    sendControl(fusionModeCommand(mode));
+  });
+  ipcMain.handle("session:set-affected-side", (_e, side: "left" | "right") => {
+    sendControl(affectedSideCommand(side));
+  });
+  ipcMain.handle("session:calibrate-pose", () => {
+    sendControl(calibratePoseCommand());
   });
 }
 

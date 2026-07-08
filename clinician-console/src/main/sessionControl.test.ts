@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { sessionControlCommand, setModeCommand } from "./sessionControl";
+import {
+  sessionControlCommand,
+  setModeCommand,
+  fusionModeCommand,
+  affectedSideCommand,
+  calibratePoseCommand,
+} from "./sessionControl";
 
 describe("setModeCommand", () => {
   it("builds a set_mode command frame", () => {
@@ -22,5 +28,17 @@ describe("sessionControlCommand", () => {
   it("always disarms on end (sim or live)", () => {
     expect(sessionControlCommand("sim", "end")).toBe(JSON.stringify({ cmd: "end_session" }));
     expect(sessionControlCommand("live", "end")).toBe(JSON.stringify({ cmd: "end_session" }));
+  });
+});
+
+describe("fusion command builders", () => {
+  it("builds a fusion_mode set_mode command", () => {
+    expect(JSON.parse(fusionModeCommand("B"))).toEqual({ cmd: "set_mode", fusion_mode: "B" });
+  });
+  it("builds an affected_side set_mode command", () => {
+    expect(JSON.parse(affectedSideCommand("left"))).toEqual({ cmd: "set_mode", affected_side: "left" });
+  });
+  it("builds a calibrate_pose command", () => {
+    expect(JSON.parse(calibratePoseCommand())).toEqual({ cmd: "calibrate_pose" });
   });
 });
