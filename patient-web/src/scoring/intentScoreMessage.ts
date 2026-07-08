@@ -2,6 +2,8 @@ export type ScoreFrame = {
   intentScore: number;
   erdScore: number | null;
   classifierScore: number | null;
+  kinematicScore: number | null;
+  compensationFlag: boolean;
   isArtifact: boolean;
   mode: string;
   timestamp: number;
@@ -38,6 +40,8 @@ export function parseIntentScoreMessage(raw: string): ParseResult {
       intentScore: d.intent_score,
       erdScore: numOrNull(d.erd_score),
       classifierScore: numOrNull(d.classifier_score),
+      kinematicScore: numOrNull(d.kinematic_score),
+      compensationFlag: Boolean(d.compensation_flag),
       isArtifact: Boolean(d.is_artifact),
       mode: typeof d.mode === "string" ? d.mode : "unknown",
       timestamp: typeof d.timestamp === "number" ? d.timestamp : 0,
