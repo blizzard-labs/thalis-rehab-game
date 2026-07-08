@@ -1,6 +1,6 @@
 # NeuroReach — Development Status & TODOs
 
-_Last updated: 2026-07-05. Reference spec: [`docs/specs.md`](specs.md). Game design docs:
+_Last updated: 2026-07-07. Reference spec: [`docs/specs.md`](specs.md). Game design docs:
 [`gardengrow.md`](gardengrow.md), [`reachcollect.md`](reachcollect.md)._
 
 This is the **whole-project** status board across all three subsystems. Each subsystem section lists
@@ -13,22 +13,26 @@ lined up 🔜**. Detailed change history lives in git + claude-mem, not here.
 
 | Subsystem | State | Tests |
 |---|---|---|
-| `signal-engine/` (Python DSP + scoring + WS) | Core complete, mock/synthetic-validated; on-head validation pending | **67 passed, 6 skipped** (skips = opt-in live/on-head) |
-| `clinician-console/` (Electron + React, C1–C5 + LAN pairing) | Guided session stepper (Signal→Pair→Calibrate→Live); Sim/Live toggle + pairing surfaced; End/Switch-mode wired; persistence still pending | **110 passed** (31 files) + 2 live integration |
-| `patient-web/` (React + Vite patient game) | Welcome→Calibration→Garden/StarCatch→Summary + pairing gate; EEG-only | **62 passed** (20 files) + 2 live integration |
+| `signal-engine/` (Python DSP + scoring + WS) | Core complete, mock/synthetic-validated; WebRTC camera receive (aiortc) landed; on-head validation pending | **76 passed, 6 skipped** (+1 opt-in live) |
+| `clinician-console/` (Electron + React, C1–C5 + LAN pairing) | Guided session stepper (Signal→Pair→Calibrate→Live); Sim/Live toggle + pairing surfaced; **real WebRTC signaling relay** (echo stub gone); End/Switch-mode wired; persistence still pending | **116 passed** (32 files) + 2 live integration |
+| `patient-web/` (React + Vite patient game) | Welcome→Calibration→Garden/StarCatch→Summary + pairing gate; **camera publish over WebRTC** for paired sessions | **76 passed** (23 files) + 2 live integration |
 
-**Milestone map (spec §15):** V2-0 foundation ✅ · V2-1 patient web ✅ · S1 LAN + pairing ✅ · **V2-2 remote
-camera/WebRTC ⏳ next** · V2-3 clinical workflow ⏳ · V2-4 packaging/hardening ⏳.
+**Milestone map (spec §15):** V2-0 foundation ✅ · V2-1 patient web ✅ · S1 LAN + pairing ✅ · **V2-2a WebRTC
+transport spine ✅** · V2-2b vision/kinematics ⏳ next · V2-2c fusion/UX ⏳ · V2-3 clinical workflow ⏳ ·
+V2-4 packaging/hardening ⏳.
 
-**The single biggest gap is the vision pipeline** (WebRTC → aiortc → MediaPipe → `kinematic_score`). Every
-Blended/Active-mode feature, verified-ROM gameplay, covert-MI validity gating, and compensation penalty
-is blocked on it. Everything shipped so far is **EEG-only (Mode A, band-power)**.
+**The vision transport spine now works end-to-end** (patient `getUserMedia` → WebRTC → console signaling
+relay → sidecar `aiortc` → decoded frames in `VideoFrameSink`). The remaining vision gap is
+**MediaPipe → `kinematic_score`** (V2-2b) and its **fusion + health-panel UX** (V2-2c). Until those land,
+scoring is still **EEG-only (Mode A, band-power)** — no verified-ROM, covert-MI validity gate, or
+compensation penalty yet. Design/plan:
+[`docs/superpowers/specs/2026-07-07-v2-2a-webrtc-transport-spine-design.md`](superpowers/specs/2026-07-07-v2-2a-webrtc-transport-spine-design.md).
 
 Run all tests:
 ```bash
-conda run -n eeg python -m pytest signal-engine/tests/   # 67 passed, 6 skipped
-cd patient-web        && npm run test                     # 62 passed
-cd clinician-console  && npm run test                     # 110 passed
+conda run -n eeg python -m pytest signal-engine/tests/ -m "not live"   # 76 passed, 6 skipped
+cd patient-web        && npm run test                                  # 76 passed
+cd clinician-console  && npm run test                                  # 116 passed
 ```
 
 ---
@@ -69,10 +73,17 @@ ERDCalculator (+CSP/LDA when reliable) → IntentScore fusion → 20 Hz WebSocke
   the active session** — with a controller present, no score frames reach any client (patient or console)
   before `start_session` or after `end_session`; `eeg_quality` is never gated. Without a controller (real
   headset/standalone) broadcasting is ungated. `intent_score` frame is byte-stable; `eeg_quality` on its
-  own message type. Entrypoint `run_ws_server.py` boots idle and selects source via `EEG_SOURCE=sim`
-  (default) or `live`.
+  own message type. Also dispatches `webrtc-offer`/`webrtc-ice` (keyed on `type`, not `cmd`) to the vision
+  receiver and replies `webrtc-answer`. Entrypoint `run_ws_server.py` boots idle and selects source via
+  `EEG_SOURCE=sim` (default) or `live`; builds the `VideoFrameSink` + `WebRTCReceiver` after the scoring
+  service (baseline-before-simulator boot order preserved).
+- **Vision** (`vision/`, V2-2a transport spine): `WebRTCReceiver` (`aiortc` answerer, injectable peer
+  factory — patient camera track → decoded frames); `VideoFrameSink` (bounded latest-frame buffer,
+  drop-oldest, monotonic `frame_count` for the camera-link health check). Signaling rides the paired LAN
+  socket. **No MediaPipe / `kinematic_score` yet** (V2-2b). Design:
+  [`docs/superpowers/specs/2026-07-07-v2-2a-webrtc-transport-spine-design.md`](superpowers/specs/2026-07-07-v2-2a-webrtc-transport-spine-design.md).
 
-### 🧪 Tests available (`signal-engine/tests/`, 73 collected)
+### 🧪 Tests available (`signal-engine/tests/`, 83 collected)
 | File | # | Covers |
 |---|---|---|
 | `test_lsl_inlet.py` | 8 | channel ID, permuted slicing, chunk shape/dtype, IMU, positional fallback, timeout |
@@ -87,12 +98,20 @@ ERDCalculator (+CSP/LDA when reliable) → IntentScore fusion → 20 Hz WebSocke
 | `test_ws_session_commands.py` | 3 | `start_session`/`end_session` route to controller + `session` reply; no-controller → `error` |
 | `test_session_gating.py` | 1 | end-to-end: score floors idle, rises after `start_session` (session gate drives IntentScore) |
 | `test_live_unicorn.py` | 6 | **skipped** unless `THALIS_LIVE_UNICORN=1` — stream metadata, live EEG/IMU, p95 latency, end-to-end |
+| `test_frame_sink.py` | 2 | `VideoFrameSink` latest/count, clear resets latest not count |
+| `test_webrtc_receiver.py` | 4 | offer→answer + setRemote, ice parse/forward, null-ice ignore, close clears sink (fake peer) |
+| `test_ws_server_signaling.py` | 3 | offer→answer on same socket, ice→receiver, no-receiver silent no-op |
+| `test_webrtc_live.py` | 1 | `@pytest.mark.live` — real `aiortc` loopback offerer→receiver, frames land in sink (deselected on CI) |
 
 Latency validated off-head: **p95 ≈ 18 ms** (budget 250 ms), compute-only ≈ 1.5 ms.
 
 ### ⚠️ Missing capabilities
-- **Vision pipeline absent** — no `vision/` module, no aiortc receive, no MediaPipe, no `kinematic_score`.
-  Fusion runs EEG-only (`w_kin=0`). Blocks Modes B/C, covert-MI validity gate, compensation penalty.
+- **Vision scoring absent (V2-2b/2-2c)** — transport spine done (`aiortc` receive → `VideoFrameSink`),
+  but no MediaPipe, no kinematic features, no `kinematic_score`. Fusion still runs EEG-only (`w_kin=0`).
+  Blocks Modes B/C, covert-MI validity gate, compensation penalty. Also missing: rest-pose calibration
+  (5 s) + framing-check setup step, and unifying the publisher stream with the `CameraFeed` preview.
+- **`aiortc` dependency** installed into the `eeg` env but not pinned in any tracked manifest (repo has no
+  requirements/environment file); Windows-clinic install validation deferred to V2-4 packaging.
 - **60 s baseline-rest block** not built (orchestrator collects MI trials only).
 - **Per-patient versioned filter persistence** to disk not built (CSP/LDA fit in-memory only).
 - **Dead-channel handling** — off-head flat electrodes need a per-channel quality flag feeding the
@@ -102,7 +121,8 @@ Latency validated off-head: **p95 ≈ 18 ms** (budget 250 ms), compute-only ≈ 
   source-switching is a stub (`EEG_SOURCE=live` binds the real `Data` stream / errors if absent; no
   runtime mock⇔real reconfigure from the console toggle yet).
 - **FastAPI + SQLite/EDF persistence layer** (spec §11) not built.
-- **pytest markers** — live tests gated by env var, not a `-m live` marker; markers unregistered (warns).
+- **pytest markers** — new vision live test uses a registered `-m live` marker (via `conftest.pytest_configure`);
+  the older `test_live_unicorn.py` is still gated by the `THALIS_LIVE_UNICORN` env var, not unified onto `-m live`.
 - **On-head numbers unverified** — µV amplitude and ERD magnitude were measured off-head (floating-
   electrode noise); do NOT trust until re-run on-head.
 
@@ -113,8 +133,8 @@ Latency validated off-head: **p95 ≈ 18 ms** (budget 250 ms), compute-only ≈ 
 - Wire `test_live_unicorn.py` through `EEGInlet` instead of the local `_LiveUnicorn` shim.
 - 60 s baseline-rest + per-patient filter versioning tests.
 - Offline replay / regression harness (needs a stored raw EEG+pose corpus).
-- Vision: MediaPipe joint-angle vs goniometer ground-truth; remote aiortc-stream parity; frame-drop /
-  camera-deny → EEG-only fallback.
+- Vision (V2-2b/2-2c): MediaPipe joint-angle vs goniometer ground-truth; kinematic_score fusion parity;
+  frame-drop / camera-deny → EEG-only fallback surfaced in the console health panel.
 - Full-pipeline latency-to-client budget (EEG → WSS → render).
 
 ---
@@ -130,8 +150,9 @@ five-screen console. Data is **mock/in-memory** (seeded roster), no persistence.
 - **LAN server** (`src/main/lan/`): `lanServer` (HTTPS static serve of `patient-web/dist` + `ws` on one
   port, **LAN-IP-only bind**, **Origin allowlist**); `cert` (self-signed TOFU, `selfsigned@2.x`);
   `pairing` (`SessionPairing`: 6-char confusable-free code, single active session, single-claimant bind,
-  TTL); `scoreRelay` (forwards **only `intent_score`** to the patient); `signaling` (WebRTC SDP/ICE relay
-  **contract + echo stub** — real aiortc peer is V2-2); `netUtil` (LAN-IPv4 detection). Wired via
+  TTL); `scoreRelay` (forwards **only `intent_score`** to the patient); `signalingRelay` + `signaling`
+  (**real bidirectional WebRTC SDP/ICE relay** patient⇄sidecar `aiortc`, queue-until-open outbox, same
+  lifecycle as `scoreRelay`; echo stub removed); `netUtil` (LAN-IPv4 detection). Wired via
   `config.ts` (`LAN_PORT=8443`), `main.ts` (start/end-session IPC), `preload.ts` (`window.neuroreach`).
 - **Session control channel** (`src/main/main.ts` + `sessionControl.ts`) — a persistent control socket to
   the sidecar, driven by decoupled IPC: `session:open` mints the pairing code (no arm), `session:begin`
@@ -155,14 +176,15 @@ five-screen console. Data is **mock/in-memory** (seeded roster), no persistence.
 - **Shared parsers** (`src/scoring/`) — `intentScoreMessage` (byte-identical to patient-web),
   `eegQualityMessage`, `scoreStore`, `eegQualityStore`; `net/scoreClient` WS adapter.
 
-### 🧪 Tests available (30 files, 106 unit + 2 live integration)
+### 🧪 Tests available (32 files, 116 unit + 2 live integration)
 - **Renderer:** `App`, `Roster`, `SignalCheckStep`, `PairDeviceStep`, `CalibrateStep`, `LiveStep`,
   `SessionFlow`, `useSession`, `LiveMonitor` (incl. End/Switch-mode controls), `HistoryTrends`,
   `Assessments`, `ProtocolEditor`, `PatientWorkspace`.
 - **Main/LAN:** `lanServer` (headless integration: fake sidecar → two mock WSS clients — pairs,
   single-claimant `session_taken`, `eeg_quality` never forwarded, bad code, foreign-origin rejected),
-  `cert`, `pairing`, `scoreRelay`, `signaling`, `netUtil`, `lanConfig`, `sidecar`, `sessionControl`
-  (source+action → command mapping + `setModeCommand`).
+  `cert`, `pairing`, `scoreRelay`, `signalingRelay` (bidirectional forward + queue-until-open + reconnect),
+  `signaling` (`isSignalingMessage`), `lanServer` (also: paired offer→sidecar, sidecar answer→patient),
+  `netUtil`, `lanConfig`, `sidecar`, `sessionControl` (source+action → command mapping + `setModeCommand`).
 - **Data/scoring:** `store`, `selectors`, `scoreStore`, `eegQualityStore`, `intentScoreMessage`,
   `eegQualityMessage`, `scoreClient`, `sanity`.
 - **Integration** (`integration/`, real sidecar): `sidecar.live` (asserts `intent_score` + `eeg_quality`
@@ -178,7 +200,8 @@ five-screen console. Data is **mock/in-memory** (seeded roster), no persistence.
   calibration** (Calibrate is an honest placeholder — needs the LSL-marker → browser bridge).
 - **No persistence** — all data is in-memory mock; real records need the sidecar FastAPI + SQLite layer
   (spec §11), not built.
-- **WebRTC signaling is an echo stub** — no real aiortc peer, no camera-link health panel (V2-2).
+- **No camera-link health panel** — signaling relay + `aiortc` receive work, but the console has no
+  panel showing camera-link state / "vision degraded → EEG-only" (V2-2c).
 - **"Offline-OK" badge is a static label**, not a live LAN/patient-connection indicator.
 - **Game scenes still read `localhost:8765`** — a remote paired device pairs, but the paired LAN socket
   isn't yet wired into the game scenes, so remote gameplay visuals don't follow the score.
@@ -198,12 +221,14 @@ five-screen console. Data is **mock/in-memory** (seeded roster), no persistence.
 ## 3. `patient-web/` — React + Vite patient game
 
 Scene machine `Welcome → Calibration → GameModeSelect → Garden / StarCatch → Summary`, with a `Pairing`
-gate when a `?c=<code>` session code is present. **EEG-only**; camera overlay is a local `getUserMedia`
-preview, not yet published to the clinic.
+gate when a `?c=<code>` session code is present. **EEG-only scoring**; the camera is now **published over
+WebRTC** to the sidecar for paired sessions (transport only — no `kinematic_score` consuming it yet).
 
 ### ✅ Implemented
 - **Scenes** (`src/scenes/`): `WelcomeScene` (P1 greeting) · `CalibrationScene` (P2 client-timed Graz cue
-  sequencer — **cosmetic**, no marker bridge; clinician pre-cal "I'm ready" gate; blinking REC dot) ·
+  sequencer — **cosmetic**, no marker bridge; now matches spec §6: 60 s eyes-open baseline rest
+  (`baselineMs`) → 2-class block cueing affected↔unaffected each trial, `totalTrials` per class;
+  clinician pre-cal "I'm ready" gate; blinking REC dot) ·
   `GameModeSelect` (Garden live; River disabled; Star Catcher live) · `GardenScene` (P3 illustrated
   full-bleed SVG flower, focus meter, status banner, camera overlay) · `StarCatchScene` (P4 reach avatar
   toward star ROM target) · `SummaryScene` (P6 warm non-comparative recap) · `PairingScene` (presentational
@@ -216,20 +241,26 @@ preview, not yet published to the clinic.
   0.3/s, 3 s bloom dwell, 0.75/0.60 hysteresis) · `reach/ReachModel` (adaptive staircase band 0.55–0.9) ·
   `scoring/intentScoreMessage` (shared `ScoreFrame` contract, byte-identical to console) · `scoring/scoreStore`
   (circular buffer, latest/recentAverage/streak) · `net/scoreClient` (WSS reconnect + backoff) ·
-  `net/lanClient` (pair from `?c=`, route `paired`/`error`/`intent_score`, localhost dev fallback) ·
-  `net/usePatientLink` (**one persistent session socket** lifted to App — remote `?c=` dials the LAN relay
-  `wss://<host>` and rides the *paired* socket for scores; no code → localhost sidecar; capped-backoff
-  reconnect feeds a shared `ScoreStore`) · `session/SessionStats` (engaged-time + longest-streak).
+  `net/lanClient` (pair from `?c=`, route `paired`/`error`/`intent_score`/`webrtc-*`, localhost dev
+  fallback, outbound `send`) · `net/usePatientLink` (**one persistent session socket** lifted to App —
+  remote `?c=` dials the LAN relay `wss://<host>` and rides the *paired* socket for scores **and WebRTC
+  signaling** via `sendSignaling`/`subscribeSignaling`; no code → localhost sidecar; capped-backoff
+  reconnect feeds a shared `ScoreStore`) · `net/signaling` (`isSignalingMessage` guard, contract mirrors
+  the console) · `net/cameraPublisher` (WebRTC offerer/send-only: `getUserMedia`→`RTCPeerConnection`,
+  offer + trickle ICE, injectable for jsdom) · `net/useCameraPublish` (mounts the publisher for paired
+  sessions; camera-deny → EEG-only, no throw) · `session/SessionStats` (engaged-time + longest-streak).
 - **App router** (`App.tsx`) — `useState` scene machine sharing one `SessionStats`; owns the `usePatientLink`
   connection for the whole session, boots to the pairing gate when `?c=` present and takes patient identity
   from the paired ack (closes the hardcoded-"Margaret" gap in the LAN path; `config.ts` remains the dev
   default). Scenes previously each opened `ws://localhost:8765`, which never reached a **remote** patient
   over the LAN relay (worked only same-machine) — fixed by the single lifted socket.
 
-### 🧪 Tests available (20 files, 62 unit + 2 live integration)
+### 🧪 Tests available (23 files, 76 unit + 2 live integration)
 - **Scenes:** `Welcome`, `Calibration`, `GameModeSelect`, `Garden`, `StarCatch`, `Summary`, `Pairing`.
 - **Logic:** `PlantGrowthModel`, `ReachModel`, `intentScoreMessage`, `scoreStore`, `scoreClient`,
-  `usePatientLink` (remote-relay routing + reconnect + local fallback), `SessionStats`, `sanity`.
+  `usePatientLink` (remote-relay routing + reconnect + local fallback + signaling send/subscribe),
+  `signaling`, `cameraPublisher` (offer/answer/ice/teardown), `useCameraPublish` (start/stop/subscribe),
+  `SessionStats`, `sanity`.
 - **Warm-up:** `warmupMotion`, `interpolation`, `useWarmupPose`.
 - **App:** flow `Welcome → Calibration → Garden → Summary`.
 - **Integration** (`integration/sidecar.live.test.ts`, real mock-EEG sidecar ~27 s boot): "mock MI grows
@@ -239,8 +270,10 @@ preview, not yet published to the clinic.
 ### ⚠️ Missing capabilities
 - **P2 Calibration is cosmetic** — client-timed, NOT marker-driven; no mechanism forwards the Python LSL
   marker stream to the browser.
-- **No camera publish** — `CameraFeed` is a local preview; no `getUserMedia` → WebRTC → aiortc publish.
-  P4 verified-ROM and P5 compensation overlay need kinematics (blocked on the vision pipeline).
+- **Camera publish transport-only** — `cameraPublisher`/`useCameraPublish` publish the track to the
+  sidecar `aiortc` receiver, but nothing consumes it yet: no `kinematic_score`, so P4 verified-ROM and P5
+  compensation overlay stay blocked (V2-2b/2-2c). The publisher acquires its own stream; unifying it with
+  the `CameraFeed` preview (single stream) is deferred to the V2-2b framing-check step.
 - **Reach & Collect is Phase-A only** — single fixed direction/target driven by IntentScore magnitude;
   cued-direction (Phase B) and verified-ROM (Phase C) not built (see `reachcollect.md`).
 - **PixiJS deferred** — all scenes are React + SVG/CSS.
@@ -251,7 +284,6 @@ preview, not yet published to the clinic.
 
 ### 🔜 Tests still lined up
 - Marker-driven calibration once the LSL-marker → browser bridge exists.
-- Camera publish + WebRTC path (patient side of V2-2).
 - Adaptive-difficulty staircase in Garden.
 - Reach & Collect Phase B (cued-direction target catalogue).
 - End-to-end web latency (EEG → WSS → React render) p95 < 250 ms.
@@ -277,9 +309,12 @@ preview, not yet published to the clinic.
 
 ## 5. Next up (priority order)
 
-1. **V2-2 vision pipeline** — the keystone. Patient `getUserMedia` → WebRTC publish → aiortc receive in
-   the sidecar → MediaPipe → `kinematic_score` fusion; frame-drop/deny → EEG-only fallback; framing-check
-   setup step; camera-link health panel. Unblocks Modes B/C, verified ROM, compensation penalty.
+1. **V2-2b vision & kinematics** — the keystone, now unblocked by the V2-2a transport spine. Consume the
+   `VideoFrameSink` with MediaPipe Pose/Hands → joint angles, trunk displacement, jerk → `kinematic_score`;
+   rest-pose calibration (5 s) + framing-check setup step; confidence / last-known-good gating. Then
+   **V2-2c fusion & UX**: wire `kinematic_score` into `IntentScoreEngine` (Modes B/C, compensation
+   penalty); camera-link health panel; frame-drop/deny → EEG-only fallback surfaced both sides. Unblocks
+   Modes B/C, verified ROM, compensation penalty.
 2. **Engine control channel** — End/Switch-mode + session arm/disarm are wired; still need **pause/rest**
    (new sidecar command) and **marker-driven calibration** (LSL-marker → browser bridge).
 3. **Persistence** — sidecar FastAPI + SQLite/EDF; real console records + export.
