@@ -6,7 +6,8 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { WebSocketServer, WebSocket } from "ws";
 import { SessionPairing, type SessionInfo } from "./pairing";
 import { createScoreRelay, type RelaySocket } from "./scoreRelay";
-import { handleSignalingMessage, isSignalingMessage } from "./signaling";
+import { createSignalingRelay } from "./signalingRelay";
+import { isSignalingMessage } from "./signaling";
 
 export type LanServerOptions = {
   host: string;
@@ -34,6 +35,7 @@ export class LanServer extends EventEmitter {
   private pairing: SessionPairing;
   private patientSocket: WebSocket | null = null;
   private relay: ReturnType<typeof createScoreRelay> | null = null;
+  private signalingRelay: ReturnType<typeof createSignalingRelay> | null = null;
   private nextId = 1;
   private port = 0;
 
@@ -85,7 +87,7 @@ export class LanServer extends EventEmitter {
       }
       if (this.pairing.boundSocketId() !== id) return; // only the paired socket may proceed
       if (isSignalingMessage(msg)) {
-        handleSignalingMessage(msg, (m) => ws.send(JSON.stringify(m)));
+        this.signalingRelay?.sendToSidecar(data.toString());
         return;
       }
       // game-event and other patient→server messages: emitted for S3 to persist
@@ -99,6 +101,8 @@ export class LanServer extends EventEmitter {
         this.pairing.releaseSocket();
         this.relay?.stop();
         this.relay = null;
+        this.signalingRelay?.stop();
+        this.signalingRelay = null;
         this.emit("patient-disconnected");
       }
     });
@@ -126,6 +130,17 @@ export class LanServer extends EventEmitter {
       },
     });
     this.relay.connect();
+    // Bidirectional WebRTC signaling carrier: patient offer/ice -> sidecar,
+    // sidecar answer/ice -> patient. Same lifecycle as the score relay.
+    this.signalingRelay?.stop();
+    this.signalingRelay = createSignalingRelay({
+      sidecarWsUrl: this.opts.sidecarWsUrl,
+      createSocket: this.opts.createSidecarSocket,
+      sendToPatient: (raw) => {
+        if (this.patientSocket?.readyState === WebSocket.OPEN) this.patientSocket.send(raw);
+      },
+    });
+    this.signalingRelay.connect();
   }
 
   startSession(session: SessionInfo): { code: string; url: string } {
@@ -136,6 +151,8 @@ export class LanServer extends EventEmitter {
   endSession(): void {
     this.relay?.stop();
     this.relay = null;
+    this.signalingRelay?.stop();
+    this.signalingRelay = null;
     this.patientSocket?.close();
     this.patientSocket = null;
     this.pairing.end();

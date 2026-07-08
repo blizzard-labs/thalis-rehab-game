@@ -50,6 +50,7 @@ class NeuroReachWSServer:
         broadcast_hz: float = 20.0,
         quality_hz: float = 5.0,
         session_controller=None,
+        webrtc_receiver=None,
     ):
         self.scoring_service = scoring_service
         self.host = host
@@ -61,6 +62,9 @@ class NeuroReachWSServer:
         # Optional dev-mode session gate (SessionSimulator). None on a real
         # headset run; then start_session/end_session reply with an error.
         self.session_controller = session_controller
+        # Optional aiortc receiver for the patient camera track. None on a real
+        # headset / standalone run; then webrtc-* signaling is silently ignored.
+        self.webrtc_receiver = webrtc_receiver
         # When a session controller is present, intent_score frames are only
         # broadcast while a session is active (between start_session and
         # end_session). This stops simulated scores from reaching the patient
@@ -265,11 +269,17 @@ class NeuroReachWSServer:
             self.clients.discard(websocket)
             logger.info("client disconnected %s (clients=%d)", addr, len(self.clients))
 
+    _SIGNALING_TYPES = {"webrtc-offer", "webrtc-answer", "webrtc-ice"}
+
     async def _handle_message(self, websocket, raw) -> None:
         try:
             data = json.loads(raw)
         except (ValueError, TypeError):
             await self._send(websocket, {"type": "error", "message": "invalid json"})
+            return
+        msg_type = data.get("type") if isinstance(data, dict) else None
+        if msg_type in self._SIGNALING_TYPES:
+            await self._handle_signaling(websocket, data)
             return
         cmd = data.get("cmd") if isinstance(data, dict) else None
         handler = self._dispatch.get(cmd)
@@ -285,6 +295,17 @@ class NeuroReachWSServer:
             await websocket.send(json.dumps(obj))
         except websockets.exceptions.ConnectionClosed:
             self.clients.discard(websocket)
+
+    async def _handle_signaling(self, websocket, data) -> None:
+        rx = self.webrtc_receiver
+        if rx is None:
+            return  # standalone / no camera path: silently ignore
+        if data["type"] == "webrtc-offer":
+            answer = await rx.handle_offer(data["sdp"])
+            await self._send(websocket, answer)
+        elif data["type"] == "webrtc-ice":
+            await rx.add_ice(data.get("candidate"))
+        # webrtc-answer from patient is a no-op (patient is the offerer)
 
     # ------------------------------------------------------------------ commands
 

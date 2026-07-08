@@ -56,4 +56,26 @@ describe("usePatientLink", () => {
     act(() => sock.emit({ type: "error", reason: "bad_code" }));
     await waitFor(() => expect(result.current.error).toBe("bad_code"));
   });
+
+  it("routes inbound webrtc frames to a signaling subscriber", async () => {
+    const sock = fakeSocket();
+    const { result } = renderHook(() => usePatientLink("ABC234", "wss://clinic:8443", () => sock));
+    act(() => sock.emitOpen());
+
+    const received: unknown[] = [];
+    act(() => result.current.subscribeSignaling((m) => received.push(m)));
+    act(() => sock.emit({ type: "webrtc-answer", sdp: "A" }));
+
+    expect(received).toEqual([{ type: "webrtc-answer", sdp: "A" }]);
+  });
+
+  it("sendSignaling writes to the paired socket", async () => {
+    const sock = fakeSocket();
+    const { result } = renderHook(() => usePatientLink("ABC234", "wss://clinic:8443", () => sock));
+    act(() => sock.emitOpen());
+
+    act(() => result.current.sendSignaling({ type: "webrtc-offer", sdp: "O" }));
+
+    expect(sock.send).toHaveBeenCalledWith(JSON.stringify({ type: "webrtc-offer", sdp: "O" }));
+  });
 });

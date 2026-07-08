@@ -13,3 +13,10 @@ from pathlib import Path
 _SIGNAL_ENGINE = Path(__file__).resolve().parent.parent
 if str(_SIGNAL_ENGINE) not in sys.path:
     sys.path.insert(0, str(_SIGNAL_ENGINE))
+
+
+def pytest_configure(config):
+    config.addinivalue_line(
+        "markers",
+        "live: opt-in tests needing real hardware/heavy deps (skipped on CI)",
+    )

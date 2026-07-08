@@ -25,6 +25,8 @@ from scoring.intent_score import IntentScoreEngine
 from scoring.scoring_service import ScoringService
 from scoring.session_simulator import SessionSimulator
 from server.ws_server import NeuroReachWSServer
+from vision.frame_sink import VideoFrameSink
+from vision.webrtc_receiver import WebRTCReceiver
 
 FS = 250
 
@@ -103,8 +105,18 @@ def main():
         sim = SessionSimulator(outlet)
         print("SessionSimulator ready (idle). Arms on Start Session.")
 
+    # Built after the scoring service so the baseline-before-simulator boot order
+    # is untouched. Owns the aiortc peer for the patient camera track.
+    frame_sink = VideoFrameSink()
+    receiver = WebRTCReceiver(frame_sink)
+
     srv = NeuroReachWSServer(
-        svc, host="localhost", port=8765, broadcast_hz=20.0, session_controller=sim
+        svc,
+        host="localhost",
+        port=8765,
+        broadcast_hz=20.0,
+        session_controller=sim,
+        webrtc_receiver=receiver,
     )
     print("WS server starting on ws://localhost:8765 (Ctrl-C to stop)")
     try:
