@@ -26,6 +26,7 @@ from acquisition.lsl_inlet import UNICORN_POSITIONAL_EEG_LABELS
 from classifiers.online_classifier import OnlineClassifier
 from features.erd import ERDCalculator
 from scoring.ring_buffer import RingBuffer
+from vision.types import KinematicResult
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +45,8 @@ class IntentScoreResult:
     classifier_score: float | None
     is_artifact: bool
     timestamp: float
+    kinematic_score: float | None = None
+    compensation_flag: bool = False
 
 
 class IntentScoreEngine:
@@ -82,9 +85,24 @@ class IntentScoreEngine:
         self._running_max: float = 100.0
         self._n_real: int = 0
 
+        # Fusion session mode (spec §8.2–8.4). Camera absent -> Mode A (EEG only).
+        self.session_mode: str = "A"
+
+    _MODE_WEIGHTS = {"A": (1.0, 0.0), "B": (0.6, 0.4), "C": (0.25, 0.75)}
+
+    def set_session_mode(self, mode: str) -> None:
+        if mode not in self._MODE_WEIGHTS:
+            raise ValueError(f"unknown session mode: {mode}")
+        self.session_mode = mode
+
     # ------------------------------------------------------------------
 
-    def compute(self, ring_buffer: RingBuffer, artifact_clean: bool) -> IntentScoreResult:
+    def compute(
+        self,
+        ring_buffer: RingBuffer,
+        artifact_clean: bool,
+        kinematic: "KinematicResult | None" = None,
+    ) -> IntentScoreResult:
         now = time.time()
 
         if not artifact_clean:
@@ -106,8 +124,25 @@ class IntentScoreEngine:
         else:
             raw_score = erd_score
 
-        normalized = self._normalize(raw_score)
-        intent = self._apply_ema(normalized)
+        eeg_normalized = self._normalize(raw_score)   # 0–100 EEG component
+
+        w_eeg, w_kin = self._MODE_WEIGHTS[self.session_mode]
+        # Absent/invalid pose is absent evidence — never scored as clean stillness
+        # or as movement: drop w_kin and renormalize to EEG-only (spec §7.3/§8.1).
+        kin_valid = kinematic is not None and kinematic.pose_valid and w_kin > 0.0
+        if kin_valid:
+            total = w_eeg + w_kin
+            fused = (w_eeg * eeg_normalized + w_kin * kinematic.kinematic_score) / total
+            fused -= kinematic.compensation_penalty
+            reported_kin = kinematic.kinematic_score
+            comp_flag = kinematic.compensation_flag
+        else:
+            fused = eeg_normalized
+            reported_kin = None
+            comp_flag = False
+
+        fused = float(np.clip(fused, 0.0, 100.0))
+        intent = self._apply_ema(fused)
         self._prev_intent = intent
 
         return IntentScoreResult(
@@ -116,6 +151,8 @@ class IntentScoreEngine:
             classifier_score=classifier_score,
             is_artifact=False,
             timestamp=now,
+            kinematic_score=reported_kin,
+            compensation_flag=comp_flag,
         )
 
     # ------------------------------------------------------------------
