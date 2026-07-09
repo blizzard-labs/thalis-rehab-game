@@ -4,6 +4,7 @@ import type { ConnectionState } from "../net/scoreClient";
 import type { SidecarState } from "../main/sidecar";
 import type { EegQualityStore } from "../scoring/eegQualityStore";
 import type { VisionHealthStore } from "../scoring/visionHealthStore";
+import type { CameraFrameStore } from "../scoring/cameraFrameStore";
 import type { Patient } from "../data/types";
 import { useScoreStore } from "./useScoreStore";
 import { useEegQualityStore } from "./useEegQualityStore";
@@ -16,6 +17,7 @@ type Props = {
   sidecarState: SidecarState;
   qualityStore?: EegQualityStore;
   visionHealthStore?: VisionHealthStore;
+  cameraFrameStore?: CameraFrameStore;
   patient?: Patient;
   onEndSession?: () => void;
   onSwitchMode?: (mode: "band_power_only" | "csp_lda_blend") => void;

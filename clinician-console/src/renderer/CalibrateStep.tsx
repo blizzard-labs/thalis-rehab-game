@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type { VisionHealthStore } from "../scoring/visionHealthStore";
+import type { CameraFrameStore } from "../scoring/cameraFrameStore";
 import { useVisionHealthStore } from "./useVisionHealthStore";
 import { WaitingSpinner } from "./WaitingSpinner";
 
@@ -12,6 +13,7 @@ type Props = {
   onAffectedSide?: (side: "left" | "right") => void;
   defaultSide?: "left" | "right";
   visionHealthStore: VisionHealthStore;
+  cameraFrameStore?: CameraFrameStore;
 };
 
 const MODES: { id: "A" | "B" | "C"; label: string; hint: string }[] = [

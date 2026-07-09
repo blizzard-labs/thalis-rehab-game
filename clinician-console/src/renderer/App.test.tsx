@@ -5,6 +5,7 @@ import { PatientStore } from "../data/store";
 import { ScoreStore } from "../scoring/scoreStore";
 import { EegQualityStore } from "../scoring/eegQualityStore";
 import { VisionHealthStore } from "../scoring/visionHealthStore";
+import { CameraFrameStore } from "../scoring/cameraFrameStore";
 
 function renderApp() {
   return render(
@@ -13,6 +14,7 @@ function renderApp() {
       scoreStore={new ScoreStore()}
       qualityStore={new EegQualityStore()}
       visionHealthStore={new VisionHealthStore()}
+      cameraFrameStore={new CameraFrameStore()}
       connectionState="open"
       sidecarState="ready"
     />,

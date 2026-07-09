@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { ScoreStore } from "../scoring/scoreStore";
 import type { EegQualityStore } from "../scoring/eegQualityStore";
 import type { VisionHealthStore } from "../scoring/visionHealthStore";
+import type { CameraFrameStore } from "../scoring/cameraFrameStore";
 import type { ConnectionState } from "../net/scoreClient";
 import type { SidecarState } from "../main/sidecar";
 import type { Patient } from "../data/types";
@@ -23,6 +24,7 @@ type Props = {
   scoreStore: ScoreStore;
   qualityStore: EegQualityStore;
   visionHealthStore: VisionHealthStore;
+  cameraFrameStore: CameraFrameStore;
   connectionState: ConnectionState;
   sidecarState: SidecarState;
   onExit: () => void;
@@ -90,6 +92,7 @@ export function SessionFlow(props: Props) {
           onAffectedSide={s.setAffectedSide}
           defaultSide={patient.affectedSide.toLowerCase() as "left" | "right"}
           visionHealthStore={props.visionHealthStore}
+          cameraFrameStore={props.cameraFrameStore}
         />
       )}
       {step === "live" && (
@@ -99,6 +102,7 @@ export function SessionFlow(props: Props) {
           visionHealthStore={props.visionHealthStore}
           connectionState={props.connectionState}
           sidecarState={props.sidecarState}
+          cameraFrameStore={props.cameraFrameStore}
           patient={patient}
           onBegin={s.begin}
           onEndSession={endSession}
