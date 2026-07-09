@@ -13,11 +13,16 @@ import time
 
 class VisionHealthMonitor:
     def __init__(self, receiver, sink, latest_kinematic, engine, *,
-                 staleness_s: float = 0.3, now=time.time):
+                 kin_engine=None, worker=None, staleness_s: float = 0.3, now=time.time):
         self.receiver = receiver
         self.sink = sink
         self.latest = latest_kinematic
+        # ``engine`` is the IntentScoreEngine (holds session_mode A/B/C).
+        # ``kin_engine`` is the KinematicScoreEngine (holds affected_side + rest
+        # pose); falls back to ``engine`` so a single combined fake works in tests.
         self.engine = engine
+        self.kin_engine = kin_engine if kin_engine is not None else engine
+        self.worker = worker
         self.staleness_s = float(staleness_s)
         self._now = now
         self._prev_count = None
@@ -49,9 +54,14 @@ class VisionHealthMonitor:
             and not kinematic_active
         )
 
+        calibration = self.worker.calibration_status() if self.worker is not None else "idle"
+
         return {
             "connection": connection,
             "fps": round(float(fps), 1),
             "kinematic_active": bool(kinematic_active),
             "degraded": bool(degraded),
+            "affected_side": getattr(self.kin_engine, "affected_side", "right"),
+            "rest_calibrated": getattr(self.kin_engine, "_rest", None) is not None,
+            "calibration": calibration,
         }

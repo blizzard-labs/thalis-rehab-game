@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import type { VisionHealthStore } from "../scoring/visionHealthStore";
+import { useVisionHealthStore } from "./useVisionHealthStore";
 
 type Props = {
   onNext: () => void;
@@ -7,6 +9,7 @@ type Props = {
   onAffectedSide?: (side: "left" | "right") => void;
   onCalibratePose?: () => void;
   defaultSide?: "left" | "right";
+  visionHealthStore: VisionHealthStore;
 };
 
 const MODES: { id: "A" | "B" | "C"; label: string; hint: string }[] = [
@@ -15,15 +18,36 @@ const MODES: { id: "A" | "B" | "C"; label: string; hint: string }[] = [
   { id: "C", label: "Mode C", hint: "Movement-led" },
 ];
 
+function calText(vh: { connection: string; calibration: string; restCalibrated: boolean } | null): string {
+  if (vh === null || vh.connection !== "connected") return "Waiting for the patient camera…";
+  if (vh.restCalibrated) return "✓ Rest pose calibrated";
+  if (vh.calibration === "collecting") return "Calibrating… hold still, keep the affected arm in frame";
+  return "Not calibrated — sit still, then press Calibrate rest pose";
+}
+
 // Step 3 — Calibration. The Graz cue block still needs the LSL-marker → patient
 // bridge (roadmap), so it stays an honest placeholder. V2-2c adds the vision
-// fusion controls: session mode (A/B/C), affected side, and rest-pose calibration.
-export function CalibrateStep({ onNext, onBack, onFusionMode, onAffectedSide, onCalibratePose, defaultSide = "right" }: Props) {
+// fusion controls: session mode (A/B/C), affected side, and rest-pose calibration,
+// with live calibration feedback from the sidecar's vision_health frame.
+export function CalibrateStep(
+  { onNext, onBack, onFusionMode, onAffectedSide, onCalibratePose, defaultSide = "right", visionHealthStore }: Props,
+) {
   const [mode, setMode] = useState<"A" | "B" | "C">("B");
-  const [side, setSide] = useState<"left" | "right">(defaultSide);
+  const [localSide, setLocalSide] = useState<"left" | "right">(defaultSide);
+  const vh = useVisionHealthStore(visionHealthStore).latest;
+  // The engine is the source of truth once frames flow; before then, reflect the
+  // clinician's local pick (seeded from the patient record).
+  const side = vh?.affectedSide ?? localSide;
+
+  // Push the patient's affected side to the engine on mount so scoring matches
+  // the record WITHOUT requiring a click — the engine boots to a fixed default
+  // otherwise, which silently scores the wrong arm.
+  useEffect(() => {
+    onAffectedSide?.(defaultSide);
+  }, [defaultSide, onAffectedSide]);
 
   const pickMode = (m: "A" | "B" | "C") => { setMode(m); onFusionMode?.(m); };
-  const pickSide = (sd: "left" | "right") => { setSide(sd); onAffectedSide?.(sd); };
+  const pickSide = (sd: "left" | "right") => { setLocalSide(sd); onAffectedSide?.(sd); };
 
   return (
     <div className="content">
@@ -54,7 +78,10 @@ export function CalibrateStep({ onNext, onBack, onFusionMode, onAffectedSide, on
             <button className={`btn ${side === "right" ? "btn-primary" : ""}`} onClick={() => pickSide("right")}>Right</button>
           </div>
 
-          <button className="btn" onClick={() => onCalibratePose?.()}>Calibrate rest pose</button>
+          <div className="fusion-group">
+            <button className="btn" onClick={() => onCalibratePose?.()}>Calibrate rest pose</button>
+            <span className="cal-status" data-testid="calibration-status">{calText(vh)}</span>
+          </div>
         </div>
       </div>
       <div className="roster-tools">

@@ -381,10 +381,17 @@ class NeuroReachWSServer:
                     {"type": "error", "message": f"invalid fusion_mode: {fusion_mode}"},
                 )
                 return
-        # Affected side mirrors the kinematic landmark selection.
+        # Affected side mirrors the kinematic landmark selection. Rest pose is
+        # side-specific (it anchors that arm's reach), so switching sides
+        # invalidates any existing calibration — clear it so the clinician
+        # recalibrates for the correct arm.
         side = data.get("affected_side")
         if side in ("left", "right") and self.kinematic_worker is not None:
-            self.kinematic_worker.engine.affected_side = side
+            worker = self.kinematic_worker
+            if worker.engine.affected_side != side:
+                worker.engine.affected_side = side
+                worker.engine.set_rest_pose(None)
+                worker.reset_calibration()
         await self._send(websocket, self._status_payload())
 
     async def _cmd_calibrate_pose(self, websocket, data) -> None:

@@ -84,6 +84,7 @@ export function SessionFlow(props: Props) {
           onAffectedSide={s.setAffectedSide}
           onCalibratePose={s.calibratePose}
           defaultSide={patient.affectedSide.toLowerCase() as "left" | "right"}
+          visionHealthStore={props.visionHealthStore}
         />
       )}
       {step === "live" && (

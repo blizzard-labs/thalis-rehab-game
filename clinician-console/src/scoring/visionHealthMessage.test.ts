@@ -5,7 +5,8 @@ describe("parseVisionHealthMessage", () => {
   it("parses a well-formed frame", () => {
     const raw = JSON.stringify({
       type: "vision_health", connection: "connected", fps: 14.8,
-      kinematic_active: true, degraded: false, timestamp: 123,
+      kinematic_active: true, degraded: false, affected_side: "left",
+      calibration: "collecting", rest_calibrated: false, timestamp: 123,
     });
     const r = parseVisionHealthMessage(raw);
     expect(r.ok).toBe(true);
@@ -14,6 +15,9 @@ describe("parseVisionHealthMessage", () => {
       expect(r.frame.fps).toBe(14.8);
       expect(r.frame.kinematicActive).toBe(true);
       expect(r.frame.degraded).toBe(false);
+      expect(r.frame.affectedSide).toBe("left");
+      expect(r.frame.calibration).toBe("collecting");
+      expect(r.frame.restCalibrated).toBe(false);
     }
   });
 
@@ -35,6 +39,9 @@ describe("parseVisionHealthMessage", () => {
       expect(r.frame.fps).toBe(0);
       expect(r.frame.kinematicActive).toBe(false);
       expect(r.frame.degraded).toBe(false);
+      expect(r.frame.affectedSide).toBe("right");
+      expect(r.frame.calibration).toBe("idle");
+      expect(r.frame.restCalibrated).toBe(false);
     }
   });
 });

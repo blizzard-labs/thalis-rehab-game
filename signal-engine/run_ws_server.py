@@ -140,7 +140,8 @@ def main():
     vision_monitor = None
     if worker is not None:
         vision_monitor = VisionHealthMonitor(
-            receiver, frame_sink, latest_kin, svc.engine
+            receiver, frame_sink, latest_kin, svc.engine,
+            kin_engine=kin_engine, worker=worker,
         )
 
     srv = NeuroReachWSServer(

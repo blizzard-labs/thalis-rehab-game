@@ -64,6 +64,12 @@ class KinematicWorker:
     def calibration_status(self) -> str:
         return self._cal_status
 
+    def reset_calibration(self) -> None:
+        """Drop any in-progress or completed calibration (e.g. affected side
+        changed, so the existing rest pose no longer applies)."""
+        self._calibrator = None
+        self._cal_status = "idle"
+
     # -- lifecycle -------------------------------------------------------------
 
     def start(self) -> "KinematicWorker":

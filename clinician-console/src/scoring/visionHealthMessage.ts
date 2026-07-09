@@ -6,6 +6,9 @@ export type VisionHealthFrame = {
   fps: number;
   kinematicActive: boolean;
   degraded: boolean;
+  affectedSide: "left" | "right";
+  calibration: string;
+  restCalibrated: boolean;
   timestamp: number;
 };
 
@@ -34,6 +37,9 @@ export function parseVisionHealthMessage(raw: string): VisionHealthParseResult {
       fps: typeof d.fps === "number" && Number.isFinite(d.fps) ? d.fps : 0,
       kinematicActive: Boolean(d.kinematic_active),
       degraded: Boolean(d.degraded),
+      affectedSide: d.affected_side === "left" ? "left" : "right",
+      calibration: typeof d.calibration === "string" ? d.calibration : "idle",
+      restCalibrated: Boolean(d.rest_calibrated),
       timestamp: typeof d.timestamp === "number" ? d.timestamp : 0,
     },
   };

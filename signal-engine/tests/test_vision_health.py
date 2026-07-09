@@ -28,8 +28,18 @@ class _Result:
 
 
 class _Engine:
-    def __init__(self, mode):
+    def __init__(self, mode, side="right", rest=None):
         self.session_mode = mode
+        self.affected_side = side
+        self._rest = rest
+
+
+class _Worker:
+    def __init__(self, status="idle"):
+        self._status = status
+
+    def calibration_status(self):
+        return self._status
 
 
 class _Clock:
@@ -40,10 +50,11 @@ class _Clock:
         return self.t
 
 
-def _monitor(clk, *, mode="B", state="connected"):
+def _monitor(clk, *, mode="B", state="connected", side="right", rest=None, cal="idle"):
+    engine = _Engine(mode, side=side, rest=rest)
     m = VisionHealthMonitor(
-        _Receiver(state), _Sink(), _Latest(), _Engine(mode),
-        staleness_s=0.3, now=clk.now,
+        _Receiver(state), _Sink(), _Latest(), engine,
+        worker=_Worker(cal), staleness_s=0.3, now=clk.now,
     )
     return m
 
@@ -97,3 +108,20 @@ def test_not_degraded_when_no_connection():
     clk = _Clock()
     m = _monitor(clk, mode="B", state="closed")
     assert m.sample()["degraded"] is False
+
+
+def test_reports_affected_side_and_calibration_state():
+    clk = _Clock()
+    m = _monitor(clk, side="left", rest=None, cal="collecting")
+    snap = m.sample()
+    assert snap["affected_side"] == "left"
+    assert snap["calibration"] == "collecting"
+    assert snap["rest_calibrated"] is False
+
+
+def test_rest_calibrated_true_when_engine_has_rest():
+    clk = _Clock()
+    m = _monitor(clk, side="right", rest=object(), cal="complete")
+    snap = m.sample()
+    assert snap["rest_calibrated"] is True
+    assert snap["calibration"] == "complete"

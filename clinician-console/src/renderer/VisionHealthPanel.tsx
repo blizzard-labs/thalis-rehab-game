@@ -8,6 +8,13 @@ type Props = {
   scoreStore: ScoreStore;
 };
 
+// Human-readable rest-pose calibration state for the panel.
+function calLabel(status: string): string {
+  if (status === "collecting") return "calibrating…";
+  if (status === "complete") return "calibrated";
+  return "not calibrated";
+}
+
 // C3 sub-panel — camera-link health (V2-2c). Connection state + frame rate, a
 // "vision degraded → EEG-only" banner, a kinematic-score readout, and a
 // compensation cue mirror. Absent frame = no camera link (EEG-only session).
@@ -35,6 +42,13 @@ export function VisionHealthPanel({ visionHealthStore, scoreStore }: Props) {
             </span>
           )}
         </>
+      )}
+      {vh !== null && (
+        <span className="vh-side" data-testid="vision-affected-side">
+          {vh.affectedSide === "left" ? "Left" : "Right"} arm
+          {" · "}
+          {vh.restCalibrated ? "calibrated" : calLabel(vh.calibration)}
+        </span>
       )}
       <span className="vh-kin">
         KINEMATIC {latest && latest.kinematicScore !== null ? latest.kinematicScore.toFixed(0) : "—"}

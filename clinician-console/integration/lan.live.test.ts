@@ -12,7 +12,7 @@ import type { SessionInfo } from "../src/main/lan/pairing";
 
 const REPO_ROOT = join(__dirname, "..", "..");
 const SIDECAR_PORT = 8765;
-const SESSION: SessionInfo = { patientFirstName: "Margaret", affectedSide: "left", mode: "band_power_only" };
+const SESSION: SessionInfo = { patientFirstName: "Margaret", affectedSide: "left", mode: "band_power_only", source: "sim" };
 
 function condaAvailable(): boolean {
   try {

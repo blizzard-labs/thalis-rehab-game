@@ -66,6 +66,15 @@ def test_stale_sink_not_reprocessed():
     assert calls["n"] == 1   # single frame processed once despite many loop iterations
 
 
+def test_reset_calibration_drops_progress():
+    sink = VideoFrameSink()
+    worker = KinematicWorker(sink, _FakeEstimator(), KinematicScoreEngine(), LatestKinematic())
+    worker.begin_calibration()
+    assert worker.calibration_status() == "collecting"
+    worker.reset_calibration()
+    assert worker.calibration_status() == "idle"
+
+
 def test_begin_calibration_sets_rest_pose():
     sink = VideoFrameSink()
     latest = LatestKinematic()

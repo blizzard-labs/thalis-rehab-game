@@ -15,7 +15,8 @@ function scoreFrame(over: Partial<Record<string, unknown>> = {}) {
 describe("VisionHealthPanel", () => {
   it("shows connection state and fps", () => {
     const vh = new VisionHealthStore();
-    vh.push({ connection: "connected", fps: 15, kinematicActive: true, degraded: false, timestamp: 0 });
+    vh.push({ connection: "connected", fps: 15, kinematicActive: true, degraded: false,
+      affectedSide: "right", calibration: "complete", restCalibrated: true, timestamp: 0 });
     const sc = new ScoreStore();
     sc.push(scoreFrame());
     render(<VisionHealthPanel visionHealthStore={vh} scoreStore={sc} />);
@@ -26,9 +27,20 @@ describe("VisionHealthPanel", () => {
 
   it("raises the degraded banner", () => {
     const vh = new VisionHealthStore();
-    vh.push({ connection: "connected", fps: 0, kinematicActive: false, degraded: true, timestamp: 0 });
+    vh.push({ connection: "connected", fps: 0, kinematicActive: false, degraded: true,
+      affectedSide: "right", calibration: "idle", restCalibrated: false, timestamp: 0 });
     render(<VisionHealthPanel visionHealthStore={vh} scoreStore={new ScoreStore()} />);
     expect(screen.getByTestId("vision-degraded-banner")).toHaveTextContent(/EEG-only/i);
+  });
+
+  it("shows the affected side and calibration state", () => {
+    const vh = new VisionHealthStore();
+    vh.push({ connection: "connected", fps: 15, kinematicActive: false, degraded: false,
+      affectedSide: "left", calibration: "collecting", restCalibrated: false, timestamp: 0 });
+    render(<VisionHealthPanel visionHealthStore={vh} scoreStore={new ScoreStore()} />);
+    const side = screen.getByTestId("vision-affected-side");
+    expect(side).toHaveTextContent(/left arm/i);
+    expect(side).toHaveTextContent(/calibrating/i);
   });
 
   it("shows the compensation indicator when flagged", () => {
@@ -46,7 +58,8 @@ describe("VisionHealthPanel", () => {
   it("shows 'no camera link' (not a degraded alarm) when the connection is closed", () => {
     // Boot state: monitor frames arrive but no patient has connected yet.
     const vh = new VisionHealthStore();
-    vh.push({ connection: "closed", fps: 0, kinematicActive: false, degraded: false, timestamp: 0 });
+    vh.push({ connection: "closed", fps: 0, kinematicActive: false, degraded: false,
+      affectedSide: "right", calibration: "idle", restCalibrated: false, timestamp: 0 });
     render(<VisionHealthPanel visionHealthStore={vh} scoreStore={new ScoreStore()} />);
     expect(screen.getByTestId("vision-health-panel")).toHaveTextContent(/no camera link/i);
     expect(screen.queryByTestId("vision-degraded-banner")).toBeNull();
