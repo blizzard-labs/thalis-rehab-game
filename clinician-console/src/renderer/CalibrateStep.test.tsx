@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent, act } from "@testing-library/react";
 import { CalibrateStep } from "./CalibrateStep";
 import { VisionHealthStore } from "../scoring/visionHealthStore";
+import { CameraFrameStore } from "../scoring/cameraFrameStore";
 
 function renderStep(props: Partial<React.ComponentProps<typeof CalibrateStep>> = {}) {
   const store = props.visionHealthStore ?? new VisionHealthStore();
@@ -9,6 +10,7 @@ function renderStep(props: Partial<React.ComponentProps<typeof CalibrateStep>> =
     <CalibrateStep
       onNext={() => {}} onBack={() => {}} defaultSide="right"
       waitingForPatient={false} onGoLive={() => {}}
+      cameraFrameStore={new CameraFrameStore()} calibrationStartedAt={null}
       {...props} visionHealthStore={store}
     />,
   );
@@ -45,6 +47,28 @@ describe("CalibrateStep", () => {
     renderStep({});
     expect(screen.queryByText(/calibrate rest pose/i)).toBeNull();
     expect(screen.queryByTestId("calibration-status")).toBeNull();
+  });
+
+  it("shows the camera feed + three calibration status rows", () => {
+    renderStep({});
+    expect(screen.getByTestId("cal-status-inframe")).toBeTruthy();
+    expect(screen.getByTestId("cal-status-cv")).toBeTruthy();
+    expect(screen.getByTestId("cal-status-eeg")).toBeTruthy();
+  });
+
+  it("marks in-frame yes once pose landmarks arrive", () => {
+    const cameraFrameStore = new CameraFrameStore();
+    renderStep({ cameraFrameStore });
+    expect(screen.getByTestId("cal-status-inframe").textContent).toMatch(/no/i);
+    act(() =>
+      cameraFrameStore.push({
+        jpeg: "x",
+        landmarks: { pose: [[0.5, 0.5, 0.95]], hands: { left: null, right: null } },
+        fps: 10,
+        timestamp: 0,
+      }),
+    );
+    expect(screen.getByTestId("cal-status-inframe").textContent).toMatch(/yes/i);
   });
 
   it("pushes the patient's affected side to the engine on mount (no click needed)", () => {

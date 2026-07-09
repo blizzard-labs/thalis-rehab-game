@@ -33,8 +33,12 @@ type Props = {
 export function SessionFlow(props: Props) {
   const { patient, onExit } = props;
   const s = useSession();
-  // Patient "I'm ready" auto-starts rest-pose calibration — no manual button.
-  const cp = useCheckpoints({ onCalibrationReady: () => { void s.calibratePose(); } });
+  const [calibrationStartedAt, setCalibrationStartedAt] = useState<number | null>(null);
+  // Patient "I'm ready" auto-starts rest-pose calibration (no manual button) and
+  // marks t0 for the EEG-baseline progress bar.
+  const cp = useCheckpoints({
+    onCalibrationReady: () => { void s.calibratePose(); setCalibrationStartedAt(Date.now()); },
+  });
   const [step, setStep] = useState<Step>("signal");
   const go = (next: Step) => setStep(next);
 
@@ -93,6 +97,7 @@ export function SessionFlow(props: Props) {
           defaultSide={patient.affectedSide.toLowerCase() as "left" | "right"}
           visionHealthStore={props.visionHealthStore}
           cameraFrameStore={props.cameraFrameStore}
+          calibrationStartedAt={calibrationStartedAt}
         />
       )}
       {step === "live" && (
