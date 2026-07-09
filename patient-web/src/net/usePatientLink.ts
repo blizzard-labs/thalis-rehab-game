@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createLanClient, type PairedSession } from "./lanClient";
 import type { ConnectionState, WsLike } from "./scoreClient";
 import { parseIntentScoreMessage } from "../scoring/intentScoreMessage";
@@ -88,14 +88,24 @@ export function usePatientLink(
     };
   }, [code, wssUrl]);
 
+  // Stable identities: both only touch refs, so useCallback with no deps is
+  // safe. Consumers (useCameraPublish) list these in a useEffect dep array — a
+  // fresh identity each render would restart the WebRTC publisher on every
+  // parent re-render, tearing down the live camera link mid-negotiation.
+  const sendSignaling = useCallback(
+    (msg: SignalingMessage) => clientRef.current?.send(JSON.stringify(msg)),
+    [],
+  );
+  const subscribeSignaling = useCallback((fn: (m: SignalingMessage) => void) => {
+    signalingSubRef.current = fn;
+  }, []);
+
   return {
     store: storeRef.current,
     conn,
     session,
     error,
-    sendSignaling: (msg) => clientRef.current?.send(JSON.stringify(msg)),
-    subscribeSignaling: (fn) => {
-      signalingSubRef.current = fn;
-    },
+    sendSignaling,
+    subscribeSignaling,
   };
 }

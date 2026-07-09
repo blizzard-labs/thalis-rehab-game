@@ -78,4 +78,21 @@ describe("usePatientLink", () => {
 
     expect(sock.send).toHaveBeenCalledWith(JSON.stringify({ type: "webrtc-offer", sdp: "O" }));
   });
+
+  it("keeps sendSignaling / subscribeSignaling identity stable across re-renders", () => {
+    // Consumers (useCameraPublish) depend on these in a useEffect dep array. If
+    // their identity changed each render, the effect would tear down and restart
+    // the WebRTC publisher on every parent re-render — destroying the live camera
+    // link. They must be memoized.
+    const sock = fakeSocket();
+    const { result, rerender } = renderHook(() =>
+      usePatientLink("ABC234", "wss://clinic:8443", () => sock),
+    );
+    const send1 = result.current.sendSignaling;
+    const sub1 = result.current.subscribeSignaling;
+    rerender();
+    rerender();
+    expect(result.current.sendSignaling).toBe(send1);
+    expect(result.current.subscribeSignaling).toBe(sub1);
+  });
 });

@@ -25,8 +25,9 @@ export function useCameraPublish(link: PatientLink, enabled: boolean): void {
       void publisher.handleSignaling(msg);
     });
 
-    publisher.start().catch(() => {
+    publisher.start().catch((err) => {
       // no camera / permission denied / no RTCPeerConnection -> stay EEG-only
+      console.warn("camera publish failed; continuing EEG-only:", err);
     });
 
     return () => {

@@ -335,6 +335,7 @@ class NeuroReachWSServer:
             return  # standalone / no camera path: silently ignore
         if data["type"] == "webrtc-offer":
             answer = await rx.handle_offer(data["sdp"])
+            logger.info("patient camera offer handled")
             await self._send(websocket, answer)
         elif data["type"] == "webrtc-ice":
             await rx.add_ice(data.get("candidate"))

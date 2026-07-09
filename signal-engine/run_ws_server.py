@@ -11,9 +11,12 @@ MockUnicornOutlet block and start your real LSL stream before launching.
 
 from __future__ import annotations
 
+import logging
 import os
 import queue
 import time
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
 
 from acquisition.lsl_inlet import EEGInlet
 from acquisition.mock_eeg_outlet import MockUnicornOutlet
