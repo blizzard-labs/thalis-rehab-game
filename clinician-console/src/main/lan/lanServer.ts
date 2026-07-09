@@ -8,6 +8,7 @@ import { SessionPairing, type SessionInfo } from "./pairing";
 import { createScoreRelay, type RelaySocket } from "./scoreRelay";
 import { createSignalingRelay } from "./signalingRelay";
 import { isSignalingMessage } from "./signaling";
+import { isPatientCheckpoint, type ClinicianCheckpoint } from "./checkpoint";
 
 export type LanServerOptions = {
   host: string;
@@ -38,6 +39,7 @@ export class LanServer extends EventEmitter {
   private signalingRelay: ReturnType<typeof createSignalingRelay> | null = null;
   private nextId = 1;
   private port = 0;
+  private checkpoints = { patientBegan: false, patientCalibrated: false, clinicianLive: false };
 
   constructor(private opts: LanServerOptions) {
     super();
@@ -90,6 +92,12 @@ export class LanServer extends EventEmitter {
         this.signalingRelay?.sendToSidecar(data.toString());
         return;
       }
+      if (isPatientCheckpoint(msg)) {
+        if (msg.checkpoint === "session-begin") this.checkpoints.patientBegan = true;
+        else this.checkpoints.patientCalibrated = true;
+        this.emit("patient-checkpoint", msg.checkpoint);
+        return;
+      }
       // game-event and other patient→server messages: emitted for S3 to persist
       if (msg.type === "game-event") this.emit("game-event", msg);
     });
@@ -119,6 +127,9 @@ export class LanServer extends EventEmitter {
     }
     this.patientSocket = ws;
     ws.send(JSON.stringify({ type: "paired", session: this.pairing.session() }));
+    if (this.checkpoints.clinicianLive) {
+      ws.send(JSON.stringify({ type: "clinician-checkpoint", checkpoint: "go-live" }));
+    }
     this.emit("patient-connected");
     // Fan the sidecar score out to this patient.
     this.relay?.stop();
@@ -144,11 +155,27 @@ export class LanServer extends EventEmitter {
   }
 
   startSession(session: SessionInfo): { code: string; url: string } {
+    this.resetCheckpoints();
     const code = this.pairing.mint(session);
     return { code, url: `${this.origin()}/?c=${code}` };
   }
 
+  sendClinicianCheckpoint(checkpoint: ClinicianCheckpoint): void {
+    if (checkpoint === "go-live") this.checkpoints.clinicianLive = true;
+    const raw = JSON.stringify({ type: "clinician-checkpoint", checkpoint });
+    if (this.patientSocket?.readyState === WebSocket.OPEN) this.patientSocket.send(raw);
+  }
+
+  checkpointState(): { patientBegan: boolean; patientCalibrated: boolean; clinicianLive: boolean } {
+    return { ...this.checkpoints };
+  }
+
+  private resetCheckpoints(): void {
+    this.checkpoints = { patientBegan: false, patientCalibrated: false, clinicianLive: false };
+  }
+
   endSession(): void {
+    this.resetCheckpoints();
     this.relay?.stop();
     this.relay = null;
     this.signalingRelay?.stop();
