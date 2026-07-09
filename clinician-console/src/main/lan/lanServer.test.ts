@@ -260,4 +260,72 @@ describe("LanServer", () => {
     });
     expect(closed).toBe(true);
   });
+
+  it("records a patient checkpoint and emits it", async () => {
+    sidecar = await fakeSidecar();
+    server = new LanServer(baseOpts());
+    await server.start();
+    const code = server.startSession(SESSION).code;
+    const p = connectPatient(server);
+    await p.open();
+    p.send({ type: "pair", code });
+    await p.waitFor("paired");
+
+    const seen: string[] = [];
+    server.on("patient-checkpoint", (c: string) => seen.push(c));
+    p.send({ type: "patient-checkpoint", checkpoint: "session-begin" });
+    await new Promise<void>((r) => {
+      const check = () => (seen.length ? r() : setTimeout(check, 10));
+      check();
+    });
+    expect(seen).toEqual(["session-begin"]);
+    expect(server.checkpointState().patientBegan).toBe(true);
+    p.ws.close();
+  });
+
+  it("forwards a clinician go-live to the patient and remembers it", async () => {
+    sidecar = await fakeSidecar();
+    server = new LanServer(baseOpts());
+    await server.start();
+    const code = server.startSession(SESSION).code;
+    const p = connectPatient(server);
+    await p.open();
+    p.send({ type: "pair", code });
+    await p.waitFor("paired");
+
+    server.sendClinicianCheckpoint("go-live");
+    const msg = await p.waitFor("clinician-checkpoint");
+    expect(msg.checkpoint).toBe("go-live");
+    expect(server.checkpointState().clinicianLive).toBe(true);
+    p.ws.close();
+  });
+
+  it("replays clinician go-live to a socket that pairs after the fact", async () => {
+    sidecar = await fakeSidecar();
+    server = new LanServer(baseOpts());
+    await server.start();
+    const code = server.startSession(SESSION).code;
+    server.sendClinicianCheckpoint("go-live"); // before any patient pairs
+
+    const p = connectPatient(server);
+    await p.open();
+    p.send({ type: "pair", code });
+    const msg = await p.waitFor("clinician-checkpoint");
+    expect(msg.checkpoint).toBe("go-live");
+    p.ws.close();
+  });
+
+  it("resets checkpoint flags on endSession", async () => {
+    sidecar = await fakeSidecar();
+    server = new LanServer(baseOpts());
+    await server.start();
+    server.startSession(SESSION);
+    server.sendClinicianCheckpoint("go-live");
+    server.endSession();
+    expect(server.checkpointState()).toEqual({
+      patientBegan: false,
+      patientCalibrated: false,
+      clinicianLive: false,
+    });
+  });
 });

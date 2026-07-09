@@ -11,6 +11,7 @@ function renderStep(over: Partial<Parameters<typeof PairDeviceStep>[0]> = {}) {
     onOpen: vi.fn().mockResolvedValue(undefined),
     onNext: vi.fn(),
     onBack: vi.fn(),
+    waitingForPatient: false,
     ...over,
   };
   return { props, ...render(<PairDeviceStep {...props} />) };
@@ -53,5 +54,17 @@ describe("PairDeviceStep", () => {
   it("shows a desktop-app notice when the bridge is absent", () => {
     renderStep({ bridgeReady: false });
     expect(screen.getByText(/desktop app/i)).toBeTruthy();
+  });
+
+  it("disables Continue and shows the spinner while waiting for the patient", () => {
+    renderStep({ code: "ABC234", url: "https://x/?c=ABC234", waitingForPatient: true });
+    expect(screen.getByRole("button", { name: /continue/i })).toBeDisabled();
+    expect(screen.getByTestId("waiting-spinner")).toHaveTextContent(/waiting for patient/i);
+  });
+
+  it("enables Continue and hides the spinner once the patient has begun", () => {
+    renderStep({ code: "ABC234", url: "https://x/?c=ABC234", waitingForPatient: false });
+    expect(screen.getByRole("button", { name: /continue/i })).not.toBeDisabled();
+    expect(screen.queryByTestId("waiting-spinner")).toBeNull();
   });
 });

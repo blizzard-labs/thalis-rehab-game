@@ -5,12 +5,15 @@ import { parseIntentScoreMessage } from "../scoring/intentScoreMessage";
 import { ScoreStore } from "../scoring/scoreStore";
 import { config } from "../config";
 import type { SignalingMessage } from "./signaling";
+import type { PatientCheckpoint } from "./checkpoint";
 
 export type PatientLink = {
   store: ScoreStore;
   conn: ConnectionState;
   session: PairedSession | null;
   error: string | null;
+  clinicianLive: boolean;
+  notify: (checkpoint: PatientCheckpoint) => void;
   sendSignaling: (msg: SignalingMessage) => void;
   subscribeSignaling: (fn: (msg: SignalingMessage) => void) => void;
 };
@@ -35,6 +38,7 @@ export function usePatientLink(
   const [conn, setConn] = useState<ConnectionState>("connecting");
   const [session, setSession] = useState<PairedSession | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [clinicianLive, setClinicianLive] = useState(false);
   const factoryRef = useRef(createSocket);
   factoryRef.current = createSocket;
   const clientRef = useRef<ReturnType<typeof createLanClient> | null>(null);
@@ -67,6 +71,9 @@ export function usePatientLink(
         },
         onError: (reason) => setError(reason),
         onSignaling: (m) => signalingSubRef.current?.(m),
+        onCheckpoint: (m) => {
+          if (m.type === "clinician-checkpoint" && m.checkpoint === "go-live") setClinicianLive(true);
+        },
         onClose: () => {
           if (stopped) return;
           setConn("reconnecting");
@@ -99,12 +106,19 @@ export function usePatientLink(
   const subscribeSignaling = useCallback((fn: (m: SignalingMessage) => void) => {
     signalingSubRef.current = fn;
   }, []);
+  const notify = useCallback(
+    (checkpoint: PatientCheckpoint) =>
+      clientRef.current?.send(JSON.stringify({ type: "patient-checkpoint", checkpoint })),
+    [],
+  );
 
   return {
     store: storeRef.current,
     conn,
     session,
     error,
+    clinicianLive,
+    notify,
     sendSignaling,
     subscribeSignaling,
   };

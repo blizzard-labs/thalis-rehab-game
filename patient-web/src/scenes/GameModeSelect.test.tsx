@@ -38,6 +38,21 @@ describe("GameModeSelect", () => {
     expect(ready).not.toBeDisabled();
   });
 
+  it("stays disabled after selecting a mode until the clinician is ready", () => {
+    render(<GameModeSelect onConfirm={() => {}} clinicianReady={false} />);
+    fireEvent.click(screen.getByTestId("mode-garden"));
+    const ready = screen.getByTestId("mode-ready");
+    expect(ready).toBeDisabled();
+    expect(screen.getByTestId("waiting-spinner")).toHaveTextContent(/waiting for clinician/i);
+  });
+
+  it("enables 'I'm ready' when a mode is selected and the clinician is ready", () => {
+    render(<GameModeSelect onConfirm={() => {}} clinicianReady={true} />);
+    fireEvent.click(screen.getByTestId("mode-garden"));
+    expect(screen.getByTestId("mode-ready")).not.toBeDisabled();
+    expect(screen.queryByTestId("waiting-spinner")).toBeNull();
+  });
+
   it("calls onConfirm with the selected mode id only after ready is pressed", () => {
     const onConfirm = vi.fn();
     render(<GameModeSelect onConfirm={onConfirm} />);

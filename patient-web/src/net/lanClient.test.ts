@@ -48,6 +48,20 @@ describe("createLanClient", () => {
     expect(errors).toEqual(["session_taken"]);
   });
 
+  it("routes a clinician-checkpoint frame to onCheckpoint", () => {
+    const sock = fakeSocket();
+    const checkpoints: any[] = [];
+    const c = createLanClient({
+      code: "ABC234", wssUrl: "wss://h", localhostUrl: "ws://l",
+      createSocket: () => sock, onScoreFrame: () => {}, onPaired: () => {}, onError: () => {},
+      onCheckpoint: (m) => checkpoints.push(m),
+    });
+    c.connect();
+    sock.fireOpen();
+    sock.emit(JSON.stringify({ type: "clinician-checkpoint", checkpoint: "go-live" }));
+    expect(checkpoints).toEqual([{ type: "clinician-checkpoint", checkpoint: "go-live" }]);
+  });
+
   it("dev mode (no code) connects to localhost and auto-pairs", () => {
     const sock = fakeSocket();
     const paired: any[] = [];

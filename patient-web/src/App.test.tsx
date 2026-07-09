@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, act } from "@testing-library/react";
+import { render, screen, act, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import App from "./App";
 
@@ -29,10 +29,11 @@ describe("App flow", () => {
     expect(screen.getByText(/ready to play/i)).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: /let's begin/i }));
-    // V2-2c framing-check step sits between Welcome and Calibration. jsdom has
-    // no camera, so advance via the always-available skip path.
-    await user.click(screen.getByTestId("framing-skip"));
+    // Welcome now advances straight to Calibration; the framing choice lives
+    // under the calibration camera. jsdom has no camera, so take the always-
+    // available skip path, which then unlocks the "I'm ready" clinician gate.
     expect(screen.getByTestId("calibration")).toBeInTheDocument();
+    await user.click(screen.getByTestId("framing-skip"));
 
     // Clinician pre-calibration gate: the cue sequence is held until "I'm ready".
     await user.click(screen.getByTestId("ready-btn"));
@@ -88,6 +89,34 @@ describe("App flow", () => {
 
       expect(screen.getByText(/hi jordan/i)).toBeInTheDocument();
       expect(screen.getByText(/ready to play/i)).toBeInTheDocument();
+    } finally {
+      window.history.pushState({}, "", "/");
+    }
+  });
+
+  it("notifies session-begin over the paired socket when Let's begin is pressed", () => {
+    const sent: string[] = [];
+    let sock: any = null;
+    vi.stubGlobal("WebSocket", class {
+      onopen: any = null; onclose: any = null; onmessage: any = null; onerror: any = null;
+      send(raw: string) { sent.push(raw); }
+      close() {}
+      constructor() { sock = this; }
+    });
+    window.history.pushState({}, "", "/?c=ABC234");
+    try {
+      render(<App />);
+      act(() => {
+        sock.onopen?.({});
+        sock.onmessage?.({
+          data: JSON.stringify({
+            type: "paired",
+            session: { patientFirstName: "Jordan", affectedSide: "right", mode: "band_power_only" },
+          }),
+        });
+      });
+      fireEvent.click(screen.getByRole("button", { name: /let's begin/i }));
+      expect(sent.some((r) => r.includes("patient-checkpoint") && r.includes("session-begin"))).toBe(true);
     } finally {
       window.history.pushState({}, "", "/");
     }

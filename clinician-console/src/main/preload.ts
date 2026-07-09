@@ -19,4 +19,9 @@ contextBridge.exposeInMainWorld("neuroreach", {
   calibratePose: () => ipcRenderer.invoke("session:calibrate-pose"),
   onPatientConnected: (cb: () => void) => ipcRenderer.on("patient-connected", () => cb()),
   onPatientDisconnected: (cb: () => void) => ipcRenderer.on("patient-disconnected", () => cb()),
+  onPatientCheckpoint: (cb: (checkpoint: string) => void) =>
+    ipcRenderer.on("patient-checkpoint", (_e, checkpoint) => cb(checkpoint)),
+  sendClinicianCheckpoint: (checkpoint: unknown) =>
+    ipcRenderer.invoke("session:clinician-checkpoint", checkpoint),
+  getCheckpointState: () => ipcRenderer.invoke("session:checkpoint-state"),
 });

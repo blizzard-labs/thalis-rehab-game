@@ -69,6 +69,7 @@ function startLan() {
   });
   lan.on("patient-connected", () => win?.webContents.send("patient-connected"));
   lan.on("patient-disconnected", () => win?.webContents.send("patient-disconnected"));
+  lan.on("patient-checkpoint", (checkpoint: string) => win?.webContents.send("patient-checkpoint", checkpoint));
   lan.start();
   openControlSocket();
 
@@ -95,6 +96,10 @@ function startLan() {
   ipcMain.handle("session:calibrate-pose", () => {
     sendControl(calibratePoseCommand());
   });
+  ipcMain.handle("session:clinician-checkpoint", (_e, checkpoint: "go-live") =>
+    lan!.sendClinicianCheckpoint(checkpoint),
+  );
+  ipcMain.handle("session:checkpoint-state", () => lan!.checkpointState());
 }
 
 function createWindow() {

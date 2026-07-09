@@ -14,8 +14,8 @@ lined up 🔜**. Detailed change history lives in git + claude-mem, not here.
 | Subsystem | State | Tests |
 |---|---|---|
 | `signal-engine/` (Python DSP + scoring + WS) | Core complete, mock/synthetic-validated; WebRTC camera receive (aiortc) + **MediaPipe kinematic scoring fused into IntentScore (V2-2b)** + **`vision_health` camera-link telemetry frame (V2-2c)** landed; on-head validation pending | **110 passed, 6 skipped** (+2 opt-in live) |
-| `clinician-console/` (Electron + React, C1–C5 + LAN pairing) | Guided session stepper (Signal→Pair→Calibrate→Live); Sim/Live toggle + pairing surfaced; **real WebRTC signaling relay** (echo stub gone); End/Switch-mode wired; **vision health panel + fusion controls (mode A/B/C, affected side, calibrate rest pose) (V2-2c)**; persistence still pending | **130 passed** (34 files) + 2 live integration |
-| `patient-web/` (React + Vite patient game) | Welcome→**Framing-check**→Calibration→Garden/StarCatch→Summary + pairing gate; **camera publish over WebRTC** for paired sessions; **kinematic overlay: verified indicator (P4) + compensation cue (P5) (V2-2c)** | **84 passed** (25 files) + 2 live integration |
+| `clinician-console/` (Electron + React, C1–C5 + LAN pairing) | Guided session stepper (Signal→Pair→Calibrate→Live); Sim/Live toggle + pairing surfaced; **real WebRTC signaling relay** (echo stub gone); End/Switch-mode wired; **vision health panel + fusion controls (mode A/B/C, affected side, calibrate rest pose) (V2-2c)**; **cross-app checkpoint gating** (Pair Continue waits on patient "Let's begin"; Continue-to-live waits on patient calibration-done; both gated buttons show a "waiting for patient" spinner); persistence still pending | **149 passed** (36 files) + 2 live integration |
+| `patient-web/` (React + Vite patient game) | Welcome→Calibration→Garden/StarCatch→Summary + pairing gate; **framing-check merged into Calibration** (skip / in-frame buttons under the camera gate the "I'm ready" clinician gate); **hover-expand on every camera feed** (full-frame contain overlay); **camera publish over WebRTC** for paired sessions; **kinematic overlay: verified indicator (P4) + compensation cue (P5) (V2-2c)**; **mode-select "I'm ready" gated on clinician "Continue to live"** (spinner while waiting; bypassed in no-code/dev mode) | **93 passed** (25 files) + 2 live integration |
 
 **Milestone map (spec §15):** V2-0 foundation ✅ · V2-1 patient web ✅ · S1 LAN + pairing ✅ · **V2-2a WebRTC
 transport spine ✅** · **V2-2b vision/kinematics ✅** · **V2-2c fusion-UX/health-panel ✅** · V2-3 clinical
@@ -26,8 +26,10 @@ console signaling relay → sidecar `aiortc` → `VideoFrameSink` → MediaPipe 
 `kinematic_score`, fused into `IntentScore` per Mode A/B/C with a trunk-lean compensation penalty).
 **V2-2c added the UX**: a clinician-only `vision_health` frame (WebRTC connection state, fps,
 `kinematic_active`, "vision degraded — EEG-only" — never reaches the patient, guarded by the relay
-allowlist); a browser-local framing-check setup step (lightweight luminance heuristic + manual confirm, no
-ML); patient rendering of the kinematic fields (verified indicator P4 + debounced compensation cue P5); and
+allowlist); a browser-local framing-check step (lightweight luminance heuristic + manual confirm, no
+ML) — **now merged into the Calibration scene** as skip / in-frame buttons under the camera feed that gate
+the clinician "I'm ready" gate, with a hover-expand full-frame overlay on every camera feed; patient
+rendering of the kinematic fields (verified indicator P4 + debounced compensation cue P5); and
 console fusion controls (mode A/B/C, affected side, calibrate rest pose). Still **deferred**: covert-MI
 trial-invalidation / classifier-training-exclusion (needs per-trial covert-vs-attempted context the RT path
 doesn't model), the full Phase C verified-ROM game (two-bone FK rig + per-target angle catalogue), a full
@@ -35,11 +37,19 @@ publisher/preview stream unification, and goniometer ground-truth validation. De
 [`2026-07-08-v2-2c-vision-ux-design.md`](superpowers/specs/2026-07-08-v2-2c-vision-ux-design.md),
 [`2026-07-07-v2-2b-kinematic-scoring-design.md`](superpowers/specs/2026-07-07-v2-2b-kinematic-scoring-design.md).
 
+**Cross-app checkpoint gating** locksteps the two apps at three handoffs: a new `patient-checkpoint`
+(`session-begin`, `calibration-complete`) / `clinician-checkpoint` (`go-live`) contract rides the paired
+LAN socket, with `LanServer` as the session-scoped state authority (replays `go-live` on re-pair, resets on
+end/new session) bridged to the console renderer over IPC. Gates are active only when paired — no-code/dev
+falls back to local-action-only. Design/plan:
+[`2026-07-09-checkpoint-gating-design.md`](superpowers/specs/2026-07-09-checkpoint-gating-design.md),
+[`2026-07-09-checkpoint-gating.md`](superpowers/plans/2026-07-09-checkpoint-gating.md).
+
 Run all tests:
 ```bash
 conda run -n eeg python -m pytest signal-engine/tests/ -m "not live"   # 101 passed, 6 skipped
-cd patient-web        && npm run test                                  # 78 passed
-cd clinician-console  && npm run test                                  # 118 passed
+cd patient-web        && npm run test                                  # 93 passed
+cd clinician-console  && npm run test                                  # 149 passed
 ```
 
 ---

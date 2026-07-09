@@ -6,13 +6,12 @@ import { GardenScene } from "./scenes/GardenScene";
 import { StarCatchScene } from "./scenes/StarCatchScene";
 import { SummaryScene } from "./scenes/SummaryScene";
 import { PairingScene } from "./scenes/PairingScene";
-import { FramingCheckScene } from "./scenes/FramingCheckScene";
 import { SessionStats } from "./session/SessionStats";
 import { config, readSessionCode } from "./config";
 import { usePatientLink } from "./net/usePatientLink";
 import { useCameraPublish } from "./net/useCameraPublish";
 
-type View = "pairing" | "welcome" | "framing" | "calibration" | "modeselect" | "garden" | "stars" | "summary";
+type View = "pairing" | "welcome" | "calibration" | "modeselect" | "garden" | "stars" | "summary";
 
 export default function App() {
   // A pairing code in the URL (`?c=`) means this device was launched from the
@@ -48,21 +47,19 @@ export default function App() {
       case "pairing":
         return <PairingScene error={link.error} />;
       case "welcome":
-        return <WelcomeScene firstName={firstName} onBegin={() => setView("framing")} />;
-      case "framing":
-        return <FramingCheckScene onConfirm={() => setView("calibration")} />;
+        return <WelcomeScene firstName={firstName} onBegin={() => { setView("calibration"); if (code) link.notify("session-begin"); }} />;
       case "calibration":
         return (
           <CalibrationScene
             affectedSide={identity.affectedSide}
             totalTrials={2 /* per class → 4 cued trials; short demo block */}
             baselineMs={3000 /* demo: real block is 60 s (spec §6 step 1) */}
-            onComplete={() => setView("modeselect")}
+            onComplete={() => { setView("modeselect"); if (code) link.notify("calibration-complete"); }}
           />
         );
       case "modeselect":
         // Garden Grow and Star Catcher are wired; GameModeSelect disables the rest.
-        return <GameModeSelect onConfirm={(id) => setView(id === "stars" ? "stars" : "garden")} />;
+        return <GameModeSelect clinicianReady={code ? link.clinicianLive : true} onConfirm={(id) => setView(id === "stars" ? "stars" : "garden")} />;
       case "garden":
         return (
           <GardenScene

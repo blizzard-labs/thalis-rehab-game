@@ -79,6 +79,25 @@ describe("usePatientLink", () => {
     expect(sock.send).toHaveBeenCalledWith(JSON.stringify({ type: "webrtc-offer", sdp: "O" }));
   });
 
+  it("exposes clinicianLive=false until a go-live arrives, then flips it true", async () => {
+    const sock = fakeSocket();
+    const { result } = renderHook(() => usePatientLink("ABC234", "wss://clinic:8443", () => sock));
+    act(() => sock.emitOpen());
+    expect(result.current.clinicianLive).toBe(false);
+    act(() => sock.emit({ type: "clinician-checkpoint", checkpoint: "go-live" }));
+    await waitFor(() => expect(result.current.clinicianLive).toBe(true));
+  });
+
+  it("notify() sends a patient-checkpoint frame over the socket", async () => {
+    const sock = fakeSocket();
+    const { result } = renderHook(() => usePatientLink("ABC234", "wss://clinic:8443", () => sock));
+    act(() => sock.emitOpen());
+    act(() => result.current.notify("session-begin"));
+    expect(sock.send).toHaveBeenCalledWith(
+      JSON.stringify({ type: "patient-checkpoint", checkpoint: "session-begin" }),
+    );
+  });
+
   it("keeps sendSignaling / subscribeSignaling identity stable across re-renders", () => {
     // Consumers (useCameraPublish) depend on these in a useEffect dep array. If
     // their identity changed each render, the effect would tear down and restart
