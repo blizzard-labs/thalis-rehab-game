@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 import QRCode from "qrcode";
+import { WaitingSpinner } from "./WaitingSpinner";
 
 type Props = {
   code: string | null;
   url: string | null;
   connected: boolean;
   bridgeReady: boolean;
+  waitingForPatient: boolean;
   onOpen: () => Promise<void>;
   onNext: () => void;
   onBack: () => void;
@@ -16,7 +18,7 @@ type Props = {
 // localhost). Minting only opens pairing — it does not start EEG streaming, which
 // begins later in the Live step. Never hard-gated: Continue advances whether or
 // not a patient has paired yet.
-export function PairDeviceStep({ code, url, connected, bridgeReady, onOpen, onNext, onBack }: Props) {
+export function PairDeviceStep({ code, url, connected, bridgeReady, waitingForPatient, onOpen, onNext, onBack }: Props) {
   const [qr, setQr] = useState<string | null>(null);
   useEffect(() => {
     if (url) QRCode.toDataURL(url).then(setQr);
@@ -68,7 +70,10 @@ export function PairDeviceStep({ code, url, connected, bridgeReady, onOpen, onNe
       <div className="roster-tools">
         <button className="link-btn" onClick={onBack}>← Signal check</button>
         <span className="spacer" style={{ flex: 1 }} />
-        <button className="btn btn-primary" onClick={onNext}>Continue ▶</button>
+        <div className="gate-col">
+          <button className="btn btn-primary" onClick={onNext} disabled={waitingForPatient}>Continue ▶</button>
+          {waitingForPatient && <WaitingSpinner label="Waiting for patient…" />}
+        </div>
       </div>
     </div>
   );

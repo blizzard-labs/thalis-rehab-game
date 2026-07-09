@@ -6,6 +6,7 @@ import type { ConnectionState } from "../net/scoreClient";
 import type { SidecarState } from "../main/sidecar";
 import type { Patient } from "../data/types";
 import { useSession } from "./useSession";
+import { useCheckpoints } from "./useCheckpoints";
 import { SignalCheckStep } from "./SignalCheckStep";
 import { PairDeviceStep } from "./PairDeviceStep";
 import { CalibrateStep } from "./CalibrateStep";
@@ -30,6 +31,7 @@ type Props = {
 export function SessionFlow(props: Props) {
   const { patient, onExit } = props;
   const s = useSession();
+  const cp = useCheckpoints();
   const [step, setStep] = useState<Step>("signal");
   const go = (next: Step) => setStep(next);
 
@@ -72,6 +74,7 @@ export function SessionFlow(props: Props) {
             affectedSide: patient.affectedSide.toLowerCase() as "left" | "right",
             mode: patient.mode,
           })}
+          waitingForPatient={cp.active && !cp.patientBegan}
           onNext={() => go("calibrate")}
           onBack={() => go("signal")}
         />
