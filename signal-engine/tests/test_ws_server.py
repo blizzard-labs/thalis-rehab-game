@@ -251,3 +251,49 @@ def test_no_vision_health_without_monitor(ws_server):
     with connect(URI) as ws:
         got = _recv_type(ws, "vision_health", timeout_s=0.5)
     assert got is None
+
+
+# --------------------------------------------------- camera_frame (console feed)
+
+class _FakeSink:
+    frame_count = 1
+
+    def latest(self):
+        return object()  # opaque av-frame stand-in; encode_jpeg is monkeypatched
+
+
+class _FakeCamWorker:
+    sink = _FakeSink()
+
+    def latest_pose(self):
+        import numpy as np
+        from vision.types import PoseFrame
+        return PoseFrame(pose=np.zeros((33, 4)), hands={"left": None, "right": None}, timestamp=0.0)
+
+
+def test_camera_frame_broadcast(monkeypatch):
+    """A server with a kinematic worker broadcasts a clinician-only camera_frame
+    (JPEG + landmarks). Clinician-only: never gated, never reaches the patient."""
+    monkeypatch.setattr("server.ws_server.encode_jpeg", lambda *a, **k: "AAAA")
+    outlet = MockUnicornOutlet(seed=17)
+    outlet.start()
+    time.sleep(0.3)
+    service, _q, inlet = make_scoring_service(outlet)
+    server = NeuroReachWSServer(
+        service, host=HOST, port=8772, broadcast_hz=20.0,
+        kinematic_worker=_FakeCamWorker(), camera_hz=50.0,
+    )
+    server.start_background()
+    try:
+        with connect("ws://localhost:8772") as ws:
+            frame = _recv_type(ws, "camera_frame", timeout_s=2.0)
+    finally:
+        server.stop()
+        inlet.close()
+        outlet.stop()
+
+    assert frame is not None, "no camera_frame received"
+    assert frame["jpeg"] == "AAAA"
+    assert len(frame["landmarks"]["pose"]) == 33
+    assert frame["landmarks"]["hands"]["left"] is None
+    assert isinstance(frame["fps"], (int, float))

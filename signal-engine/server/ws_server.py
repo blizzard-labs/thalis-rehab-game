@@ -36,6 +36,8 @@ import time
 
 import websockets
 
+from vision.frame_encoder import encode_jpeg
+
 logger = logging.getLogger(__name__)
 
 
@@ -54,6 +56,7 @@ class NeuroReachWSServer:
         kinematic_worker=None,
         vision_health_monitor=None,
         vision_health_hz: float = 2.0,
+        camera_hz: float = 12.0,
     ):
         self.scoring_service = scoring_service
         self.host = host
@@ -75,6 +78,13 @@ class NeuroReachWSServer:
         # standalone / EEG-only boot; then no vision_health frame is emitted.
         self.vision_health_monitor = vision_health_monitor
         self.vision_health_hz = float(vision_health_hz)
+        # Camera feed: JPEG + landmarks for the clinician console, driven off the
+        # kinematic worker's decoded frames + latest pose. Clinician-only (this
+        # localhost socket); the LAN relay allowlists intent_score, so a
+        # camera_frame never reaches the patient.
+        self.camera_hz = float(camera_hz)
+        self._cam_emitted = 0
+        self._cam_t0 = None
         # When a session controller is present, intent_score frames are only
         # broadcast while a session is active (between start_session and
         # end_session). This stops simulated scores from reaching the patient
@@ -150,6 +160,8 @@ class NeuroReachWSServer:
         ]
         if self.vision_health_monitor is not None:
             self._tasks.append(asyncio.ensure_future(self._vision_health_loop()))
+        if self.kinematic_worker is not None:
+            self._tasks.append(asyncio.ensure_future(self._camera_frame_loop()))
         logger.info("NeuroReachWSServer listening on ws://%s:%d", self.host, self.port)
         self._ready.set()
 
@@ -253,6 +265,48 @@ class NeuroReachWSServer:
                 payload = json.dumps(
                     {"type": "vision_health", **snap, "timestamp": time.time()}
                 )
+                await self._broadcast(payload)
+        except asyncio.CancelledError:
+            pass
+
+    def _serialize_landmarks(self, pose_frame) -> dict:
+        """Normalized [0,1] image coords for the console overlay. Pose rows carry
+        [x, y, visibility]; hands (if present) carry [x, y]."""
+        pose = [[float(r[0]), float(r[1]), float(r[3])] for r in pose_frame.pose]
+        hands = {}
+        for side in ("left", "right"):
+            h = pose_frame.hands.get(side) if pose_frame.hands else None
+            hands[side] = None if h is None else [[float(p[0]), float(p[1])] for p in h]
+        return {"pose": pose, "hands": hands}
+
+    async def _camera_frame_loop(self) -> None:
+        """Broadcast JPEG + MediaPipe landmarks for the clinician console feed."""
+        interval = 1.0 / self.camera_hz
+        worker = self.kinematic_worker
+        try:
+            while not self._shutdown:
+                await asyncio.sleep(interval)
+                if not self.clients:
+                    continue
+                av_frame = worker.sink.latest()
+                pose_frame = worker.latest_pose()
+                if av_frame is None or pose_frame is None:
+                    continue
+                jpeg = encode_jpeg(av_frame)
+                if not jpeg:
+                    continue
+                self._cam_emitted += 1
+                now = time.time()
+                if self._cam_t0 is None:
+                    self._cam_t0 = now
+                elapsed = max(1e-6, now - self._cam_t0)
+                payload = json.dumps({
+                    "type": "camera_frame",
+                    "jpeg": jpeg,
+                    "landmarks": self._serialize_landmarks(pose_frame),
+                    "fps": round(self._cam_emitted / elapsed, 1),
+                    "timestamp": now,
+                })
                 await self._broadcast(payload)
         except asyncio.CancelledError:
             pass
