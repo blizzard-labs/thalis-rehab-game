@@ -6,6 +6,27 @@ describe("CalibrationScene", () => {
   beforeEach(() => vi.useFakeTimers());
   afterEach(() => vi.useRealTimers());
 
+  it("greys out 'I'm ready' until a framing choice (skip / in-frame) is made", () => {
+    render(
+      <CalibrationScene affectedSide="left" totalTrials={20} baselineMs={1000} onComplete={() => {}} />,
+    );
+    // Before any framing choice the clinician gate is disabled.
+    expect(screen.getByTestId("ready-btn")).toBeDisabled();
+    // Skip (no camera) is the always-available framing choice; it unlocks ready.
+    act(() => fireEvent.click(screen.getByTestId("framing-skip")));
+    expect(screen.getByTestId("ready-btn")).toBeEnabled();
+  });
+
+  it("disables the 'I'm in frame' choice until the camera heuristic passes", () => {
+    // jsdom has no getUserMedia -> heuristic can't pass -> in-frame disabled,
+    // while skip stays available.
+    render(
+      <CalibrationScene affectedSide="left" totalTrials={20} baselineMs={1000} onComplete={() => {}} />,
+    );
+    expect(screen.getByTestId("framing-confirm")).toBeDisabled();
+    expect(screen.getByTestId("framing-skip")).toBeEnabled();
+  });
+
   it("holds the block until the clinician presses 'I'm ready'", () => {
     render(
       <CalibrationScene affectedSide="left" totalTrials={20} baselineMs={1000} onComplete={() => {}} />,
@@ -15,6 +36,7 @@ describe("CalibrationScene", () => {
     expect(screen.queryByTestId("rec-indicator")).not.toBeInTheDocument();
     act(() => vi.advanceTimersByTime(5000));
     expect(root).toHaveAttribute("data-phase", "baseline");
+    act(() => fireEvent.click(screen.getByTestId("framing-skip")));
     act(() => fireEvent.click(screen.getByTestId("ready-btn")));
     // Button disappears, recording indicator appears.
     expect(screen.queryByTestId("ready-btn")).not.toBeInTheDocument();
@@ -26,6 +48,7 @@ describe("CalibrationScene", () => {
       <CalibrationScene affectedSide="left" totalTrials={20} baselineMs={60000} onComplete={() => {}} />,
     );
     const root = screen.getByTestId("calibration");
+    act(() => fireEvent.click(screen.getByTestId("framing-skip")));
     act(() => fireEvent.click(screen.getByTestId("ready-btn")));
     // Baseline holds through the full window, then hands off to trial 1 fixation.
     expect(root).toHaveAttribute("data-phase", "baseline");
@@ -41,6 +64,7 @@ describe("CalibrationScene", () => {
       <CalibrationScene affectedSide="left" totalTrials={20} baselineMs={1000} onComplete={() => {}} />,
     );
     const root = screen.getByTestId("calibration");
+    act(() => fireEvent.click(screen.getByTestId("framing-skip")));
     act(() => fireEvent.click(screen.getByTestId("ready-btn")));
     act(() => vi.advanceTimersByTime(1000)); // baseline → trial 1 fixation
     act(() => vi.advanceTimersByTime(2000)); // fixation → cue (trial 1: affected = left)
@@ -66,6 +90,7 @@ describe("CalibrationScene", () => {
     render(
       <CalibrationScene affectedSide="right" totalTrials={1} baselineMs={1000} onComplete={onComplete} />,
     );
+    act(() => fireEvent.click(screen.getByTestId("framing-skip")));
     act(() => fireEvent.click(screen.getByTestId("ready-btn")));
     // BUG-FIX (task-7-report): each phase timer registers inside a useEffect that only runs
     // after React flushes; advancing the whole window in one shot leaves later timers

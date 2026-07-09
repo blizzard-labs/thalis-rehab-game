@@ -52,6 +52,11 @@ export function CalibrationScene({
   // clinician confirms pre-calibration setup — electrode contact, camera
   // position, patient profile — by pressing "I'm ready".
   const [ready, setReady] = useState(false);
+  // Framing gate (merged from the old FramingCheckScene): the clinician must
+  // make a framing choice — "I'm in frame" (camera heuristic passed) or "Skip
+  // (no camera)" (EEG-only fallback) — before the "I'm ready" gate unlocks.
+  const [framed, setFramed] = useState(false);
+  const [framingReady, setFramingReady] = useState(false);
   const done = useRef(false);
   const phase = ORDER[phaseIdx];
 
@@ -113,6 +118,7 @@ export function CalibrationScene({
           type="button"
           className="cal-ready-btn"
           onClick={() => setReady(true)}
+          disabled={!framed}
           data-testid="ready-btn"
         >
           I’m ready
@@ -141,7 +147,39 @@ export function CalibrationScene({
           />
         </div>
 
-        <CameraFeed recording={ready} />
+        {/* Camera sidecar + framing choice. Buttons carry the old
+            FramingCheckScene logic: skip always advances (EEG-only), in-frame
+            unlocks only once the camera heuristic passes. Either choice arms
+            the "I'm ready" gate above. Hidden once framed so it does not
+            distract during the block. */}
+        <div className="cal-cam-col">
+          <CameraFeed
+            recording={ready}
+            framing={!framed}
+            onFramingReady={setFramingReady}
+          />
+          {!framed && (
+            <div className="cal-framing-actions">
+              <button
+                type="button"
+                className="cal-ctl-btn cal-ctl-btn--skip"
+                data-testid="framing-skip"
+                onClick={() => setFramed(true)}
+              >
+                Skip (no camera)
+              </button>
+              <button
+                type="button"
+                className="cal-ctl-btn"
+                data-testid="framing-confirm"
+                disabled={!framingReady}
+                onClick={() => setFramed(true)}
+              >
+                I'm in frame ▶
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="cal-controls">
