@@ -14,11 +14,15 @@ type Props = {
 export function VisionHealthPanel({ visionHealthStore, scoreStore }: Props) {
   const vh = useVisionHealthStore(visionHealthStore).latest;
   const latest = useScoreStore(scoreStore).latest;
+  // A camera link only counts as "up" once the peer is connected. Before a
+  // patient pairs + publishes, the sidecar reports connection "closed" — show
+  // that as "no camera link", not a live 0-fps / degraded line.
+  const linkUp = vh !== null && vh.connection === "connected";
 
   return (
     <div className="vh-panel" data-testid="vision-health-panel">
       <span className="vh-title">CAMERA LINK</span>
-      {vh === null ? (
+      {!linkUp ? (
         <span className="vh-nolink">no camera link</span>
       ) : (
         <>

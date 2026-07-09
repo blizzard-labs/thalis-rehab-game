@@ -38,10 +38,19 @@ class VisionHealthMonitor:
         kinematic_active = (
             result is not None and (t - result.timestamp) <= self.staleness_s
         )
-        degraded = self.engine.session_mode in ("B", "C") and not kinematic_active
+        connection = self.receiver.connection_state()
+        # "degraded" = a LIVE camera link exists but isn't feeding fresh kinematic
+        # in a kinematic-weighted mode. Before any patient connects (connection
+        # not "connected") it's a no-link state, NOT degraded — otherwise the
+        # console shows a false "vision degraded" alarm at boot.
+        degraded = (
+            connection == "connected"
+            and self.engine.session_mode in ("B", "C")
+            and not kinematic_active
+        )
 
         return {
-            "connection": self.receiver.connection_state(),
+            "connection": connection,
             "fps": round(float(fps), 1),
             "kinematic_active": bool(kinematic_active),
             "degraded": bool(degraded),

@@ -42,4 +42,13 @@ describe("VisionHealthPanel", () => {
     render(<VisionHealthPanel visionHealthStore={new VisionHealthStore()} scoreStore={new ScoreStore()} />);
     expect(screen.getByTestId("vision-health-panel")).toHaveTextContent(/no camera link/i);
   });
+
+  it("shows 'no camera link' (not a degraded alarm) when the connection is closed", () => {
+    // Boot state: monitor frames arrive but no patient has connected yet.
+    const vh = new VisionHealthStore();
+    vh.push({ connection: "closed", fps: 0, kinematicActive: false, degraded: false, timestamp: 0 });
+    render(<VisionHealthPanel visionHealthStore={vh} scoreStore={new ScoreStore()} />);
+    expect(screen.getByTestId("vision-health-panel")).toHaveTextContent(/no camera link/i);
+    expect(screen.queryByTestId("vision-degraded-banner")).toBeNull();
+  });
 });

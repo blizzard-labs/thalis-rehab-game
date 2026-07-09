@@ -88,3 +88,12 @@ def test_not_degraded_when_kinematic_fresh():
     m = _monitor(clk, mode="C")
     m.latest.value = _Result(ts=clk.t)
     assert m.sample()["degraded"] is False
+
+
+def test_not_degraded_when_no_connection():
+    # Boot state: MediaPipe present -> Mode B, but no patient camera has
+    # connected yet (connection "closed"). "degraded" means a live link dropped,
+    # not "never connected" -> must stay False until the link is up.
+    clk = _Clock()
+    m = _monitor(clk, mode="B", state="closed")
+    assert m.sample()["degraded"] is False
