@@ -94,7 +94,8 @@ export class LanServer extends EventEmitter {
       }
       if (isPatientCheckpoint(msg)) {
         if (msg.checkpoint === "session-begin") this.checkpoints.patientBegan = true;
-        else this.checkpoints.patientCalibrated = true;
+        else if (msg.checkpoint === "calibration-complete") this.checkpoints.patientCalibrated = true;
+        // "calibration-ready" is a transient trigger — forwarded, but no gate flips.
         this.emit("patient-checkpoint", msg.checkpoint);
         return;
       }

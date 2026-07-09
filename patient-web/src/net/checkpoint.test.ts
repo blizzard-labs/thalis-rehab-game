@@ -5,6 +5,7 @@ describe("checkpoint contract", () => {
   it("recognizes patient checkpoints", () => {
     expect(isPatientCheckpoint({ type: "patient-checkpoint", checkpoint: "session-begin" })).toBe(true);
     expect(isPatientCheckpoint({ type: "patient-checkpoint", checkpoint: "calibration-complete" })).toBe(true);
+    expect(isPatientCheckpoint({ type: "patient-checkpoint", checkpoint: "calibration-ready" })).toBe(true);
   });
   it("recognizes clinician checkpoints", () => {
     expect(isClinicianCheckpoint({ type: "clinician-checkpoint", checkpoint: "go-live" })).toBe(true);

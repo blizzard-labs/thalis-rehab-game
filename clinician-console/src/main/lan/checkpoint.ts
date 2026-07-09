@@ -1,11 +1,11 @@
-export type PatientCheckpoint = "session-begin" | "calibration-complete";
+export type PatientCheckpoint = "session-begin" | "calibration-complete" | "calibration-ready";
 export type ClinicianCheckpoint = "go-live";
 
 export type CheckpointMessage =
   | { type: "patient-checkpoint"; checkpoint: PatientCheckpoint }
   | { type: "clinician-checkpoint"; checkpoint: ClinicianCheckpoint };
 
-const PATIENT_CHECKPOINTS = new Set<string>(["session-begin", "calibration-complete"]);
+const PATIENT_CHECKPOINTS = new Set<string>(["session-begin", "calibration-complete", "calibration-ready"]);
 const CLINICIAN_CHECKPOINTS = new Set<string>(["go-live"]);
 
 export function isPatientCheckpoint(
