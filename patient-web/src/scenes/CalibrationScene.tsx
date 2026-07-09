@@ -33,6 +33,7 @@ export function CalibrationScene({
   totalTrials = 20,
   baselineMs = 60000,
   onComplete,
+  onReady,
 }: {
   affectedSide: "left" | "right";
   /** Cued trials PER CLASS (spec §6 step 2: ≈20 per class). */
@@ -40,6 +41,8 @@ export function CalibrationScene({
   /** Baseline eyes-open rest window (spec §6 step 1: 60 s). */
   baselineMs?: number;
   onComplete: () => void;
+  /** Fired when the patient presses "I'm ready" — starts rest-pose + baseline calibration. */
+  onReady?: () => void;
 }) {
   // Two classes (affected / unaffected) interleaved across the block.
   const total = totalTrials * 2;
@@ -117,7 +120,7 @@ export function CalibrationScene({
         <button
           type="button"
           className="cal-ready-btn"
-          onClick={() => setReady(true)}
+          onClick={() => { setReady(true); onReady?.(); }}
           disabled={!framed}
           data-testid="ready-btn"
         >

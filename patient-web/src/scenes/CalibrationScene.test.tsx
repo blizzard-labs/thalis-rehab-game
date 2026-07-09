@@ -43,6 +43,16 @@ describe("CalibrationScene", () => {
     expect(screen.getByTestId("rec-indicator")).toBeInTheDocument();
   });
 
+  it("calls onReady when the 'I'm ready' gate is pressed", () => {
+    const onReady = vi.fn();
+    render(
+      <CalibrationScene affectedSide="right" baselineMs={1000} onComplete={() => {}} onReady={onReady} />,
+    );
+    act(() => fireEvent.click(screen.getByTestId("framing-skip")));
+    act(() => fireEvent.click(screen.getByTestId("ready-btn")));
+    expect(onReady).toHaveBeenCalledTimes(1);
+  });
+
   it("runs a 60 s eyes-open baseline rest before the first cued trial (spec §6 step 1)", () => {
     render(
       <CalibrationScene affectedSide="left" totalTrials={20} baselineMs={60000} onComplete={() => {}} />,
