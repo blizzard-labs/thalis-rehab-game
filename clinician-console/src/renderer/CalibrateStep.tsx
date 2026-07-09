@@ -1,10 +1,13 @@
 import { useEffect, useState } from "react";
 import type { VisionHealthStore } from "../scoring/visionHealthStore";
 import { useVisionHealthStore } from "./useVisionHealthStore";
+import { WaitingSpinner } from "./WaitingSpinner";
 
 type Props = {
   onNext: () => void;
   onBack: () => void;
+  onGoLive: () => void;
+  waitingForPatient: boolean;
   onFusionMode?: (mode: "A" | "B" | "C") => void;
   onAffectedSide?: (side: "left" | "right") => void;
   onCalibratePose?: () => void;
@@ -30,7 +33,7 @@ function calText(vh: { connection: string; calibration: string; restCalibrated: 
 // fusion controls: session mode (A/B/C), affected side, and rest-pose calibration,
 // with live calibration feedback from the sidecar's vision_health frame.
 export function CalibrateStep(
-  { onNext, onBack, onFusionMode, onAffectedSide, onCalibratePose, defaultSide = "right", visionHealthStore }: Props,
+  { onNext, onBack, onGoLive, waitingForPatient, onFusionMode, onAffectedSide, onCalibratePose, defaultSide = "right", visionHealthStore }: Props,
 ) {
   const [mode, setMode] = useState<"A" | "B" | "C">("B");
   const [localSide, setLocalSide] = useState<"left" | "right">(defaultSide);
@@ -48,6 +51,7 @@ export function CalibrateStep(
 
   const pickMode = (m: "A" | "B" | "C") => { setMode(m); onFusionMode?.(m); };
   const pickSide = (sd: "left" | "right") => { setLocalSide(sd); onAffectedSide?.(sd); };
+  const goLive = () => { onGoLive(); onNext(); };
 
   return (
     <div className="content">
@@ -87,8 +91,11 @@ export function CalibrateStep(
       <div className="roster-tools">
         <button className="link-btn" onClick={onBack}>← Pair device</button>
         <span className="spacer" style={{ flex: 1 }} />
-        <button className="btn" onClick={onNext}>Skip</button>
-        <button className="btn btn-primary" onClick={onNext}>Continue to live ▶</button>
+        <button className="btn" onClick={goLive}>Skip</button>
+        <div className="gate-col">
+          <button className="btn btn-primary" onClick={goLive} disabled={waitingForPatient}>Continue to live ▶</button>
+          {waitingForPatient && <WaitingSpinner label="Waiting for patient…" />}
+        </div>
       </div>
     </div>
   );

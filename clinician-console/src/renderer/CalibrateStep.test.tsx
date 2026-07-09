@@ -8,6 +8,7 @@ function renderStep(props: Partial<React.ComponentProps<typeof CalibrateStep>> =
   render(
     <CalibrateStep
       onNext={() => {}} onBack={() => {}} defaultSide="right"
+      waitingForPatient={false} onGoLive={() => {}}
       {...props} visionHealthStore={store}
     />,
   );
@@ -61,5 +62,26 @@ describe("CalibrateStep", () => {
     expect(screen.getByTestId("calibration-status")).toHaveTextContent(/calibrated/i);
     // Live side (left) wins over the local default (right).
     expect(screen.getByRole("button", { name: /^left$/i }).className).toMatch(/btn-primary/);
+  });
+
+  it("disables 'Continue to live' and shows the spinner while waiting for calibration", () => {
+    renderStep({ waitingForPatient: true });
+    expect(screen.getByRole("button", { name: /continue to live/i })).toBeDisabled();
+    expect(screen.getByTestId("waiting-spinner")).toHaveTextContent(/waiting for patient/i);
+  });
+
+  it("fires go-live from both Continue to live and Skip", () => {
+    const onGoLive = vi.fn();
+    const onNext = vi.fn();
+    renderStep({ waitingForPatient: false, onGoLive, onNext });
+    fireEvent.click(screen.getByRole("button", { name: /continue to live/i }));
+    fireEvent.click(screen.getByRole("button", { name: /^skip$/i }));
+    expect(onGoLive).toHaveBeenCalledTimes(2);
+    expect(onNext).toHaveBeenCalledTimes(2);
+  });
+
+  it("keeps Skip enabled even while waiting", () => {
+    renderStep({ waitingForPatient: true });
+    expect(screen.getByRole("button", { name: /^skip$/i })).not.toBeDisabled();
   });
 });

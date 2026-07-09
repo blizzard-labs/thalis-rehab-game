@@ -83,6 +83,8 @@ export function SessionFlow(props: Props) {
         <CalibrateStep
           onNext={() => go("live")}
           onBack={() => go("pair")}
+          onGoLive={cp.sendGoLive}
+          waitingForPatient={cp.active && !cp.patientCalibrated}
           onFusionMode={s.setFusionMode}
           onAffectedSide={s.setAffectedSide}
           onCalibratePose={s.calibratePose}
