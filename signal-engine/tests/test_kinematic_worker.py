@@ -48,6 +48,17 @@ def test_worker_publishes_latest_result():
         worker.stop()
 
 
+def test_latest_pose_returns_last_estimated_frame():
+    sink = VideoFrameSink()
+    worker = KinematicWorker(sink, _FakeEstimator(), _rested_engine(), LatestKinematic())
+    assert worker.latest_pose() is None
+    sink.push(1.5)
+    worker._process(sink.latest())  # drive one tick directly
+    pose = worker.latest_pose()
+    assert pose is not None
+    assert pose.pose.shape == (33, 4)
+
+
 def test_stale_sink_not_reprocessed():
     sink = VideoFrameSink()
     latest = LatestKinematic()
