@@ -31,17 +31,20 @@ describe("CalibrateStep", () => {
     expect(onNext).toHaveBeenCalled();
   });
 
-  it("emits fusion mode, affected side, and calibrate pose", () => {
+  it("emits fusion mode and affected side", () => {
     const onFusionMode = vi.fn();
     const onAffectedSide = vi.fn();
-    const onCalibratePose = vi.fn();
-    renderStep({ onFusionMode, onAffectedSide, onCalibratePose, defaultSide: "right" });
+    renderStep({ onFusionMode, onAffectedSide, defaultSide: "right" });
     fireEvent.click(screen.getByRole("button", { name: /mode c/i }));
     expect(onFusionMode).toHaveBeenCalledWith("C");
     fireEvent.click(screen.getByRole("button", { name: /^left$/i }));
     expect(onAffectedSide).toHaveBeenCalledWith("left");
-    fireEvent.click(screen.getByRole("button", { name: /calibrate rest pose/i }));
-    expect(onCalibratePose).toHaveBeenCalled();
+  });
+
+  it("no longer renders a manual rest-pose calibrate button or status", () => {
+    renderStep({});
+    expect(screen.queryByText(/calibrate rest pose/i)).toBeNull();
+    expect(screen.queryByTestId("calibration-status")).toBeNull();
   });
 
   it("pushes the patient's affected side to the engine on mount (no click needed)", () => {
@@ -50,16 +53,13 @@ describe("CalibrateStep", () => {
     expect(onAffectedSide).toHaveBeenCalledWith("left");
   });
 
-  it("reflects the live affected side + calibration state from vision_health", () => {
+  it("reflects the live affected side from vision_health", () => {
     const store = new VisionHealthStore();
     renderStep({ visionHealthStore: store, defaultSide: "right" });
-    // Before frames: waiting for camera.
-    expect(screen.getByTestId("calibration-status")).toHaveTextContent(/waiting for the patient camera/i);
     act(() => store.push({
       connection: "connected", fps: 15, kinematicActive: true, degraded: false,
       affectedSide: "left", calibration: "complete", restCalibrated: true, timestamp: 0,
     }));
-    expect(screen.getByTestId("calibration-status")).toHaveTextContent(/calibrated/i);
     // Live side (left) wins over the local default (right).
     expect(screen.getByRole("button", { name: /^left$/i }).className).toMatch(/btn-primary/);
   });

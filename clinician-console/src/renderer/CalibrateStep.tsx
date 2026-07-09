@@ -10,7 +10,6 @@ type Props = {
   waitingForPatient: boolean;
   onFusionMode?: (mode: "A" | "B" | "C") => void;
   onAffectedSide?: (side: "left" | "right") => void;
-  onCalibratePose?: () => void;
   defaultSide?: "left" | "right";
   visionHealthStore: VisionHealthStore;
 };
@@ -21,19 +20,12 @@ const MODES: { id: "A" | "B" | "C"; label: string; hint: string }[] = [
   { id: "C", label: "Mode C", hint: "Movement-led" },
 ];
 
-function calText(vh: { connection: string; calibration: string; restCalibrated: boolean } | null): string {
-  if (vh === null || vh.connection !== "connected") return "Waiting for the patient camera…";
-  if (vh.restCalibrated) return "✓ Rest pose calibrated";
-  if (vh.calibration === "collecting") return "Calibrating… hold still, keep the affected arm in frame";
-  return "Not calibrated — sit still, then press Calibrate rest pose";
-}
-
 // Step 3 — Calibration. The Graz cue block still needs the LSL-marker → patient
 // bridge (roadmap), so it stays an honest placeholder. V2-2c adds the vision
 // fusion controls: session mode (A/B/C), affected side, and rest-pose calibration,
 // with live calibration feedback from the sidecar's vision_health frame.
 export function CalibrateStep(
-  { onNext, onBack, onGoLive, waitingForPatient, onFusionMode, onAffectedSide, onCalibratePose, defaultSide = "right", visionHealthStore }: Props,
+  { onNext, onBack, onGoLive, waitingForPatient, onFusionMode, onAffectedSide, defaultSide = "right", visionHealthStore }: Props,
 ) {
   const [mode, setMode] = useState<"A" | "B" | "C">("B");
   const [localSide, setLocalSide] = useState<"left" | "right">(defaultSide);
@@ -80,11 +72,6 @@ export function CalibrateStep(
             <span className="fusion-label">Affected side</span>
             <button className={`btn ${side === "left" ? "btn-primary" : ""}`} onClick={() => pickSide("left")}>Left</button>
             <button className={`btn ${side === "right" ? "btn-primary" : ""}`} onClick={() => pickSide("right")}>Right</button>
-          </div>
-
-          <div className="fusion-group">
-            <button className="btn" onClick={() => onCalibratePose?.()}>Calibrate rest pose</button>
-            <span className="cal-status" data-testid="calibration-status">{calText(vh)}</span>
           </div>
         </div>
       </div>
