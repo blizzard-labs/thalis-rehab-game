@@ -38,6 +38,14 @@ describe("useCheckpoints", () => {
     expect(result.current.patientCalibrated).toBe(true);
   });
 
+  it("invokes onCalibrationReady when a calibration-ready checkpoint arrives", () => {
+    const { fire } = installBridge();
+    const onCalibrationReady = vi.fn();
+    renderHook(() => useCheckpoints({ onCalibrationReady }));
+    act(() => fire("calibration-ready"));
+    expect(onCalibrationReady).toHaveBeenCalledTimes(1);
+  });
+
   it("sends go-live through the bridge", () => {
     const { bridge } = installBridge();
     const { result } = renderHook(() => useCheckpoints());

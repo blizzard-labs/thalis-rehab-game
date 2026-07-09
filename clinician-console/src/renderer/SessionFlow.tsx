@@ -31,7 +31,8 @@ type Props = {
 export function SessionFlow(props: Props) {
   const { patient, onExit } = props;
   const s = useSession();
-  const cp = useCheckpoints();
+  // Patient "I'm ready" auto-starts rest-pose calibration — no manual button.
+  const cp = useCheckpoints({ onCalibrationReady: () => { void s.calibratePose(); } });
   const [step, setStep] = useState<Step>("signal");
   const go = (next: Step) => setStep(next);
 
@@ -87,7 +88,6 @@ export function SessionFlow(props: Props) {
           waitingForPatient={cp.active && !cp.patientCalibrated}
           onFusionMode={s.setFusionMode}
           onAffectedSide={s.setAffectedSide}
-          onCalibratePose={s.calibratePose}
           defaultSide={patient.affectedSide.toLowerCase() as "left" | "right"}
           visionHealthStore={props.visionHealthStore}
         />
