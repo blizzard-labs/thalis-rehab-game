@@ -130,6 +130,24 @@ body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, sans-serif; co
   transform: scaleX(-1); /* selfie mirror */ }
 .cal-camera__placeholder { color: #9aa3af; font-size: 14px; text-align: center;
   padding: 12px; }
+/* Camera column: the sidecar feed with its framing-choice buttons underneath. */
+.cal-cam-col { display: flex; flex-direction: column; align-items: center;
+  gap: 12px; flex: 0 0 auto; }
+.cal-framing-actions { display: flex; gap: 10px; }
+/* Hover-expand overlay — a full-frame (object-fit: contain) view of the same
+   stream, centered over the viewport on the top layer. Hidden until the sidecar
+   is hovered, then eased in. `fixed` escapes the sidecar's overflow clip. */
+.cal-camera__expand { position: fixed; inset: 0; margin: auto;
+  width: min(90vw, 900px); height: min(85vh, 675px); border-radius: 20px;
+  overflow: hidden; background: #11161d; border: 2px solid #d3d8e0;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.55); opacity: 0;
+  transform: scale(0.96); pointer-events: none; z-index: 1000;
+  transition: opacity 200ms ease, transform 200ms ease; }
+.cal-camera__expand video { width: 100%; height: 100%; object-fit: contain;
+  transform: scaleX(-1); /* selfie mirror */ }
+.cal-camera:hover .cal-camera__expand { opacity: 1; transform: scale(1); }
+@media (prefers-reduced-motion: reduce) {
+  .cal-camera__expand { transition: none; } }
 /* Recording indicator — red dot + REC, top-left of the camera frame. */
 .cal-rec { position: absolute; top: 12px; left: 12px; display: flex;
   align-items: center; gap: 6px; padding: 4px 10px 4px 8px; border-radius: 999px;
@@ -310,3 +328,11 @@ body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, sans-serif; co
   gap: 16px;
   padding: 16px;
 }
+
+.waiting { display: flex; align-items: center; justify-content: center; gap: 8px;
+  margin-top: 8px; font-size: 14px; color: #6b7a90; }
+.waiting__spin { width: 14px; height: 14px; border-radius: 50%;
+  border: 2px solid currentColor; border-top-color: transparent;
+  animation: waiting-spin 0.8s linear infinite; }
+@keyframes waiting-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .waiting__spin { animation: none; } }

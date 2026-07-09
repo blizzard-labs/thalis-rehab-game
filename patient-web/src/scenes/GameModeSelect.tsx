@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { WaitingSpinner } from "./WaitingSpinner";
 
 export type GameModeId = "garden" | "river" | "stars";
 
@@ -22,7 +23,9 @@ const MODES: GameMode[] = [
  * "I'm ready" gate mirroring the pre-calibration gate. Only Garden Grow is
  * selectable for now — the other two are visible-but-disabled placeholders.
  */
-export function GameModeSelect({ onConfirm }: { onConfirm: (id: GameModeId) => void }) {
+export function GameModeSelect(
+  { onConfirm, clinicianReady = true }: { onConfirm: (id: GameModeId) => void; clinicianReady?: boolean },
+) {
   const [selected, setSelected] = useState<GameModeId | null>(null);
 
   return (
@@ -62,11 +65,12 @@ export function GameModeSelect({ onConfirm }: { onConfirm: (id: GameModeId) => v
           type="button"
           className="cal-ready-btn modeselect-ready"
           data-testid="mode-ready"
-          disabled={!selected}
-          onClick={() => selected && onConfirm(selected)}
+          disabled={!selected || !clinicianReady}
+          onClick={() => selected && clinicianReady && onConfirm(selected)}
         >
           I’m ready
         </button>
+        {selected && !clinicianReady && <WaitingSpinner label="Waiting for clinician…" />}
       </div>
     </main>
   );
