@@ -1,6 +1,6 @@
 # NeuroReach — Development Status & TODOs
 
-_Last updated: 2026-07-08. Reference spec: [`docs/specs.md`](specs.md). Game design docs:
+_Last updated: 2026-07-09. Reference spec: [`docs/specs.md`](specs.md). Game design docs:
 [`gardengrow.md`](gardengrow.md), [`reachcollect.md`](reachcollect.md)._
 
 This is the **whole-project** status board across all three subsystems. Each subsystem section lists
@@ -13,9 +13,9 @@ lined up 🔜**. Detailed change history lives in git + claude-mem, not here.
 
 | Subsystem | State | Tests |
 |---|---|---|
-| `signal-engine/` (Python DSP + scoring + WS) | Core complete, mock/synthetic-validated; WebRTC camera receive (aiortc) + **MediaPipe kinematic scoring fused into IntentScore (V2-2b)** + **`vision_health` camera-link telemetry frame (V2-2c)** landed; on-head validation pending | **110 passed, 6 skipped** (+2 opt-in live) |
-| `clinician-console/` (Electron + React, C1–C5 + LAN pairing) | Guided session stepper (Signal→Pair→Calibrate→Live); Sim/Live toggle + pairing surfaced; **real WebRTC signaling relay** (echo stub gone); End/Switch-mode wired; **vision health panel + fusion controls (mode A/B/C, affected side, calibrate rest pose) (V2-2c)**; **cross-app checkpoint gating** (Pair Continue waits on patient "Let's begin"; Continue-to-live waits on patient calibration-done; both gated buttons show a "waiting for patient" spinner); persistence still pending | **149 passed** (36 files) + 2 live integration |
-| `patient-web/` (React + Vite patient game) | Welcome→Calibration→Garden/StarCatch→Summary + pairing gate; **framing-check merged into Calibration** (skip / in-frame buttons under the camera gate the "I'm ready" clinician gate); **hover-expand on every camera feed** (full-frame contain overlay); **camera publish over WebRTC** for paired sessions; **kinematic overlay: verified indicator (P4) + compensation cue (P5) (V2-2c)**; **mode-select "I'm ready" gated on clinician "Continue to live"** (spinner while waiting; bypassed in no-code/dev mode) | **93 passed** (25 files) + 2 live integration |
+| `signal-engine/` (Python DSP + scoring + WS) | Core complete, mock/synthetic-validated; WebRTC camera receive (aiortc) + **MediaPipe kinematic scoring fused into IntentScore (V2-2b)** + **`vision_health` camera-link telemetry frame (V2-2c)** + **clinician-only `camera_frame` frame (JPEG + landmarks @12 Hz) for the console feed** + **`eeg_quality` trace now covers all 8 channels**; on-head validation pending | **120 passed, 6 skipped** (+2 opt-in live) |
+| `clinician-console/` (Electron + React, C1–C5 + LAN pairing) | Guided session stepper (Signal→Pair→Calibrate→Live); Sim/Live toggle + pairing surfaced; **real WebRTC signaling relay** (echo stub gone); End/Switch-mode wired; **live camera feed + MediaPipe overlay (`CameraView`) in both the calibration and live tabs**; **calibration-tab status column** (in-frame · CV rest-pose · EEG-baseline bar); **rest-pose calibration auto-starts on patient "I'm ready"** (manual button removed); **scientific 8-channel EEG scope (`EegScope`)**; **camera-link info relocated** (connection + fps in the header; kinematic score → thin full-width graph under the intent hero, "not calibrated" until CV calibrated); `VisionHealthPanel` retired; top-bar clinician label removed; **cross-app checkpoint gating**; persistence still pending | **169 passed** (42 files) + 2 live integration |
+| `patient-web/` (React + Vite patient game) | Welcome→Calibration→Garden/StarCatch→Summary + pairing gate; **framing-check merged into Calibration** (skip / in-frame buttons under the camera gate the "I'm ready" clinician gate); **"I'm ready" now also fires a `calibration-ready` checkpoint** that auto-starts console rest-pose calibration; **hover-expand on every camera feed** (full-frame contain overlay); **camera publish over WebRTC** for paired sessions; **kinematic overlay: verified indicator (P4) + compensation cue (P5) (V2-2c)**; **mode-select "I'm ready" gated on clinician "Continue to live"** (spinner while waiting; bypassed in no-code/dev mode) | **94 passed** (25 files) + 2 live integration |
 
 **Milestone map (spec §15):** V2-0 foundation ✅ · V2-1 patient web ✅ · S1 LAN + pairing ✅ · **V2-2a WebRTC
 transport spine ✅** · **V2-2b vision/kinematics ✅** · **V2-2c fusion-UX/health-panel ✅** · V2-3 clinical
@@ -47,9 +47,9 @@ falls back to local-action-only. Design/plan:
 
 Run all tests:
 ```bash
-conda run -n eeg python -m pytest signal-engine/tests/ -m "not live"   # 101 passed, 6 skipped
-cd patient-web        && npm run test                                  # 93 passed
-cd clinician-console  && npm run test                                  # 149 passed
+conda run -n eeg python -m pytest signal-engine/tests/ -m "not live"   # 120 passed, 6 skipped
+cd patient-web        && npm run test                                  # 94 passed
+cd clinician-console  && npm run test                                  # 169 passed
 ```
 
 ---
