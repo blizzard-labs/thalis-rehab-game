@@ -15,7 +15,7 @@ function vhFrame(restCalibrated: boolean) {
 }
 
 function frame(intentScore: number, isArtifact = false): ScoreFrame {
-  return { intentScore, erdScore: 61.2, classifierScore: null, kinematicScore: null, compensationFlag: false, isArtifact, mode: "band_power_only", timestamp: 0 };
+  return { intentScore, erdScore: 61.2, classifierScore: null, kinematicScore: null, compensationFlag: false, joints: null, isArtifact, mode: "band_power_only", timestamp: 0 };
 }
 
 describe("LiveMonitor", () => {
@@ -94,7 +94,7 @@ describe("LiveMonitor", () => {
 
   it("enables Switch mode and calls onSwitchMode when a classifier score is present", () => {
     const store = new ScoreStore();
-    act(() => store.push({ intentScore: 55, erdScore: 40, classifierScore: 0.7, kinematicScore: null, compensationFlag: false, isArtifact: false, mode: "csp_lda_blend", timestamp: 1 }));
+    act(() => store.push({ intentScore: 55, erdScore: 40, classifierScore: 0.7, kinematicScore: null, compensationFlag: false, joints: null, isArtifact: false, mode: "csp_lda_blend", timestamp: 1 }));
     const onSwitch = vi.fn();
     render(<LiveMonitor store={store} connectionState="open" sidecarState="ready" onSwitchMode={onSwitch} />);
     const btn = screen.getByRole("button", { name: /switch mode/i }) as HTMLButtonElement;

@@ -13,6 +13,7 @@ export type PatientLink = {
   session: PairedSession | null;
   error: string | null;
   clinicianLive: boolean;
+  romTargets: Partial<Record<string, number>> | null;
   notify: (checkpoint: PatientCheckpoint) => void;
   sendSignaling: (msg: SignalingMessage) => void;
   subscribeSignaling: (fn: (msg: SignalingMessage) => void) => void;
@@ -39,6 +40,7 @@ export function usePatientLink(
   const [session, setSession] = useState<PairedSession | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [clinicianLive, setClinicianLive] = useState(false);
+  const [romTargets, setRomTargets] = useState<Partial<Record<string, number>> | null>(null);
   const factoryRef = useRef(createSocket);
   factoryRef.current = createSocket;
   const clientRef = useRef<ReturnType<typeof createLanClient> | null>(null);
@@ -68,6 +70,16 @@ export function usePatientLink(
           setSession(s);
           setError(null);
           setConn("open");
+        },
+        onRomTargets: (targets) => {
+          // rom_targets: { joint: { rest_deg, max_deg, target_deg } } -> { joint: target_deg }
+          if (typeof targets !== "object" || targets === null) return;
+          const out: Record<string, number> = {};
+          for (const [joint, v] of Object.entries(targets as Record<string, unknown>)) {
+            const td = (v as { target_deg?: unknown })?.target_deg;
+            if (typeof td === "number" && Number.isFinite(td)) out[joint] = td;
+          }
+          setRomTargets(out);
         },
         onError: (reason) => setError(reason),
         onSignaling: (m) => signalingSubRef.current?.(m),
@@ -118,6 +130,7 @@ export function usePatientLink(
     session,
     error,
     clinicianLive,
+    romTargets,
     notify,
     sendSignaling,
     subscribeSignaling,

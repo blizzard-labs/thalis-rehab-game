@@ -7,7 +7,7 @@ import { ScoreStore } from "../scoring/scoreStore";
 // Scenes are pure consumers of a shared ScoreStore now; drive the loop by
 // pushing frames into the store the App hook would otherwise fill.
 const frame = (v: number) => ({
-  intentScore: v, erdScore: null, classifierScore: null, kinematicScore: null, compensationFlag: false, isArtifact: false, mode: "band_power_only", timestamp: 0,
+  intentScore: v, erdScore: null, classifierScore: null, kinematicScore: null, compensationFlag: false, joints: null, isArtifact: false, mode: "band_power_only", timestamp: 0,
 });
 
 describe("GardenScene", () => {

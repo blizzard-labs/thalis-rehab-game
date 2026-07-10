@@ -14,6 +14,7 @@ export type LanClientOptions = {
   localhostUrl: string;
   createSocket: (url: string) => WsLike;
   onScoreFrame: (raw: string) => void;
+  onRomTargets?: (targets: unknown) => void;
   onPaired: (session: PairedSession) => void;
   onError: (reason: string) => void;
   onSignaling?: (msg: SignalingMessage) => void;
@@ -46,6 +47,7 @@ export function createLanClient(opts: LanClientOptions) {
       if (msg.type === "paired") opts.onPaired(msg.session as PairedSession);
       else if (msg.type === "error") opts.onError(msg.reason);
       else if (msg.type === "intent_score") opts.onScoreFrame(raw);
+      else if (msg.type === "rom_targets") opts.onRomTargets?.(msg.targets);
       else if (isSignalingMessage(msg)) opts.onSignaling?.(msg);
       else if (isClinicianCheckpoint(msg)) opts.onCheckpoint?.(msg);
     };
