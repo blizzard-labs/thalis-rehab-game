@@ -6,7 +6,7 @@ import { sidecarOptions, lanServerOptions, SIDECAR_WS_URL } from "./config";
 import { LanServer } from "./lan/lanServer";
 import type { RelaySocket } from "./lan/scoreRelay";
 import type { SessionInfo } from "./lan/pairing";
-import { sessionControlCommand, setModeCommand, fusionModeCommand, affectedSideCommand, calibratePoseCommand } from "./sessionControl";
+import { sessionControlCommand, setModeCommand, fusionModeCommand, affectedSideCommand, calibratePoseCommand, beginRomCalibrationCommand } from "./sessionControl";
 
 // repo root is two levels up from clinician-console/dist-main
 const REPO_ROOT = join(__dirname, "..", "..");
@@ -95,6 +95,9 @@ function startLan() {
   });
   ipcMain.handle("session:calibrate-pose", () => {
     sendControl(calibratePoseCommand());
+  });
+  ipcMain.handle("session:begin-rom-calibration", () => {
+    sendControl(beginRomCalibrationCommand());
   });
   ipcMain.handle("session:clinician-checkpoint", (_e, checkpoint: "go-live") =>
     lan!.sendClinicianCheckpoint(checkpoint),

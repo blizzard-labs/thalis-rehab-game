@@ -94,6 +94,7 @@ export function SessionFlow(props: Props) {
           waitingForPatient={cp.active && !cp.patientCalibrated}
           onFusionMode={s.setFusionMode}
           onAffectedSide={s.setAffectedSide}
+          onBeginRomCalibration={s.beginRomCalibration}
           defaultSide={patient.affectedSide.toLowerCase() as "left" | "right"}
           visionHealthStore={props.visionHealthStore}
           cameraFrameStore={props.cameraFrameStore}

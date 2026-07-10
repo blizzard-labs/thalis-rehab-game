@@ -17,6 +17,7 @@ contextBridge.exposeInMainWorld("neuroreach", {
   setFusionMode: (mode: unknown) => ipcRenderer.invoke("session:set-fusion-mode", mode),
   setAffectedSide: (side: unknown) => ipcRenderer.invoke("session:set-affected-side", side),
   calibratePose: () => ipcRenderer.invoke("session:calibrate-pose"),
+  beginRomCalibration: () => ipcRenderer.invoke("session:begin-rom-calibration"),
   onPatientConnected: (cb: () => void) => ipcRenderer.on("patient-connected", () => cb()),
   onPatientDisconnected: (cb: () => void) => ipcRenderer.on("patient-disconnected", () => cb()),
   onPatientCheckpoint: (cb: (checkpoint: string) => void) =>

@@ -9,6 +9,7 @@ type NeuroreachBridge = {
   setFusionMode(mode: "A" | "B" | "C"): Promise<void>;
   setAffectedSide(side: "left" | "right"): Promise<void>;
   calibratePose(): Promise<void>;
+  beginRomCalibration(): Promise<void>;
   onPatientConnected(cb: () => void): void;
   onPatientDisconnected(cb: () => void): void;
 };
@@ -75,5 +76,10 @@ export function useSession() {
     await nr.calibratePose();
   }, [nr]);
 
-  return { source, setSource, code, url, connected, bridgeReady, open, begin, end, setMode, setFusionMode, setAffectedSide, calibratePose };
+  const beginRomCalibration = useCallback(async () => {
+    if (!nr) return;
+    await nr.beginRomCalibration();
+  }, [nr]);
+
+  return { source, setSource, code, url, connected, bridgeReady, open, begin, end, setMode, setFusionMode, setAffectedSide, calibratePose, beginRomCalibration };
 }
