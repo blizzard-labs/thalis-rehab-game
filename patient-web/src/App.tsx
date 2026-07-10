@@ -78,6 +78,7 @@ export default function App() {
             engagementThreshold={config.engagementThreshold}
             affectedSide={identity.affectedSide}
             store={link.store}
+            romTargets={link.romTargets as Partial<Record<string, number>> | null}
             conn={link.conn}
             onEnd={() => setView("summary")}
           />
