@@ -5,6 +5,7 @@ import {
   fusionModeCommand,
   affectedSideCommand,
   calibratePoseCommand,
+  beginRomCalibrationCommand,
 } from "./sessionControl";
 
 describe("setModeCommand", () => {
@@ -40,5 +41,8 @@ describe("fusion command builders", () => {
   });
   it("builds a calibrate_pose command", () => {
     expect(JSON.parse(calibratePoseCommand())).toEqual({ cmd: "calibrate_pose" });
+  });
+  it("builds a begin_rom_calibration command", () => {
+    expect(JSON.parse(beginRomCalibrationCommand())).toEqual({ cmd: "begin_rom_calibration" });
   });
 });

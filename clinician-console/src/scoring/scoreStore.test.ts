@@ -3,7 +3,7 @@ import { ScoreStore } from "./scoreStore";
 import type { ScoreFrame } from "./intentScoreMessage";
 
 function frame(intentScore: number, isArtifact = false): ScoreFrame {
-  return { intentScore, erdScore: 50, classifierScore: null, kinematicScore: null, compensationFlag: false, isArtifact, mode: "band_power_only", timestamp: 0 };
+  return { intentScore, erdScore: 50, classifierScore: null, kinematicScore: null, compensationFlag: false, joints: null, isArtifact, mode: "band_power_only", timestamp: 0 };
 }
 
 describe("ScoreStore", () => {

@@ -31,7 +31,7 @@ export function createScoreRelay(opts: ScoreRelayOptions) {
       } catch {
         return;
       }
-      if (parsed && parsed.type === "intent_score") opts.send(raw);
+      if (parsed && (parsed.type === "intent_score" || parsed.type === "rom_targets")) opts.send(raw);
     };
     s.onclose = () => {
       socket = null;

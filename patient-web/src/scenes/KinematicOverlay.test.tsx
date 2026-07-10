@@ -6,7 +6,7 @@ import { ScoreStore } from "../scoring/scoreStore";
 function frame(over: Partial<Record<string, unknown>> = {}) {
   return {
     intentScore: 50, erdScore: 40, classifierScore: null,
-    kinematicScore: 70, compensationFlag: false, isArtifact: false,
+    kinematicScore: 70, compensationFlag: false, joints: null, isArtifact: false,
     mode: "B", timestamp: 0, ...over,
   } as any;
 }

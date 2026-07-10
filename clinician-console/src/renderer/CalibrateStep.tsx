@@ -5,6 +5,7 @@ import { useVisionHealthStore } from "./useVisionHealthStore";
 import { useCameraFrameStore } from "./useCameraFrameStore";
 import { CameraView } from "./CameraView";
 import { WaitingSpinner } from "./WaitingSpinner";
+import { RomCaptureStep, type RomStatus } from "./RomCaptureStep";
 
 type Props = {
   onNext: () => void;
@@ -13,6 +14,7 @@ type Props = {
   waitingForPatient: boolean;
   onFusionMode?: (mode: "A" | "B" | "C") => void;
   onAffectedSide?: (side: "left" | "right") => void;
+  onBeginRomCalibration?: () => void;
   defaultSide?: "left" | "right";
   visionHealthStore: VisionHealthStore;
   cameraFrameStore?: CameraFrameStore;
@@ -35,9 +37,10 @@ const MODES: { id: "A" | "B" | "C"; label: string; hint: string }[] = [
 // fusion controls: session mode (A/B/C), affected side, and rest-pose calibration,
 // with live calibration feedback from the sidecar's vision_health frame.
 export function CalibrateStep(
-  { onNext, onBack, onGoLive, waitingForPatient, onFusionMode, onAffectedSide, defaultSide = "right", visionHealthStore, cameraFrameStore, calibrationStartedAt = null }: Props,
+  { onNext, onBack, onGoLive, waitingForPatient, onFusionMode, onAffectedSide, onBeginRomCalibration, defaultSide = "right", visionHealthStore, cameraFrameStore, calibrationStartedAt = null }: Props,
 ) {
   const [mode, setMode] = useState<"A" | "B" | "C">("B");
+  const [romStatus, setRomStatus] = useState<RomStatus>("idle");
   const vh = useVisionHealthStore(visionHealthStore).latest;
   // The engine is the source of truth once frames flow; before then, reflect the
   // clinician's local pick (seeded from the patient record).
@@ -85,6 +88,12 @@ export function CalibrateStep(
             ))}
           </div>
         </div>
+
+        <RomCaptureStep
+          onBegin={() => { onBeginRomCalibration?.(); setRomStatus("collecting"); }}
+          status={romStatus}
+          onDone={() => {}}
+        />
       </div>
       <div className="roster-tools">
         <button className="link-btn" onClick={onBack}>← Pair device</button>

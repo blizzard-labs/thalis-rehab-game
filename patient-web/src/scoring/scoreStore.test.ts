@@ -4,7 +4,7 @@ import type { ScoreFrame } from "./intentScoreMessage";
 
 const frame = (s: number): ScoreFrame => ({
   intentScore: s, erdScore: null, classifierScore: null,
-  kinematicScore: null, compensationFlag: false,
+  kinematicScore: null, compensationFlag: false, joints: null,
   isArtifact: false, mode: "band_power_only", timestamp: 0,
 });
 

@@ -26,6 +26,20 @@ describe("createScoreRelay", () => {
     expect(sent).toEqual([scoreFrame]);
   });
 
+  it("forwards rom_targets frames to the patient", () => {
+    const sock = fakeSocket();
+    const sent: string[] = [];
+    const relay = createScoreRelay({
+      sidecarWsUrl: "ws://x",
+      createSocket: () => sock,
+      send: (raw) => sent.push(raw),
+    });
+    relay.connect();
+    const romFrame = JSON.stringify({ type: "rom_targets", targets: {} });
+    sock.emit(romFrame);
+    expect(sent).toEqual([romFrame]);
+  });
+
   it("reconnects to the sidecar after close", () => {
     const sockets: ReturnType<typeof fakeSocket>[] = [];
     const scheduled: Array<() => void> = [];

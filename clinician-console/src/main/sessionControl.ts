@@ -32,3 +32,7 @@ export function affectedSideCommand(side: "left" | "right"): string {
 export function calibratePoseCommand(): string {
   return JSON.stringify({ cmd: "calibrate_pose" });
 }
+
+export function beginRomCalibrationCommand(): string {
+  return JSON.stringify({ cmd: "begin_rom_calibration" });
+}
