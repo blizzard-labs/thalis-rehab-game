@@ -42,6 +42,17 @@ to it; and a bottom-right **"Tracking arm ✓" / "Move into frame"** badge on bo
 bottom-left connection badge) driven by `joints.poseValid` — see
 [`2026-07-10-star-catcher-clarity-targets-net-design.md`](superpowers/specs/2026-07-10-star-catcher-clarity-targets-net-design.md).
 Deferred: net rotation to match the forearm angle (currently upright).
+**Directional wrist-reach pivot done** (2026-07-10): the per-joint-angle capture was inconsistent —
+`shoulder_flexion` needs unreliable monocular depth (z), and all three angle metrics saturate on any
+arm-raise, so one pose triggered every star. Replaced with a **directional reach** game: signal-engine emits
+the affected wrist's normalized 2D offset (`wrist_dx/wrist_dy`) on the frame; patient-web drives the avatar
+wrist from that offset via two-bone **IK** (`reach/ikArm`), places the goal star **up / to the affected side /
+below** per trial, and captures when the **net overlaps the star** (position-based) + EEG-engaged + held.
+`RomTrialModel` is now direction-based; `wristDx/wristDy` added to the byte-identical `ScoreFrame` joints in
+both apps — see
+[`2026-07-10-directional-wrist-reach.md`](superpowers/plans/2026-07-10-directional-wrist-reach.md).
+Deferred: per-patient ROM calibration re-integration (game uses a fixed `REACH_MAG`); camera-mirroring
+`sideSign` may need a one-line flip after a live visual check.
 Designs/plans:
 [`2026-07-08-v2-2c-vision-ux-design.md`](superpowers/specs/2026-07-08-v2-2c-vision-ux-design.md),
 [`2026-07-07-v2-2b-kinematic-scoring-design.md`](superpowers/specs/2026-07-07-v2-2b-kinematic-scoring-design.md).
