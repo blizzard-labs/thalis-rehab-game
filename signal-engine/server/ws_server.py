@@ -356,6 +356,8 @@ class NeuroReachWSServer:
             "shoulder_flexion_deg": float(k.shoulder_flexion_deg),
             "shoulder_abduction_deg": float(k.shoulder_abduction_deg),
             "elbow_deg": float(k.elbow_deg),
+            "wrist_dx": float(k.wrist_dx),
+            "wrist_dy": float(k.wrist_dy),
             "pose_valid": bool(k.pose_valid),
         }
 

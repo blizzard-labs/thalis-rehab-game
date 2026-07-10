@@ -29,6 +29,8 @@ class KinematicResult:
     shoulder_flexion_deg: float = 0.0
     shoulder_abduction_deg: float = 0.0
     elbow_deg: float = 0.0
+    wrist_dx: float = 0.0
+    wrist_dy: float = 0.0
 
 
 @dataclass
