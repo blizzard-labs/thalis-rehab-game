@@ -53,3 +53,36 @@ def test_jerk_zero_for_constant_velocity():
 def test_kinematic_result_fields():
     r = KinematicResult(50.0, 0.0, False, True, True, 1.0)
     assert r.kinematic_score == 50.0 and r.pose_valid is True
+
+
+def test_shoulder_abduction_arm_straight_down_is_zero():
+    # +y is down (hip below shoulder); arm hanging down = elbow along +y -> 0 deg
+    pose = _pose({kin.RIGHT_SHOULDER: (0, 0, 0), kin.RIGHT_HIP: (0, 1, 0),
+                  kin.RIGHT_ELBOW: (0, 1, 0), kin.RIGHT_WRIST: (0, 2, 0)})
+    assert kin.shoulder_abduction_angle(pose, "right") < 5.0
+
+
+def test_shoulder_abduction_arm_out_sideways_is_ninety():
+    # upper-arm horizontal (frontal plane) -> ~90 deg from the downward trunk axis
+    pose = _pose({kin.RIGHT_SHOULDER: (0, 0, 0), kin.RIGHT_HIP: (0, 1, 0),
+                  kin.RIGHT_ELBOW: (1, 0, 0), kin.RIGHT_WRIST: (2, 0, 0)})
+    assert abs(kin.shoulder_abduction_angle(pose, "right") - 90.0) < 10.0
+
+
+def test_shoulder_flexion_arm_forward_is_ninety():
+    # upper-arm horizontal in the sagittal plane (forward = +z) -> ~90 deg
+    pose = _pose({kin.RIGHT_SHOULDER: (0, 0, 0), kin.RIGHT_HIP: (0, 1, 0),
+                  kin.RIGHT_ELBOW: (0, 0, 1), kin.RIGHT_WRIST: (0, 0, 2)})
+    assert abs(kin.shoulder_flexion_angle(pose, "right") - 90.0) < 10.0
+
+
+def test_elbow_extension_straight_arm_is_wide():
+    pose = _pose({kin.RIGHT_SHOULDER: (0, 0, 0), kin.RIGHT_ELBOW: (0, -1, 0),
+                  kin.RIGHT_WRIST: (0, -2, 0)})
+    assert kin.elbow_extension_angle(pose, "right") > 170.0
+
+
+def test_angles_degenerate_zero_length_return_zero():
+    pose = _pose()  # all points at origin
+    assert kin.shoulder_flexion_angle(pose, "right") == 0.0
+    assert kin.shoulder_abduction_angle(pose, "right") == 0.0

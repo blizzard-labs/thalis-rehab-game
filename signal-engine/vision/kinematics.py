@@ -62,6 +62,42 @@ def trunk_displacement(pose: np.ndarray, rest: RestPose) -> float:
     return float(abs(dx) / width)
 
 
+def _elevation_angle(shoulder, elbow, hip, plane_axes) -> float:
+    """Angle (deg) of the upper-arm above the downward trunk axis, projected
+    onto the given 2 coordinate axes. 0 = arm hangs down along the trunk."""
+    upper = (np.asarray(elbow, float) - np.asarray(shoulder, float))[list(plane_axes)]
+    trunk_down = (np.asarray(hip, float) - np.asarray(shoulder, float))[list(plane_axes)]
+    denom = np.linalg.norm(upper) * np.linalg.norm(trunk_down)
+    if denom < 1e-9:
+        return 0.0
+    cos = float(np.clip(np.dot(upper, trunk_down) / denom, -1.0, 1.0))
+    return float(np.degrees(np.arccos(cos)))
+
+
+def shoulder_abduction_angle(pose: np.ndarray, side: str) -> float:
+    """Frontal-plane (x, y) elevation of the upper-arm — reliable from a
+    patient-facing monocular camera. 0 = arm down, ~90 = arm out sideways."""
+    idx = side_indices(side)
+    return _elevation_angle(
+        pose[idx["shoulder"], :3], pose[idx["elbow"], :3], pose[idx["hip"], :3], (0, 1)
+    )
+
+
+def shoulder_flexion_angle(pose: np.ndarray, side: str) -> float:
+    """Sagittal-plane (z, y) elevation of the upper-arm. Depends on the pose
+    depth (z) estimate, so treat as APPROXIMATE (see design §3.1)."""
+    idx = side_indices(side)
+    return _elevation_angle(
+        pose[idx["shoulder"], :3], pose[idx["elbow"], :3], pose[idx["hip"], :3], (2, 1)
+    )
+
+
+def elbow_extension_angle(pose: np.ndarray, side: str) -> float:
+    """Interior elbow angle (deg): ~180 straight, ~40 fully flexed."""
+    idx = side_indices(side)
+    return joint_angle(pose[idx["shoulder"], :3], pose[idx["elbow"], :3], pose[idx["wrist"], :3])
+
+
 def jerk(positions: list[np.ndarray], dt: float) -> float:
     """Mean magnitude of the 3rd time-derivative of a position history."""
     if len(positions) < 4 or dt <= 0:
