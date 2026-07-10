@@ -28,3 +28,11 @@
 .eeg-scope .dot--good { background: var(--good); }
 .eeg-scope .dot--check { background: var(--check); }
 .eeg-scope .dot--poor { background: var(--poor); }
+
+/* Kinematic sub-graph — thin, full-width, under the intent hero. */
+.lm-kin { display: flex; align-items: center; gap: 12px; margin-top: 8px; padding: 4px 10px;
+  background: #10141b; border-radius: 6px; }
+.lm-kin-label { font-size: 11px; letter-spacing: 0.08em; color: #6b7480; min-width: 76px; }
+.lm-kin .lm-trace--thin { flex: 1; height: 26px; }
+.lm-kin-uncal { flex: 1; font-size: 12px; color: #6b7480; font-style: italic; }
+.lm-flag { font-size: 11px; color: #e0a24e; }
