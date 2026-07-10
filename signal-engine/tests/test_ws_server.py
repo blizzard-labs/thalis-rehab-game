@@ -297,3 +297,73 @@ def test_camera_frame_broadcast(monkeypatch):
     assert len(frame["landmarks"]["pose"]) == 33
     assert frame["landmarks"]["hands"]["left"] is None
     assert isinstance(frame["fps"], (int, float))
+
+
+# --------------------------------------------------- joints + rom_targets (Task 4)
+
+class _StubEngine:
+    online_classifier = None
+    classifier_reliable = False
+
+
+class _StubService:
+    engine = _StubEngine()
+    broadcast_hz = 20.0
+
+
+class _RomWorker:
+    """Minimal worker stub exposing the LatestKinematic holder + ROM hooks."""
+    def __init__(self):
+        from vision.kinematic_worker import LatestKinematic
+        self.latest = LatestKinematic()
+        self._status = "idle"
+        self._targets = None
+
+    def begin_rom_calibration(self):
+        self._status = "collecting"
+
+    def rom_calibration_status(self):
+        return self._status
+
+    def rom_targets(self):
+        return self._targets
+
+
+def _dummy_result():
+    from scoring.intent_score import IntentScoreResult
+    import time as _t
+    return IntentScoreResult(50.0, 10.0, None, False, _t.time())
+
+
+def test_format_includes_joints_from_worker():
+    from vision.kinematic_worker import LatestKinematic
+    from vision.types import KinematicResult
+    worker = _RomWorker()
+    worker.latest.set(KinematicResult(60.0, 0.0, False, True, True, 1.0,
+                                      shoulder_flexion_deg=40.0,
+                                      shoulder_abduction_deg=88.0, elbow_deg=150.0))
+    server = NeuroReachWSServer(_StubService(), host=HOST, port=8781,
+                                kinematic_worker=worker)
+    frame = server._format(_dummy_result())
+    assert frame["joints"]["shoulder_abduction_deg"] == 88.0
+    assert frame["joints"]["pose_valid"] is True
+
+
+def test_format_joints_null_without_kinematic():
+    server = NeuroReachWSServer(_StubService(), host=HOST, port=8782,
+                                kinematic_worker=_RomWorker())
+    frame = server._format(_dummy_result())
+    assert frame["joints"] is None
+
+
+def test_begin_rom_calibration_command_replies_status():
+    import asyncio
+    worker = _RomWorker()
+    server = NeuroReachWSServer(_StubService(), host=HOST, port=8783,
+                               kinematic_worker=worker)
+    sent = []
+    class WS:
+        async def send(self, s): sent.append(s)
+    asyncio.run(server._cmd_begin_rom_calibration(WS(), {"cmd": "begin_rom_calibration"}))
+    assert any("rom_calibration" in s for s in sent)
+    assert worker.rom_calibration_status() == "collecting"

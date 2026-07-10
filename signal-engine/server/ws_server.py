@@ -110,6 +110,7 @@ class NeuroReachWSServer:
             "start_session": self._cmd_start_session,
             "end_session": self._cmd_end_session,
             "calibrate_pose": self._cmd_calibrate_pose,
+            "begin_rom_calibration": self._cmd_begin_rom_calibration,
         }
 
     # ------------------------------------------------------------------ lifecycle
@@ -338,7 +339,24 @@ class NeuroReachWSServer:
             "mode": self._current_mode(),
             "kinematic_score": getattr(result, "kinematic_score", None),
             "compensation_flag": bool(getattr(result, "compensation_flag", False)),
+            "joints": self._joints_payload(),
             "timestamp": result.timestamp,
+        }
+
+    def _joints_payload(self) -> dict | None:
+        """Freshest measured per-joint angles from the kinematic worker, or None
+        when there's no worker / no pose yet (patient game reads None as absent)."""
+        worker = self.kinematic_worker
+        if worker is None:
+            return None
+        k = worker.latest.get()
+        if k is None:
+            return None
+        return {
+            "shoulder_flexion_deg": float(k.shoulder_flexion_deg),
+            "shoulder_abduction_deg": float(k.shoulder_abduction_deg),
+            "elbow_deg": float(k.elbow_deg),
+            "pose_valid": bool(k.pose_valid),
         }
 
     # ------------------------------------------------------------------ connections
@@ -458,6 +476,16 @@ class NeuroReachWSServer:
             websocket, {"type": "pose_calibration", "status": worker.calibration_status()}
         )
 
+    async def _cmd_begin_rom_calibration(self, websocket, data) -> None:
+        worker = self.kinematic_worker
+        if worker is None:
+            await self._send(websocket, {"type": "error", "message": "no kinematic worker"})
+            return
+        worker.begin_rom_calibration()
+        await self._send(
+            websocket, {"type": "rom_calibration", "status": worker.rom_calibration_status()}
+        )
+
     async def _cmd_start_session(self, websocket, data) -> None:
         await self._session_command(websocket, arm=True)
 
@@ -474,6 +502,12 @@ class NeuroReachWSServer:
         else:
             ctrl.disarm()
         self._session_active = arm
+        # On session arm, push the calibrated per-joint ROM targets to clients so
+        # the patient game can size its verified-reach goals.
+        if arm and self.kinematic_worker is not None:
+            targets = self.kinematic_worker.rom_targets()
+            if targets is not None:
+                await self._broadcast(json.dumps({"type": "rom_targets", "targets": targets}))
         await self._send(websocket, {"type": "session", **ctrl.status()})
 
     def _status_payload(self) -> dict:
