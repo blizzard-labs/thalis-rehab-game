@@ -48,6 +48,11 @@
 .lm-kin-uncal { flex: 1; font-size: 12px; color: #8595a8; font-style: italic; }
 .lm-flag { font-size: 11px; color: #e0a24e; }
 
-/* Shrink the live patient camera so the monitor doesn't scroll. */
-.lm-camera { max-width: 280px; margin: 0 auto; }
-.lm-camera .camera-view { aspect-ratio: 4 / 3; }
+/* Patient camera fills the panel vertically. The EEG panel drives the grid-row
+   height; the camera is absolutely positioned so it fills that height WITHOUT
+   contributing its own intrinsic height (otherwise the video would grow the row
+   and blow the box up). */
+.lm-cam-panel { display: flex; flex-direction: column; }
+.lm-camera { flex: 1 1 0; min-height: 0; position: relative; }
+.lm-camera .camera-view { position: absolute; inset: 0; height: 100%; width: 100%;
+  aspect-ratio: auto; max-height: none; }

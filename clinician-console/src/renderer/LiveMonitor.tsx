@@ -102,7 +102,7 @@ export function LiveMonitor({ store, connectionState, sidecarState, qualityStore
             <div className="placeholder">channel quality stream not connected</div>
           )}
         </div>
-        <div className="panel">
+        <div className="panel lm-cam-panel">
           <div className="panel-title">Patient view (mirror)</div>
           <div className="lm-camera">
             <CameraView
