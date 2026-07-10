@@ -1,6 +1,6 @@
 # NeuroReach — Development Status & TODOs
 
-_Last updated: 2026-07-09. Reference spec: [`docs/specs.md`](specs.md). Game design docs:
+_Last updated: 2026-07-10. Reference spec: [`docs/specs.md`](specs.md). Game design docs:
 [`gardengrow.md`](gardengrow.md), [`reachcollect.md`](reachcollect.md)._
 
 This is the **whole-project** status board across all three subsystems. Each subsystem section lists
@@ -13,9 +13,9 @@ lined up 🔜**. Detailed change history lives in git + claude-mem, not here.
 
 | Subsystem | State | Tests |
 |---|---|---|
-| `signal-engine/` (Python DSP + scoring + WS) | Core complete, mock/synthetic-validated; WebRTC camera receive (aiortc) + **MediaPipe kinematic scoring fused into IntentScore (V2-2b)** + **`vision_health` camera-link telemetry frame (V2-2c)** + **clinician-only `camera_frame` frame (JPEG + landmarks @12 Hz) for the console feed** + **`eeg_quality` trace now covers all 8 channels**; on-head validation pending | **120 passed, 6 skipped** (+2 opt-in live) |
-| `clinician-console/` (Electron + React, C1–C5 + LAN pairing) | Guided session stepper (Signal→Pair→Calibrate→Live); Sim/Live toggle + pairing surfaced; **real WebRTC signaling relay** (echo stub gone); End/Switch-mode wired; **live camera feed + MediaPipe overlay (`CameraView`) in both the calibration and live tabs**; **calibration-tab status column** (in-frame · CV rest-pose · EEG-baseline bar); **rest-pose calibration auto-starts on patient "I'm ready"** (manual button removed); **scientific 8-channel EEG scope (`EegScope`)**; **camera-link info relocated** (connection + fps in the header; kinematic score → thin full-width graph under the intent hero, "not calibrated" until CV calibrated); `VisionHealthPanel` retired; top-bar clinician label removed; **cross-app checkpoint gating**; persistence still pending | **169 passed** (42 files) + 2 live integration |
-| `patient-web/` (React + Vite patient game) | Welcome→Calibration→Garden/StarCatch→Summary + pairing gate; **framing-check merged into Calibration** (skip / in-frame buttons under the camera gate the "I'm ready" clinician gate); **"I'm ready" now also fires a `calibration-ready` checkpoint** that auto-starts console rest-pose calibration; **hover-expand on every camera feed** (full-frame contain overlay); **camera publish over WebRTC** for paired sessions; **kinematic overlay: verified indicator (P4) + compensation cue (P5) (V2-2c)**; **mode-select "I'm ready" gated on clinician "Continue to live"** (spinner while waiting; bypassed in no-code/dev mode) | **94 passed** (25 files) + 2 live integration |
+| `signal-engine/` (Python DSP + scoring + WS) | Core complete, mock/synthetic-validated; WebRTC camera receive (aiortc) + **MediaPipe kinematic scoring fused into IntentScore (V2-2b)** + **`vision_health` camera-link telemetry frame (V2-2c)** + **clinician-only `camera_frame` frame (JPEG + landmarks @12 Hz) for the console feed** + **`eeg_quality` trace now covers all 8 channels**; **per-joint angles (shoulder flexion/abduction, elbow) on the `intent_score` frame + `rom_targets` message from a ROM max-capture calibration (Phase C)**; on-head validation pending | **131 passed, 6 skipped** (+2 opt-in live) |
+| `clinician-console/` (Electron + React, C1–C5 + LAN pairing) | Guided session stepper (Signal→Pair→Calibrate→Live); Sim/Live toggle + pairing surfaced; **real WebRTC signaling relay** (echo stub gone); End/Switch-mode wired; **live camera feed + MediaPipe overlay (`CameraView`) in both the calibration and live tabs**; **calibration-tab status column** (in-frame · CV rest-pose · EEG-baseline bar); **rest-pose calibration auto-starts on patient "I'm ready"** (manual button removed); **scientific 8-channel EEG scope (`EegScope`)**; **camera-link info relocated** (connection + fps in the header; kinematic score → thin full-width graph under the intent hero, "not calibrated" until CV calibrated); `VisionHealthPanel` retired; top-bar clinician label removed; **cross-app checkpoint gating**; **ROM max-capture calibration step** (`RomCaptureStep`, fires `begin_rom_calibration`); persistence still pending | **176 passed** (43 files) + 2 live integration |
+| `patient-web/` (React + Vite patient game) | Welcome→Calibration→Garden/StarCatch→Summary + pairing gate; **framing-check merged into Calibration** (skip / in-frame buttons under the camera gate the "I'm ready" clinician gate); **"I'm ready" now also fires a `calibration-ready` checkpoint** that auto-starts console rest-pose calibration; **hover-expand on every camera feed** (full-frame contain overlay); **camera publish over WebRTC** for paired sessions; **kinematic overlay: verified indicator (P4) + compensation cue (P5) (V2-2c)**; **mode-select "I'm ready" gated on clinician "Continue to live"** (spinner while waiting; bypassed in no-code/dev mode); **Star Catcher is now the Phase C verified-ROM game** — discrete cued trials over a per-joint catalogue (flexion/abduction/elbow), two-bone FK arm mirroring the real measured pose, per-patient calibrated targets over `rom_targets`, EEG-gated collect | **107 passed** (28 files) + 2 live integration |
 
 **Milestone map (spec §15):** V2-0 foundation ✅ · V2-1 patient web ✅ · S1 LAN + pairing ✅ · **V2-2a WebRTC
 transport spine ✅** · **V2-2b vision/kinematics ✅** · **V2-2c fusion-UX/health-panel ✅** · V2-3 clinical
@@ -32,8 +32,11 @@ the clinician "I'm ready" gate, with a hover-expand full-frame overlay on every 
 rendering of the kinematic fields (verified indicator P4 + debounced compensation cue P5); and
 console fusion controls (mode A/B/C, affected side, calibrate rest pose). Still **deferred**: covert-MI
 trial-invalidation / classifier-training-exclusion (needs per-trial covert-vs-attempted context the RT path
-doesn't model), the full Phase C verified-ROM game (two-bone FK rig + per-target angle catalogue), a full
-publisher/preview stream unification, and goniometer ground-truth validation. Designs/plans:
+doesn't model), a full
+publisher/preview stream unification, and goniometer ground-truth validation. **The Phase C verified-ROM
+Star Catcher game (two-bone FK rig + per-joint calibrated angle catalogue) is now built** — see
+[`2026-07-09-star-catcher-phase-c-verified-rom-design.md`](superpowers/specs/2026-07-09-star-catcher-phase-c-verified-rom-design.md).
+Designs/plans:
 [`2026-07-08-v2-2c-vision-ux-design.md`](superpowers/specs/2026-07-08-v2-2c-vision-ux-design.md),
 [`2026-07-07-v2-2b-kinematic-scoring-design.md`](superpowers/specs/2026-07-07-v2-2b-kinematic-scoring-design.md).
 
@@ -47,9 +50,9 @@ falls back to local-action-only. Design/plan:
 
 Run all tests:
 ```bash
-conda run -n eeg python -m pytest signal-engine/tests/ -m "not live"   # 120 passed, 6 skipped
-cd patient-web        && npm run test                                  # 94 passed
-cd clinician-console  && npm run test                                  # 169 passed
+conda run -n eeg python -m pytest signal-engine/tests/ -m "not live"   # 131 passed, 6 skipped
+cd patient-web        && npm run test                                  # 107 passed
+cd clinician-console  && npm run test                                  # 176 passed
 ```
 
 ---
@@ -142,8 +145,9 @@ Latency validated off-head: **p95 ≈ 18 ms** (budget 250 ms), compute-only ≈ 
 - **Vision follow-ups (post-V2-2c)** — the V2-2c UX shipped (clinician `vision_health` frame + console
   health panel, browser-local framing-check, patient P4/P5 kinematic render, console fusion controls). Still
   open: **covert-MI trial-invalidation / classifier-training-exclusion** (needs per-trial
-  covert-vs-attempted context the RT path doesn't model yet); the **full Phase C verified-ROM game**
-  (two-bone FK arm rig + per-target angle-in-degrees catalogue + grasp gating — see `reachcollect.md`); a
+  covert-vs-attempted context the RT path doesn't model yet); **grasp gating** for the Phase C game (the
+  two-bone FK rig + per-joint calibrated angle catalogue itself is now built — see `reachcollect.md` + the
+  Phase C design doc); a
   **full publisher/preview stream unification** (framing-check reuses a local `getUserMedia` preview, but
   publish + preview still open separate streams); and **goniometer** ground-truth validation of joint
   angles on a remote stream.
@@ -268,16 +272,18 @@ WebRTC** to the sidecar for paired sessions (transport only — no `kinematic_sc
   (`baselineMs`) → 2-class block cueing affected↔unaffected each trial, `totalTrials` per class;
   clinician pre-cal "I'm ready" gate; blinking REC dot) ·
   `GameModeSelect` (Garden live; River disabled; Star Catcher live) · `GardenScene` (P3 illustrated
-  full-bleed SVG flower, focus meter, status banner, camera overlay) · `StarCatchScene` (P4 reach avatar
-  toward star ROM target) · `SummaryScene` (P6 warm non-comparative recap) · `PairingScene` (presentational
+  full-bleed SVG flower, focus meter, status banner, camera overlay) · `StarCatchScene` (P4 Phase C verified-ROM:
+  two-bone FK arm mirroring the real measured pose, per-joint cued trials, EEG-gated collect) · `SummaryScene` (P6 warm non-comparative recap) · `PairingScene` (presentational
   "Connecting to your session…" / error; the connection itself lives in `usePatientLink`). `CameraFeed`
   selfie preview + REC. Scenes are **pure score consumers** — they read a shared `ScoreStore` + `conn`
   passed from App, not their own socket.
 - **Warm-up 3D hand viz** (`src/warmup/`): dual Shadow-Hand capsule renders (R3F v8/drei v9 pinned for
   React 18); affected side animates neutral→open→loop; pure motion logic TDD'd; `Canvas` mocked in jsdom.
 - **Logic layer** (fully unit-tested): `garden/PlantGrowthModel` (verbatim C# port: grow 0.8/s, wilt
-  0.3/s, 3 s bloom dwell, 0.75/0.60 hysteresis) · `reach/ReachModel` (adaptive staircase band 0.55–0.9) ·
-  `scoring/intentScoreMessage` (shared `ScoreFrame` contract, byte-identical to console) · `scoring/scoreStore`
+  0.3/s, 3 s bloom dwell, 0.75/0.60 hysteresis) · `reach/RomTrialModel` (Phase C per-joint verified trials:
+  catalogue cycling, achieved/target collect, EEG gate) + `reach/armKinematics` (two-bone FK) — supersedes
+  the legacy `reach/ReachModel` for Star Catcher ·
+  `scoring/intentScoreMessage` (shared `ScoreFrame` contract incl. `joints`, byte-identical to console) · `scoring/scoreStore`
   (circular buffer, latest/recentAverage/streak) · `net/scoreClient` (WSS reconnect + backoff) ·
   `net/lanClient` (pair from `?c=`, route `paired`/`error`/`intent_score`/`webrtc-*`, localhost dev
   fallback, outbound `send`) · `net/usePatientLink` (**one persistent session socket** lifted to App —
@@ -312,8 +318,15 @@ WebRTC** to the sidecar for paired sessions (transport only — no `kinematic_sc
   the sidecar `aiortc` receiver (feeding MediaPipe → `kinematic_score`), and V2-2c added the framing-check
   step + P4 verified indicator / P5 compensation-cue render. But the publisher, the `CameraFeed` preview,
   and the framing-check preview still each open their own `getUserMedia` — a single-stream refactor remains.
-- **Reach & Collect is Phase-A only** — single fixed direction/target driven by IntentScore magnitude;
-  cued-direction (Phase B) and verified-ROM (Phase C) not built (see `reachcollect.md`).
+- **Reach & Collect / Star Catcher is now Phase C verified-ROM** — discrete cued trials over a per-joint
+  catalogue (shoulder flexion/abduction, elbow extension), two-bone FK arm mirroring the real measured pose,
+  per-patient calibrated targets, EEG-gated collect (see `reachcollect.md` + the Phase C design doc).
+  **Still deferred for this game:** grasp/wrist-extension target (needs `mediapipe.Hands`); protocol editor
+  (§10.3 clinician-editable/ordered catalogue); live per-trial ROM readout + ROM-over-time trend charts
+  (§10.3); mode-dependent covert arm drive (covert/MI → fused-score instead of FK mirror); adaptive staircase
+  within the calibrated range; **threading the sidecar `rom_calibration` status back to the console
+  `RomCaptureStep`** (today it flips to "collecting" locally and the clinician advances via Continue — no
+  engine "complete" signal is wired yet).
 - **PixiJS deferred** — all scenes are React + SVG/CSS.
 - **No adaptive difficulty in Garden** — `engagementThreshold` is a fixed prop (spec §9.4 staircase not
   wired); `SessionStats.incrementTrials` unwired (no trial counting in free-form garden play).
@@ -323,7 +336,8 @@ WebRTC** to the sidecar for paired sessions (transport only — no `kinematic_sc
 ### 🔜 Tests still lined up
 - Marker-driven calibration once the LSL-marker → browser bridge exists.
 - Adaptive-difficulty staircase in Garden.
-- Reach & Collect Phase B (cued-direction target catalogue).
+- Grasp / wrist-extension ROM target (needs `mediapipe.Hands`).
+- Thread sidecar `rom_calibration` status → console `RomCaptureStep` completion.
 - End-to-end web latency (EEG → WSS → React render) p95 < 250 ms.
 
 ---
@@ -350,8 +364,8 @@ WebRTC** to the sidecar for paired sessions (transport only — no `kinematic_sc
 
 1. **Vision follow-ups (post-V2-2c)** — V2-2c UX shipped (`vision_health` frame + console health panel,
    framing-check, patient P4/P5 render, console fusion controls). Remaining vision work: **covert-MI
-   trial-invalidation / training-exclusion** once per-trial covert-vs-attempted context exists; the **full
-   Phase C verified-ROM game** (two-bone FK rig + per-target angle catalogue + grasp gating); **full
+   trial-invalidation / training-exclusion** once per-trial covert-vs-attempted context exists; **grasp
+   gating** for the (now-built) Phase C verified-ROM game; **full
    publisher/preview stream unification**; **goniometer** ground-truth validation.
 2. **Engine control channel** — End/Switch-mode + session arm/disarm are wired; still need **pause/rest**
    (new sidecar command) and **marker-driven calibration** (LSL-marker → browser bridge).
