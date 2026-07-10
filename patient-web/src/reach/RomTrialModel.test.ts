@@ -8,7 +8,7 @@ function frame(deg: Partial<{ flex: number; abd: number; elbow: number }>, inten
     compensationFlag: false, isArtifact: false, mode: "C", timestamp: 0,
     joints: {
       shoulderFlexionDeg: deg.flex ?? 0, shoulderAbductionDeg: deg.abd ?? 0,
-      elbowDeg: deg.elbow ?? 0, poseValid: true,
+      elbowDeg: deg.elbow ?? 0, wristDx: 0, wristDy: 0, poseValid: true,
     },
   };
 }

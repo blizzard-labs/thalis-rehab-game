@@ -13,7 +13,7 @@ const frame = (
   compensationFlag: false, isArtifact: false, mode: "C", timestamp: 0,
   joints: joints === null ? null : {
     shoulderFlexionDeg: joints.flex ?? 0, shoulderAbductionDeg: joints.abd ?? 0,
-    elbowDeg: joints.elbow ?? 0, poseValid: true,
+    elbowDeg: joints.elbow ?? 0, wristDx: 0, wristDy: 0, poseValid: true,
   },
 });
 

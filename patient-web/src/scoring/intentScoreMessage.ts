@@ -8,6 +8,8 @@ export type ScoreFrame = {
     shoulderFlexionDeg: number | null;
     shoulderAbductionDeg: number | null;
     elbowDeg: number | null;
+    wristDx: number | null;
+    wristDy: number | null;
     poseValid: boolean;
   } | null;
   isArtifact: boolean;
@@ -30,6 +32,8 @@ function parseJoints(v: unknown): ScoreFrame["joints"] {
     shoulderFlexionDeg: numOrNull(j.shoulder_flexion_deg),
     shoulderAbductionDeg: numOrNull(j.shoulder_abduction_deg),
     elbowDeg: numOrNull(j.elbow_deg),
+    wristDx: numOrNull(j.wrist_dx),
+    wristDy: numOrNull(j.wrist_dy),
     poseValid: Boolean(j.pose_valid),
   };
 }
