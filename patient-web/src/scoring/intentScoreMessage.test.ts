@@ -59,4 +59,18 @@ describe("parseIntentScoreMessage kinematic fields (V2-2b)", () => {
       expect(res.frame.compensationFlag).toBe(false);
     }
   });
+  it("parses joints when present and null when absent", () => {
+    const withJoints = JSON.stringify({
+      type: "intent_score", intent_score: 50,
+      joints: { shoulder_flexion_deg: 40, shoulder_abduction_deg: 88, elbow_deg: 150, pose_valid: true },
+    });
+    const r = parseIntentScoreMessage(withJoints);
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.frame.joints?.shoulderAbductionDeg).toBe(88);
+      expect(r.frame.joints?.poseValid).toBe(true);
+    }
+    const noJoints = parseIntentScoreMessage(JSON.stringify({ type: "intent_score", intent_score: 50 }));
+    expect(noJoints.ok && noJoints.frame.joints).toBeNull();
+  });
 });

@@ -4,6 +4,12 @@ export type ScoreFrame = {
   classifierScore: number | null;
   kinematicScore: number | null;
   compensationFlag: boolean;
+  joints: {
+    shoulderFlexionDeg: number | null;
+    shoulderAbductionDeg: number | null;
+    elbowDeg: number | null;
+    poseValid: boolean;
+  } | null;
   isArtifact: boolean;
   mode: string;
   timestamp: number;
@@ -15,6 +21,17 @@ export type ParseResult =
 
 function numOrNull(v: unknown): number | null {
   return typeof v === "number" && Number.isFinite(v) ? v : null;
+}
+
+function parseJoints(v: unknown): ScoreFrame["joints"] {
+  if (typeof v !== "object" || v === null) return null;
+  const j = v as Record<string, unknown>;
+  return {
+    shoulderFlexionDeg: numOrNull(j.shoulder_flexion_deg),
+    shoulderAbductionDeg: numOrNull(j.shoulder_abduction_deg),
+    elbowDeg: numOrNull(j.elbow_deg),
+    poseValid: Boolean(j.pose_valid),
+  };
 }
 
 export function parseIntentScoreMessage(raw: string): ParseResult {
@@ -42,6 +59,7 @@ export function parseIntentScoreMessage(raw: string): ParseResult {
       classifierScore: numOrNull(d.classifier_score),
       kinematicScore: numOrNull(d.kinematic_score),
       compensationFlag: Boolean(d.compensation_flag),
+      joints: parseJoints(d.joints),
       isArtifact: Boolean(d.is_artifact),
       mode: typeof d.mode === "string" ? d.mode : "unknown",
       timestamp: typeof d.timestamp === "number" ? d.timestamp : 0,
