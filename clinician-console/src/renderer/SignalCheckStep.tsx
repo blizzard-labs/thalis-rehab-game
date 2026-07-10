@@ -1,6 +1,7 @@
 import type { EegQualityStore } from "../scoring/eegQualityStore";
 import type { Patient } from "../data/types";
 import { useEegQualityStore } from "./useEegQualityStore";
+import { ElectrodeMap } from "./ElectrodeMap";
 
 type Props = {
   qualityStore: EegQualityStore;
@@ -9,12 +10,6 @@ type Props = {
   onSourceChange: (s: "sim" | "live") => void;
   onNext: () => void;
   onBack: () => void;
-};
-
-const POSITIONS: Record<string, { x: number; y: number }> = {
-  Fz: { x: 0.5, y: 0.18 }, C3: { x: 0.28, y: 0.42 }, Cz: { x: 0.5, y: 0.42 },
-  C4: { x: 0.72, y: 0.42 }, Pz: { x: 0.5, y: 0.66 }, PO7: { x: 0.33, y: 0.8 },
-  Oz: { x: 0.5, y: 0.88 }, PO8: { x: 0.67, y: 0.8 },
 };
 
 // Step 1 — Signal check (C2). Electrode contact + live MI trace + the EEG source
@@ -44,26 +39,7 @@ export function SignalCheckStep({ qualityStore, patient, source, onSourceChange,
         <div className="panel">
           <div className="panel-title">Electrode contact</div>
           {latest ? (
-            <>
-              <div className="electrode-map" role="group" aria-label="electrode contact map">
-                <div style={{ position: "absolute", inset: 8, border: "2px solid #3a4760", borderRadius: "50%" }} />
-                {channels.map((c) => {
-                  const pos = POSITIONS[c.label] ?? { x: 0.5, y: 0.5 };
-                  return (
-                    <div key={c.label} className={`electrode ${c.quality}`}
-                      style={{ left: `${pos.x * 100}%`, top: `${pos.y * 100}%` }}
-                      title={`${c.label}: ${c.quality} (${c.p2p.toFixed(0)} µVpp)`}>
-                      {c.label}
-                    </div>
-                  );
-                })}
-              </div>
-              <div className="legend">
-                <span><span className="dot" style={{ background: "var(--good)" }} /> Good</span>
-                <span><span className="dot" style={{ background: "var(--check)" }} /> Check</span>
-                <span><span className="dot" style={{ background: "var(--poor)" }} /> Poor</span>
-              </div>
-            </>
+            <ElectrodeMap channels={channels} />
           ) : (
             <div className="placeholder">Waiting for headset signal…</div>
           )}

@@ -25,22 +25,24 @@ describe("CalibrateStep", () => {
     expect(onNext).toHaveBeenCalled();
   });
 
-  it("advances on Continue and labels itself as abbreviated", () => {
+  it("advances on Continue", () => {
     const onNext = vi.fn();
     renderStep({ onNext });
-    expect(screen.getByText(/abbreviated/i)).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: /continue/i }));
     expect(onNext).toHaveBeenCalled();
   });
 
-  it("emits fusion mode and affected side", () => {
+  it("emits fusion mode", () => {
     const onFusionMode = vi.fn();
-    const onAffectedSide = vi.fn();
-    renderStep({ onFusionMode, onAffectedSide, defaultSide: "right" });
+    renderStep({ onFusionMode, defaultSide: "right" });
     fireEvent.click(screen.getByRole("button", { name: /mode c/i }));
     expect(onFusionMode).toHaveBeenCalledWith("C");
-    fireEvent.click(screen.getByRole("button", { name: /^left$/i }));
-    expect(onAffectedSide).toHaveBeenCalledWith("left");
+  });
+
+  it("no longer renders an affected-side toggle", () => {
+    renderStep({});
+    expect(screen.queryByRole("button", { name: /^left$/i })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^right$/i })).toBeNull();
   });
 
   it("no longer renders a manual rest-pose calibrate button or status", () => {
@@ -77,15 +79,9 @@ describe("CalibrateStep", () => {
     expect(onAffectedSide).toHaveBeenCalledWith("left");
   });
 
-  it("reflects the live affected side from vision_health", () => {
-    const store = new VisionHealthStore();
-    renderStep({ visionHealthStore: store, defaultSide: "right" });
-    act(() => store.push({
-      connection: "connected", fps: 15, kinematicActive: true, degraded: false,
-      affectedSide: "left", calibration: "complete", restCalibrated: true, timestamp: 0,
-    }));
-    // Live side (left) wins over the local default (right).
-    expect(screen.getByRole("button", { name: /^left$/i }).className).toMatch(/btn-primary/);
+  it("shows the current calibration procedure", () => {
+    renderStep({ calibrationStartedAt: null });
+    expect(screen.getByTestId("cal-procedure").textContent).toMatch(/I’m ready|I'm ready/i);
   });
 
   it("disables 'Continue to live' and shows the spinner while waiting for calibration", () => {

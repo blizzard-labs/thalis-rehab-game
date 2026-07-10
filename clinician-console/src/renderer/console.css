@@ -125,6 +125,11 @@ body { margin: 0; }
 .electrode.poor { background: var(--poor); color: #fff; }
 .legend { display: flex; gap: 16px; justify-content: center; margin-top: 12px; font-size: 12px; color: var(--muted); }
 .legend .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+/* Compact electrode map — used beside the live-tab EEG scope. */
+.electrode-wrap--compact { flex: 0 0 auto; }
+.electrode-map--compact { width: 150px; height: 150px; margin: 0; }
+.electrode-map--compact .electrode { width: 26px; height: 26px; font-size: 9px; }
+.electrode-wrap--compact .legend { gap: 10px; margin-top: 8px; font-size: 10px; }
 .alert { background: #3a2f1d; border: 1px solid #6b552c; color: #e8c25a; border-radius: 8px; padding: 10px 14px; font-size: 13px; }
 .step-label { color: var(--muted); font-size: 13px; }
 
@@ -223,9 +228,12 @@ body { margin: 0; }
 .camera-view-canvas { width: 100%; height: 100%; object-fit: contain; display: block; }
 .camera-view--idle { color: #6b7480; font-size: 13px; letter-spacing: 0.04em; text-transform: uppercase; }
 
-/* Calibration tab — live feed + status column. */
-.cal-live { display: grid; grid-template-columns: minmax(0, 2fr) minmax(180px, 1fr);
-  gap: 16px; align-items: start; margin-bottom: 16px; }
+/* Calibration tab — live feed + status column. Camera capped so the page never
+   scrolls. */
+.cal-live { display: grid; grid-template-columns: 300px 1fr;
+  gap: 20px; align-items: start; margin-bottom: 12px; }
+.cal-cam { width: 300px; }
+.cal-cam .camera-view { aspect-ratio: 4 / 3; max-height: 225px; }
 .cal-statuscol { display: flex; flex-direction: column; gap: 12px; }
 .cal-stat { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 8px;
   font-size: 12px; letter-spacing: 0.03em; }
@@ -234,6 +242,11 @@ body { margin: 0; }
 .cal-stat-val { font-variant-numeric: tabular-nums; color: #cfd6df; text-align: right; }
 .cal-bar { display: block; height: 6px; border-radius: 3px; background: #1b2029; overflow: hidden; }
 .cal-bar-fill { display: block; height: 100%; background: #4ea1ff; transition: width 0.9s linear; }
+/* Current-procedure line under the status bars. */
+.cal-procedure { display: flex; flex-direction: column; gap: 3px; margin-top: 4px;
+  padding-top: 10px; border-top: 1px solid var(--border); }
+.cal-procedure-label { font-size: 11px; letter-spacing: 0.05em; text-transform: uppercase; color: #6b7480; }
+.cal-procedure-text { font-size: 13px; color: #dfe6ef; line-height: 1.35; }
 .dot--good { background: var(--good); }
 .dot--check { background: var(--check); }
 .dot--poor { background: var(--poor); }

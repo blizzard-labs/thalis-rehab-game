@@ -38,34 +38,30 @@ export function CalibrateStep(
   { onNext, onBack, onGoLive, waitingForPatient, onFusionMode, onAffectedSide, defaultSide = "right", visionHealthStore, cameraFrameStore, calibrationStartedAt = null }: Props,
 ) {
   const [mode, setMode] = useState<"A" | "B" | "C">("B");
-  const [localSide, setLocalSide] = useState<"left" | "right">(defaultSide);
   const vh = useVisionHealthStore(visionHealthStore).latest;
   // The engine is the source of truth once frames flow; before then, reflect the
   // clinician's local pick (seeded from the patient record).
-  const side = vh?.affectedSide ?? localSide;
+  const side = vh?.affectedSide ?? defaultSide;
 
   // Push the patient's affected side to the engine on mount so scoring matches
-  // the record WITHOUT requiring a click — the engine boots to a fixed default
-  // otherwise, which silently scores the wrong arm.
+  // the record WITHOUT requiring a click (the affected-side toggle is gone; the
+  // side comes straight from the patient record).
   useEffect(() => {
     onAffectedSide?.(defaultSide);
   }, [defaultSide, onAffectedSide]);
 
   const pickMode = (m: "A" | "B" | "C") => { setMode(m); onFusionMode?.(m); };
-  const pickSide = (sd: "left" | "right") => { setLocalSide(sd); onAffectedSide?.(sd); };
   const goLive = () => { onGoLive(); onNext(); };
 
   return (
     <div className="content">
       <div className="panel-title">Calibration</div>
       <div className="panel">
-        <div className="placeholder">
-          Rest-pose + baseline calibration starts <strong>automatically</strong> when the patient presses
-          “I’m ready”. The full Graz cue block is <strong>abbreviated</strong> for now; you can skip to live.
-        </div>
         {cameraFrameStore && (
           <div className="cal-live">
-            <CameraView store={cameraFrameStore} affectedSide={side} />
+            <div className="cal-cam">
+              <CameraView store={cameraFrameStore} affectedSide={side} />
+            </div>
             <CalStatusColumn
               cameraFrameStore={cameraFrameStore}
               calibration={vh?.calibration ?? "idle"}
@@ -87,12 +83,6 @@ export function CalibrateStep(
                 {m.label} · {m.hint}
               </button>
             ))}
-          </div>
-
-          <div className="fusion-group" role="group" aria-label="Affected side">
-            <span className="fusion-label">Affected side</span>
-            <button className={`btn ${side === "left" ? "btn-primary" : ""}`} onClick={() => pickSide("left")}>Left</button>
-            <button className={`btn ${side === "right" ? "btn-primary" : ""}`} onClick={() => pickSide("right")}>Right</button>
           </div>
         </div>
       </div>
@@ -135,9 +125,9 @@ function CalStatusColumn(
     ? 0
     : Math.min(100, ((Date.now() - calibrationStartedAt) / BASELINE_MS) * 100);
 
-  const cvLabel = restCalibrated || calibration === "complete"
-    ? "✓ done"
-    : calibration === "collecting" ? "calibrating…" : "waiting";
+  const cvDone = restCalibrated || calibration === "complete";
+  const cvLabel = cvDone ? "✓ done" : calibration === "collecting" ? "calibrating…" : "waiting";
+  const procedure = currentProcedure(calibrationStartedAt, cvDone, eegPct, inFrame);
 
   return (
     <div className="cal-statuscol">
@@ -147,7 +137,7 @@ function CalStatusColumn(
         <span className="cal-stat-val">{inFrame ? "yes" : "no"}</span>
       </div>
       <div className="cal-stat" data-testid="cal-status-cv">
-        <span className={`dot ${restCalibrated || calibration === "complete" ? "dot--good" : calibration === "collecting" ? "dot--check" : "dot--poor"}`} />
+        <span className={`dot ${cvDone ? "dot--good" : calibration === "collecting" ? "dot--check" : "dot--poor"}`} />
         <span className="cal-stat-label">CV rest pose</span>
         <span className="cal-stat-val">{cvLabel}</span>
       </div>
@@ -157,6 +147,23 @@ function CalStatusColumn(
           ? <span className="cal-stat-val">waiting</span>
           : <span className="cal-bar"><span className="cal-bar-fill" style={{ width: `${eegPct}%` }} /></span>}
       </div>
+      <div className="cal-procedure" data-testid="cal-procedure">
+        <span className="cal-procedure-label">Current step</span>
+        <span className="cal-procedure-text">{procedure}</span>
+      </div>
     </div>
   );
+}
+
+// Plain-language description of what the calibration pipeline is doing right now,
+// derived from the CV rest-pose state + the EEG-baseline timer.
+function currentProcedure(startedAt: number | null, cvDone: boolean, eegPct: number, inFrame: boolean): string {
+  if (startedAt === null) return "Waiting for the patient to press “I’m ready”.";
+  if (!cvDone) {
+    return inFrame
+      ? "Step 1 of 2 — Capturing rest pose. Hold still, keep the affected arm in frame."
+      : "Step 1 of 2 — Waiting for the patient to come into frame for rest-pose capture.";
+  }
+  if (eegPct < 100) return "Step 2 of 2 — Recording resting EEG baseline (eyes open, relax).";
+  return "Calibration complete — ready to go live.";
 }

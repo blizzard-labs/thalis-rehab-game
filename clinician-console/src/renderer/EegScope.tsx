@@ -8,9 +8,16 @@ type Props = { qualityStore: EegQualityStore };
 // the latest ~4-sample chunk the sidecar sends each quality frame (~5 Hz).
 const MAX_SAMPLES = 500;
 
+// Rainbow per-channel palette (red→magenta) so 8 stacked traces stay separable.
+const RAINBOW = [
+  "#e6544b", "#e8913a", "#e8c25a", "#5fbf8f",
+  "#4bb3c9", "#4e8fe0", "#8a6ee0", "#d76fd0",
+];
+
 // Scientific 8-channel strip chart (montage-viewer norm) — one stacked row per
-// EEG channel, mono labels, per-channel quality dot, thin auto-scaled trace.
-// Styled deliberately unlike the console chrome (dark scope look, LiveMonitor.css).
+// EEG channel, mono labels, per-channel quality dot, thin auto-scaled trace in a
+// rainbow scheme, over a navy field. A legend maps each colour to its channel +
+// current peak-to-peak amplitude, with the trace window length.
 export function EegScope({ qualityStore }: Props) {
   const { latest } = useEegQualityStore(qualityStore);
   const buffers = useRef<Map<string, number[]>>(new Map());
@@ -28,20 +35,33 @@ export function EegScope({ qualityStore }: Props) {
 
   if (!latest) return <div className="placeholder">waiting for signal…</div>;
 
+  const colorOf = (i: number) => RAINBOW[i % RAINBOW.length];
+
   return (
-    <div className="eeg-scope">
-      {latest.channels.map((c) => (
-        <div className="eeg-scope-row" data-testid="eeg-scope-row" key={c.label}>
-          <span className="eeg-scope-label">{c.label}</span>
-          <span className={`dot dot--${c.quality}`} />
-          <ScopeTrace samples={buffers.current.get(c.label) ?? []} />
-        </div>
-      ))}
+    <div className="eeg-scope-wrap">
+      <div className="eeg-scope">
+        {latest.channels.map((c, i) => (
+          <div className="eeg-scope-row" data-testid="eeg-scope-row" key={c.label}>
+            <span className="eeg-scope-label" style={{ color: colorOf(i) }}>{c.label}</span>
+            <span className={`dot dot--${c.quality}`} />
+            <ScopeTrace samples={buffers.current.get(c.label) ?? []} color={colorOf(i)} />
+          </div>
+        ))}
+      </div>
+      <div className="eeg-scope-legend" data-testid="eeg-scope-legend">
+        {latest.channels.map((c, i) => (
+          <span className="eeg-legend-item" key={c.label}>
+            <span className="eeg-legend-swatch" style={{ background: colorOf(i) }} />
+            {c.label}<span className="eeg-legend-uv"> {c.p2p.toFixed(0)} µVpp</span>
+          </span>
+        ))}
+        <span className="eeg-legend-scale">window ≈ 2 s · auto-gain / channel</span>
+      </div>
     </div>
   );
 }
 
-function ScopeTrace({ samples }: { samples: number[] }) {
+function ScopeTrace({ samples, color }: { samples: number[]; color: string }) {
   const w = 400;
   const h = 24;
   if (samples.length < 2) return <svg className="eeg-scope-trace" viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" />;
@@ -54,7 +74,7 @@ function ScopeTrace({ samples }: { samples: number[] }) {
   return (
     <svg className="eeg-scope-trace" viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none">
       <line className="eeg-scope-mid" x1="0" y1={h / 2} x2={w} y2={h / 2} />
-      <polyline points={pts} fill="none" className="eeg-scope-line" />
+      <polyline points={pts} fill="none" stroke={color} strokeWidth="1" vectorEffect="non-scaling-stroke" />
     </svg>
   );
 }

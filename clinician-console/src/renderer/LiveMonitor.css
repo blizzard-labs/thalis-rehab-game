@@ -15,24 +15,39 @@
 .lm-controls .lm-end { background: #7a3b34; border-color: #944b42; }
 .lm-note { font-size: 12px; color: #6f7d92; }
 
-/* EEG scope — scientific 8-channel strip chart (montage-viewer look, not
-   matched to console chrome). Dark scope background, mono labels, thin traces. */
-.eeg-scope { display: flex; flex-direction: column; gap: 2px; background: #06090f;
-  border: 1px solid #161c26; border-radius: 6px; padding: 6px 8px; }
+/* EEG panel — trace scope (left) + electrode contact map (right). */
+.eeg-panel-row { display: flex; gap: 14px; align-items: flex-start; }
+.eeg-scope-wrap { flex: 1; min-width: 0; }
+
+/* EEG scope — scientific 8-channel strip chart (montage-viewer look). Navy field
+   (matches the console chrome behind it), mono labels, thin rainbow traces. */
+.eeg-scope { display: flex; flex-direction: column; gap: 2px; background: var(--bg);
+  border: 1px solid #33405a; border-radius: 6px; padding: 6px 8px; }
 .eeg-scope-row { display: grid; grid-template-columns: 34px 10px 1fr; align-items: center; gap: 6px; height: 26px; }
-.eeg-scope-label { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 11px;
-  color: #7fe0c8; letter-spacing: 0.02em; }
+.eeg-scope-label { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 11px; letter-spacing: 0.02em; }
 .eeg-scope-trace { width: 100%; height: 24px; display: block; }
-.eeg-scope-line { stroke: #7fe0c8; stroke-width: 1; vector-effect: non-scaling-stroke; }
-.eeg-scope-mid { stroke: #16202b; stroke-width: 1; vector-effect: non-scaling-stroke; }
+.eeg-scope-mid { stroke: #33405a; stroke-width: 1; vector-effect: non-scaling-stroke; }
 .eeg-scope .dot--good { background: var(--good); }
 .eeg-scope .dot--check { background: var(--check); }
 .eeg-scope .dot--poor { background: var(--poor); }
 
-/* Kinematic sub-graph — thin, full-width, under the intent hero. */
-.lm-kin { display: flex; align-items: center; gap: 12px; margin-top: 8px; padding: 4px 10px;
-  background: #10141b; border-radius: 6px; }
-.lm-kin-label { font-size: 11px; letter-spacing: 0.08em; color: #6b7480; min-width: 76px; }
+/* EEG legend + scale — colour→channel key with per-channel peak-to-peak µV. */
+.eeg-scope-legend { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 8px;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 10px; color: #aab6c6; }
+.eeg-legend-item { display: inline-flex; align-items: center; gap: 4px; }
+.eeg-legend-swatch { width: 10px; height: 3px; border-radius: 2px; display: inline-block; }
+.eeg-legend-uv { color: #7d889a; }
+.eeg-legend-scale { flex-basis: 100%; color: #7d889a; letter-spacing: 0.03em; }
+
+/* Kinematic sub-graph — thin, full-width, under the intent hero; same navy field
+   as the intent-score graph. */
+.lm-kin { display: flex; align-items: center; gap: 12px; margin-top: 8px; padding: 6px 12px;
+  background: var(--panel); border-radius: 8px; }
+.lm-kin-label { font-size: 11px; letter-spacing: 0.08em; color: #8595a8; min-width: 76px; }
 .lm-kin .lm-trace--thin { flex: 1; height: 26px; }
-.lm-kin-uncal { flex: 1; font-size: 12px; color: #6b7480; font-style: italic; }
+.lm-kin-uncal { flex: 1; font-size: 12px; color: #8595a8; font-style: italic; }
 .lm-flag { font-size: 11px; color: #e0a24e; }
+
+/* Shrink the live patient camera so the monitor doesn't scroll. */
+.lm-camera { max-width: 280px; margin: 0 auto; }
+.lm-camera .camera-view { aspect-ratio: 4 / 3; }

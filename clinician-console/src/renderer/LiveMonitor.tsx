@@ -2,16 +2,20 @@ import { useEffect, useState } from "react";
 import type { ScoreStore } from "../scoring/scoreStore";
 import type { ConnectionState } from "../net/scoreClient";
 import type { SidecarState } from "../main/sidecar";
-import type { EegQualityStore } from "../scoring/eegQualityStore";
 import { VisionHealthStore } from "../scoring/visionHealthStore";
 import { CameraFrameStore } from "../scoring/cameraFrameStore";
 import type { Patient } from "../data/types";
 import { useScoreStore } from "./useScoreStore";
 import { useVisionHealthStore } from "./useVisionHealthStore";
 import { useCameraFrameStore } from "./useCameraFrameStore";
+import { useEegQualityStore } from "./useEegQualityStore";
 import { CameraView } from "./CameraView";
 import { EegScope } from "./EegScope";
+import { ElectrodeMap } from "./ElectrodeMap";
+import { EegQualityStore } from "../scoring/eegQualityStore";
 import "./LiveMonitor.css";
+
+const EMPTY_QUALITY = new EegQualityStore();
 
 const EMPTY_VISION = new VisionHealthStore();
 const EMPTY_CAMERA = new CameraFrameStore();
@@ -42,6 +46,7 @@ export function LiveMonitor({ store, connectionState, sidecarState, qualityStore
   // prop is absent (e.g. the isolated component test / EEG-only session).
   const vh = useVisionHealthStore(visionHealthStore ?? EMPTY_VISION).latest;
   const cam = useCameraFrameStore(cameraFrameStore ?? EMPTY_CAMERA).latest;
+  const quality = useEegQualityStore(qualityStore ?? EMPTY_QUALITY).latest;
   const [elapsed, setElapsed] = useState(0);
   useEffect(() => {
     const t = setInterval(() => setElapsed((e) => e + 1), 1000);
@@ -88,14 +93,23 @@ export function LiveMonitor({ store, connectionState, sidecarState, qualityStore
       <div className="grid-2">
         <div className="panel">
           <div className="panel-title">EEG — 8 channel quality</div>
-          {qualityStore ? <EegScope qualityStore={qualityStore} /> : <div className="placeholder">channel quality stream not connected</div>}
+          {qualityStore ? (
+            <div className="eeg-panel-row">
+              <EegScope qualityStore={qualityStore} />
+              {quality && <ElectrodeMap channels={quality.channels} compact />}
+            </div>
+          ) : (
+            <div className="placeholder">channel quality stream not connected</div>
+          )}
         </div>
         <div className="panel">
           <div className="panel-title">Patient view (mirror)</div>
-          <CameraView
-            store={cameraFrameStore ?? EMPTY_CAMERA}
-            affectedSide={patient ? (patient.affectedSide.toLowerCase() as "left" | "right") : "right"}
-          />
+          <div className="lm-camera">
+            <CameraView
+              store={cameraFrameStore ?? EMPTY_CAMERA}
+              affectedSide={patient ? (patient.affectedSide.toLowerCase() as "left" | "right") : "right"}
+            />
+          </div>
         </div>
       </div>
 
