@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { RomTrialModel, type JointId } from "../reach/RomTrialModel";
-import { fkArm } from "../reach/armKinematics";
+import { RomTrialModel } from "../reach/RomTrialModel";
+import { ikArm } from "../reach/ikArm";
 import type { SessionStats } from "../session/SessionStats";
 import type { ConnectionState } from "../net/scoreClient";
 import { CameraFeed } from "./CameraFeed";
@@ -12,10 +12,10 @@ const prefersReducedMotion = () =>
   typeof window !== "undefined" &&
   window.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true;
 
-// SVG scene geometry (viewBox 0 0 480 600). The arm is anchored at the shoulder
-// on the patient's AFFECTED side; a two-bone forward-kinematics rig mirrors the
-// patient's real measured pose (shoulder elevation + elbow angle), so the avatar
-// arm lifts on flexion/abduction and straightens on elbow extension (spec §9.2).
+// SVG scene geometry (viewBox 0 0 600 660). The arm is centered on the page; a
+// two-bone IK rig drives the wrist directly from the patient's measured wrist
+// offset, and the goal star sits at the current trial's direction (up/side/down)
+// so the net physically overlaps the star at capture.
 type Pt = { x: number; y: number };
 
 // Five-pointed star path centered at (0,0), outer radius r.
@@ -36,7 +36,6 @@ export function StarCatchScene({
   engagementThreshold,
   affectedSide = config.patient.affectedSide,
   store,
-  romTargets,
   conn = "connecting",
   onEnd,
 }: {
@@ -44,11 +43,10 @@ export function StarCatchScene({
   engagementThreshold: number;
   affectedSide?: "left" | "right";
   store: ScoreStore;
-  romTargets?: Partial<Record<JointId, number>> | null;
   conn?: ConnectionState;
   onEnd: () => void;
 }) {
-  const model = useRef(new RomTrialModel(romTargets ?? {}));
+  const model = useRef(new RomTrialModel(affectedSide));
   const [reach, setReach] = useState(0);
   const [collected, setCollected] = useState(0);
   const [score, setScore] = useState(0);
@@ -94,37 +92,28 @@ export function StarCatchScene({
   const reduced = prefersReducedMotion();
   const pct = Math.round(score);
 
-  // Affected side → shoulder anchor. The FK rig draws from the current frame's
-  // measured joint angles; for the elbow-extension trial we hold a modest
-  // shoulder elevation so straightening reads clearly.
-  // Arm is centered on the page regardless of affected side; `mirror` only flips
-  // the reach direction so left/right patients see their own side move.
+  // Directional reach: the avatar arm is centered on the page and its wrist is
+  // driven straight from the patient's MEASURED wrist offset (reach space:
+  // +x toward the affected side, +y up). Two-bone IK bends the elbow to reach
+  // that point. The goal star sits at the current trial's direction (up / side /
+  // down), so the net physically overlaps the star at capture — no angle proxy.
+  const SCALE = 200;
   const shoulder: Pt = { x: 300, y: 330 };
-  const mirror = affectedSide === "left";
+  const bendSign = affectedSide === "left" ? -1 : 1;
+  const side = affectedSide === "left" ? -1 : 1;
+
   const j = store.latest()?.joints;
   const tracking = j?.poseValid === true;
-  const joint = model.current.current.joint;
-  const elevationDeg =
-    joint === "shoulder_abduction" ? (j?.shoulderAbductionDeg ?? 0)
-    : joint === "shoulder_flexion" ? (j?.shoulderFlexionDeg ?? 0)
-    : 20; // elbow-extension trial
-  const elbowDeg = j?.elbowDeg ?? 180;
-  const UPPER_LEN = 130, FORE_LEN = 120;
-  const { elbow, wrist } = fkArm({
-    shoulder, shoulderElevationDeg: elevationDeg, elbowDeg,
-    upperLen: UPPER_LEN, foreLen: FORE_LEN, mirror,
-  });
+  const rx = j && j.wristDx !== null && j.wristDx !== undefined ? j.wristDx * side : 0;
+  const ry = j && j.wristDy !== null && j.wristDy !== undefined ? -j.wristDy : 0;
+  const toScreen = (p: { x: number; y: number }): Pt =>
+    ({ x: shoulder.x + p.x * SCALE, y: shoulder.y - p.y * SCALE });
 
-  // Fixed goal pose for the current cue: draw the star at the wrist the arm
-  // would reach at the calibrated target angle, so it stays put in space while
-  // the live hand moves toward it.
-  const targetDeg = model.current.current.targetDeg;
-  const goalElevationDeg = joint === "elbow_extension" ? 20 : targetDeg;
-  const goalElbowDeg = joint === "elbow_extension" ? targetDeg : 180;
-  const goal = fkArm({
-    shoulder, shoulderElevationDeg: goalElevationDeg, elbowDeg: goalElbowDeg,
-    upperLen: UPPER_LEN, foreLen: FORE_LEN, mirror,
+  const { elbow, wrist } = ikArm({
+    shoulder, target: toScreen({ x: rx, y: ry }),
+    upperLen: 130, foreLen: 120, bendSign,
   });
+  const goalPt = toScreen(model.current.current.goal);
 
   // Net orientation: point the handle back along the forearm (toward the elbow)
   // so the hand appears to hold it, with the hoop encircling the goal star.
@@ -164,7 +153,7 @@ export function StarCatchScene({
             preserveAspectRatio="xMidYMid meet"
           >
             {/* fixed goal star for the current cue — stays put; the net reaches to it */}
-            <g data-testid="reach-goal" transform={`translate(${goal.wrist.x} ${goal.wrist.y})`}>
+            <g data-testid="reach-goal" transform={`translate(${goalPt.x} ${goalPt.y})`}>
               <path
                 d={STAR}
                 transform={`scale(${34 + reach * 8})`}
