@@ -104,3 +104,37 @@ def test_begin_calibration_sets_rest_pose():
         assert worker.calibration_status() == "complete"
     finally:
         worker.stop()
+
+
+def test_worker_rom_calibration_completes_and_builds_targets():
+    import numpy as np
+    import vision.kinematics as kin
+    from vision.kinematic_engine import KinematicScoreEngine
+    from vision.kinematic_worker import KinematicWorker, LatestKinematic
+    from vision.rom_calibrator import RomCalibrator
+    from vision.types import PoseFrame
+
+    def _pose():
+        p = np.zeros((33, 4)); p[:, 3] = 1.0
+        p[kin.RIGHT_SHOULDER, :3] = (0, 0, 0); p[kin.RIGHT_HIP, :3] = (0, 1, 0)
+        p[kin.RIGHT_ELBOW, :3] = (1, 0, 0); p[kin.RIGHT_WRIST, :3] = (2, 0, 0)
+        return PoseFrame(pose=p, hands={}, timestamp=0.0)
+
+    class Est:
+        def estimate(self, _): return _pose()
+
+    class Sink:
+        frame_count = 0
+        def latest(self): return object()
+
+    eng = KinematicScoreEngine("right")
+    from vision.types import RestPose
+    eng.set_rest_pose(RestPose(shoulder_mid=np.zeros(3), shoulder_width=1.0,
+                               reach_extent=0.5, timestamp=0.0))
+    w = KinematicWorker(Sink(), Est(), eng, LatestKinematic())
+    w._rom_calibrator = RomCalibrator("right", min_frames=2)
+    w._rom_status = "collecting"
+    for _ in range(3):
+        w._process(object())
+    assert w.rom_calibration_status() == "complete"
+    assert w.rom_targets()["shoulder_abduction"]["max_deg"] > 80.0

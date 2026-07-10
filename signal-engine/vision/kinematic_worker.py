@@ -52,6 +52,10 @@ class KinematicWorker:
         self._last_count = -1
         self._calibrator: RestPoseCalibrator | None = None
         self._cal_status = "idle"
+        # Per-joint max-ROM calibration (separate from rest-pose calibration).
+        self._rom_calibrator = None
+        self._rom_status = "idle"
+        self._rom_targets = None
         # Newest PoseFrame from estimate(), for the console camera overlay. Set on
         # every processed frame (including during calibration) so the overlay is
         # live even before scoring resumes.
@@ -78,6 +82,34 @@ class KinematicWorker:
         changed, so the existing rest pose no longer applies)."""
         self._calibrator = None
         self._cal_status = "idle"
+        self._rom_calibrator = None
+        self._rom_status = "idle"
+        self._rom_targets = None
+
+    # -- ROM (per-joint max) calibration --------------------------------------
+
+    def begin_rom_calibration(self) -> None:
+        from vision.rom_calibrator import RomCalibrator
+        self._rom_calibrator = RomCalibrator(affected_side=self.engine.affected_side)
+        self._rom_status = "collecting"
+
+    def rom_calibration_status(self) -> str:
+        return self._rom_status
+
+    def rom_targets(self):
+        return self._rom_targets
+
+    def _rest_angles(self) -> dict:
+        pose = self.latest_pose()
+        if pose is None:
+            return {}
+        from vision import kinematics as kin
+        side = self.engine.affected_side
+        return {
+            "shoulder_flexion": kin.shoulder_flexion_angle(pose.pose, side),
+            "shoulder_abduction": kin.shoulder_abduction_angle(pose.pose, side),
+            "elbow_extension": kin.elbow_extension_angle(pose.pose, side),
+        }
 
     # -- lifecycle -------------------------------------------------------------
 
@@ -121,4 +153,10 @@ class KinematicWorker:
                 self._cal_status = "complete"
                 self._calibrator = None
             return
+        if self._rom_calibrator is not None and pose_frame is not None:
+            self._rom_calibrator.add(pose_frame)
+            if self._rom_calibrator.is_complete():
+                self._rom_targets = self._rom_calibrator.build(self._rest_angles())
+                self._rom_status = "complete"
+                self._rom_calibrator = None
         self.latest.set(self.engine.compute(pose_frame))
