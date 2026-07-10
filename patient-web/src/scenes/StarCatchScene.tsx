@@ -100,6 +100,7 @@ export function StarCatchScene({
   const shoulder: Pt = affectedSide === "left" ? { x: 150, y: 300 } : { x: 330, y: 300 };
   const mirror = affectedSide === "left";
   const j = store.latest()?.joints;
+  const tracking = j?.poseValid === true;
   const joint = model.current.current.joint;
   const elevationDeg =
     joint === "shoulder_abduction" ? (j?.shoulderAbductionDeg ?? 0)
@@ -200,6 +201,9 @@ export function StarCatchScene({
           End session
         </button>
         <span className="conn-badge" data-state={conn}>{conn}</span>
+        <span className="tracking-badge" data-testid="tracking-badge" data-tracking={tracking ? "on" : "off"}>
+          {tracking ? "Tracking arm ✓" : "Move into frame"}
+        </span>
       </div>
     </main>
   );

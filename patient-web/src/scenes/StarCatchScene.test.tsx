@@ -76,6 +76,22 @@ describe("StarCatchScene", () => {
     expect(stats.trialsCompleted).toBe(0);
   });
 
+  it("shows the tracking badge on when pose is valid", () => {
+    const store = new ScoreStore();
+    store.push(frame(80, { flex: 30 })); // frame() sets poseValid: true
+    render(<StarCatchScene stats={new SessionStats()} engagementThreshold={60}
+                           store={store} conn="open" onEnd={() => {}} />);
+    expect(screen.getByTestId("tracking-badge")).toHaveAttribute("data-tracking", "on");
+  });
+
+  it("shows the tracking badge off when pose is invalid", () => {
+    const store = new ScoreStore();
+    store.push(frame(80, null)); // joints null → not tracking
+    render(<StarCatchScene stats={new SessionStats()} engagementThreshold={60}
+                           store={store} conn="open" onEnd={() => {}} />);
+    expect(screen.getByTestId("tracking-badge")).toHaveAttribute("data-tracking", "off");
+  });
+
   it("ends the session on the End button", () => {
     const onEnd = vi.fn();
     render(<StarCatchScene stats={new SessionStats()} engagementThreshold={55} store={new ScoreStore()} conn="open" onEnd={onEnd} />);
