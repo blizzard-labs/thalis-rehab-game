@@ -31,9 +31,6 @@ from scoring.signal_quality import compute_channel_quality, extract_trace
 
 logger = logging.getLogger(__name__)
 
-# MI channels the clinician inspects on the C2 setup screen (specsv2 wireframe).
-TRACE_CHANNELS = ("C3", "Cz", "C4")
-
 
 class ScoringService:
     """Background thread driving the EEG -> IntentScore loop."""
@@ -182,7 +179,7 @@ class ScoringService:
         self._latest_quality = {
             "fs": self.fs,
             "channels": compute_channel_quality(gate_window, labels),
-            "trace": extract_trace(gate_window, labels, list(TRACE_CHANNELS)),
+            "trace": extract_trace(gate_window, labels, labels),
             "timestamp": time.time(),
         }
 

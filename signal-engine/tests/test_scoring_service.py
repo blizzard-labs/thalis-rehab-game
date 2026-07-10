@@ -262,7 +262,8 @@ def test_latest_quality_snapshot_after_run(mock_outlet):
         for c in snap["channels"]:
             assert c["quality"] in ("good", "check", "poor")
         assert "C3" in snap["trace"] and len(snap["trace"]["C3"]) > 0
-        assert set(snap["trace"].keys()) <= {"C3", "Cz", "C4"}
+        # The live scope needs every EEG channel, not just the motor trio.
+        assert set(snap["trace"].keys()) == set(inlet.eeg_labels)
     finally:
         service.stop()
         inlet.close()

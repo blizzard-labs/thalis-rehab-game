@@ -7,8 +7,8 @@ import type { VisionHealthStore } from "../scoring/visionHealthStore";
 import type { CameraFrameStore } from "../scoring/cameraFrameStore";
 import type { Patient } from "../data/types";
 import { useScoreStore } from "./useScoreStore";
-import { useEegQualityStore } from "./useEegQualityStore";
 import { VisionHealthPanel } from "./VisionHealthPanel";
+import { EegScope } from "./EegScope";
 import "./LiveMonitor.css";
 
 type Props = {
@@ -81,7 +81,7 @@ export function LiveMonitor({ store, connectionState, sidecarState, qualityStore
       <div className="grid-2">
         <div className="panel">
           <div className="panel-title">EEG — 8 channel quality</div>
-          {qualityStore ? <ChannelStrip qualityStore={qualityStore} /> : <div className="placeholder">channel quality stream not connected</div>}
+          {qualityStore ? <EegScope qualityStore={qualityStore} /> : <div className="placeholder">channel quality stream not connected</div>}
         </div>
         <div className="panel">
           <div className="panel-title">Patient view (mirror)</div>
@@ -137,20 +137,6 @@ function SubTile({ label, value }: { label: string; value: string }) {
 function lateralityHint(erd: number | null): string {
   if (erd === null) return "—";
   return erd > 50 ? "contralateral ✓" : "weak";
-}
-
-function ChannelStrip({ qualityStore }: { qualityStore: EegQualityStore }) {
-  const { latest } = useEegQualityStore(qualityStore);
-  if (!latest) return <div className="placeholder">waiting for signal…</div>;
-  return (
-    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-      {latest.channels.map((c) => (
-        <span key={c.label} className="pill">
-          <span className="dot" style={{ background: `var(--${c.quality})` }} /> {c.label}
-        </span>
-      ))}
-    </div>
-  );
 }
 
 function Trace({ buffer }: { buffer: number[] }) {
