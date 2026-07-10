@@ -44,6 +44,14 @@ describe("StarCatchScene", () => {
     expect(screen.getByTestId("arm-fore")).toBeInTheDocument();
   });
 
+  it("shows a plain-language detail instruction naming the affected arm", () => {
+    const store = new ScoreStore();
+    store.push(frame(80, { flex: 30 })); // idx 0 = shoulder flexion
+    render(<StarCatchScene stats={new SessionStats()} engagementThreshold={60}
+                           store={store} conn="open" onEnd={() => {}} />);
+    expect(screen.getByTestId("rom-cue-detail")).toHaveTextContent(/affected arm up in front of you/i);
+  });
+
   it("collects a star when the measured joint angle meets the target while engaged", () => {
     const stats = new SessionStats();
     const store = new ScoreStore();

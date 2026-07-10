@@ -55,6 +55,7 @@ export function StarCatchScene({
   const [engaged, setEngaged] = useState(false);
   const [celebrate, setCelebrate] = useState(false);
   const [cue, setCue] = useState(model.current.current.label);
+  const [cueDetail, setCueDetail] = useState(model.current.current.cue);
   const [phase, setPhase] = useState(model.current.phase);
   const lastTs = useRef<number | null>(null);
   const celebrateUntil = useRef(0);
@@ -78,6 +79,7 @@ export function StarCatchScene({
       setScore(s);
       setEngaged(isEngaged);
       setCue(model.current.current.label);
+      setCueDetail(model.current.current.cue);
       setPhase(model.current.phase);
       setCelebrate(ts < celebrateUntil.current);
       raf = requestAnimationFrame(tick);
@@ -113,7 +115,10 @@ export function StarCatchScene({
     <main className={`scene scene--stars${reduced ? " reduced-motion" : ""}`} data-testid="starcatch">
       <KinematicOverlay store={store} />
       <div className="stars-banner" data-engaged={engaged}>
-        <span className="rom-cue" data-testid="rom-cue" data-phase={phase}>{cue}</span>
+        <span className="rom-cue-block">
+          <span className="rom-cue" data-testid="rom-cue" data-phase={phase}>{cue}</span>
+          <span className="rom-cue-detail" data-testid="rom-cue-detail">{cueDetail}</span>
+        </span>
         <span className="status-pill" data-testid="status-pill" data-engaged={engaged}>
           {engaged ? "Great reaching — keep going" : "Reach toward the star"}
         </span>
