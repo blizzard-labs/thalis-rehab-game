@@ -4,6 +4,7 @@ import { App } from "./App";
 import { ScoreStore } from "../scoring/scoreStore";
 import { EegQualityStore } from "../scoring/eegQualityStore";
 import { VisionHealthStore } from "../scoring/visionHealthStore";
+import { CameraFrameStore } from "../scoring/cameraFrameStore";
 import { patientStore } from "../data/store";
 import { createScoreClient, type ConnectionState, type WsLike } from "../net/scoreClient";
 import type { SidecarState } from "../main/sidecar";
@@ -18,6 +19,7 @@ declare global {
 const scoreStore = new ScoreStore();
 const qualityStore = new EegQualityStore();
 const visionHealthStore = new VisionHealthStore();
+const cameraFrameStore = new CameraFrameStore();
 const wsUrl = window.neuroreach?.sidecarWsUrl ?? "ws://localhost:8765";
 
 function Root() {
@@ -32,6 +34,7 @@ function Root() {
       onFrame: (f) => scoreStore.push(f),
       onQuality: (q) => qualityStore.push(q),
       onVisionHealth: (v) => visionHealthStore.push(v),
+      onCameraFrame: (f) => cameraFrameStore.push(f),
       onState: setConn,
     });
     client.connect();
@@ -44,6 +47,7 @@ function Root() {
       scoreStore={scoreStore}
       qualityStore={qualityStore}
       visionHealthStore={visionHealthStore}
+      cameraFrameStore={cameraFrameStore}
       connectionState={conn}
       sidecarState={sidecar}
     />

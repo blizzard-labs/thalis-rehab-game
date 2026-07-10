@@ -55,6 +55,7 @@ export default function App() {
             totalTrials={2 /* per class → 4 cued trials; short demo block */}
             baselineMs={3000 /* demo: real block is 60 s (spec §6 step 1) */}
             onComplete={() => { setView("modeselect"); if (code) link.notify("calibration-complete"); }}
+            onReady={() => { if (code) link.notify("calibration-ready"); }}
           />
         );
       case "modeselect":

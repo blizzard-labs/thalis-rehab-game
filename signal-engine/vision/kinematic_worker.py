@@ -52,6 +52,15 @@ class KinematicWorker:
         self._last_count = -1
         self._calibrator: RestPoseCalibrator | None = None
         self._cal_status = "idle"
+        # Newest PoseFrame from estimate(), for the console camera overlay. Set on
+        # every processed frame (including during calibration) so the overlay is
+        # live even before scoring resumes.
+        self._pose_lock = threading.Lock()
+        self._latest_pose = None  # Optional[PoseFrame]
+
+    def latest_pose(self):
+        with self._pose_lock:
+            return self._latest_pose
 
     # -- calibration -----------------------------------------------------------
 
@@ -102,6 +111,8 @@ class KinematicWorker:
 
     def _process(self, av_frame) -> None:
         pose_frame = self.estimator.estimate(av_frame)
+        with self._pose_lock:
+            self._latest_pose = pose_frame
         if self._calibrator is not None:
             if pose_frame is not None:
                 self._calibrator.add(pose_frame)

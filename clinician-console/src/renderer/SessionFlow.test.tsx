@@ -4,6 +4,7 @@ import { SessionFlow } from "./SessionFlow";
 import { ScoreStore } from "../scoring/scoreStore";
 import { EegQualityStore } from "../scoring/eegQualityStore";
 import { VisionHealthStore } from "../scoring/visionHealthStore";
+import { CameraFrameStore } from "../scoring/cameraFrameStore";
 import { PatientStore } from "../data/store";
 
 const margaret = new PatientStore().get("#0421")!;
@@ -32,6 +33,7 @@ function renderFlow() {
       scoreStore={new ScoreStore()}
       qualityStore={new EegQualityStore()}
       visionHealthStore={new VisionHealthStore()}
+      cameraFrameStore={new CameraFrameStore()}
       connectionState="open"
       sidecarState="ready"
       onExit={onExit}

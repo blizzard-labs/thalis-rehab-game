@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import type { ScoreStore } from "../scoring/scoreStore";
 import type { EegQualityStore } from "../scoring/eegQualityStore";
 import type { VisionHealthStore } from "../scoring/visionHealthStore";
+import type { CameraFrameStore } from "../scoring/cameraFrameStore";
 import type { ConnectionState } from "../net/scoreClient";
 import type { SidecarState } from "../main/sidecar";
 import type { Patient } from "../data/types";
@@ -11,6 +12,7 @@ type Props = {
   scoreStore: ScoreStore;
   qualityStore: EegQualityStore;
   visionHealthStore: VisionHealthStore;
+  cameraFrameStore?: CameraFrameStore;
   connectionState: ConnectionState;
   sidecarState: SidecarState;
   patient: Patient;
@@ -34,6 +36,7 @@ export function LiveStep(props: Props) {
       store={props.scoreStore}
       qualityStore={props.qualityStore}
       visionHealthStore={props.visionHealthStore}
+      cameraFrameStore={props.cameraFrameStore}
       connectionState={props.connectionState}
       sidecarState={props.sidecarState}
       patient={props.patient}

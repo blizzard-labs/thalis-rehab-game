@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 type CheckpointBridge = {
   onPatientCheckpoint(cb: (checkpoint: string) => void): void;
@@ -11,10 +11,14 @@ function bridge(): CheckpointBridge | null {
   return nr && typeof nr.getCheckpointState === "function" ? nr : null;
 }
 
-export function useCheckpoints() {
+export function useCheckpoints(opts?: { onCalibrationReady?: () => void }) {
   const [patientBegan, setBegan] = useState(false);
   const [patientCalibrated, setCalibrated] = useState(false);
   const nr = bridge();
+  // Ref so the checkpoint callback (registered once, effect deps [nr]) always
+  // calls the latest handler instead of the one from first render.
+  const readyCb = useRef(opts?.onCalibrationReady);
+  readyCb.current = opts?.onCalibrationReady;
 
   useEffect(() => {
     if (!nr) return;
@@ -25,6 +29,7 @@ export function useCheckpoints() {
     nr.onPatientCheckpoint((c) => {
       if (c === "session-begin") setBegan(true);
       if (c === "calibration-complete") setCalibrated(true);
+      if (c === "calibration-ready") readyCb.current?.();
     });
   }, [nr]);
 

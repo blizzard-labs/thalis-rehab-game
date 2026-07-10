@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent, act } from "@testing-library/react";
 import { CalibrateStep } from "./CalibrateStep";
 import { VisionHealthStore } from "../scoring/visionHealthStore";
+import { CameraFrameStore } from "../scoring/cameraFrameStore";
 
 function renderStep(props: Partial<React.ComponentProps<typeof CalibrateStep>> = {}) {
   const store = props.visionHealthStore ?? new VisionHealthStore();
@@ -9,6 +10,7 @@ function renderStep(props: Partial<React.ComponentProps<typeof CalibrateStep>> =
     <CalibrateStep
       onNext={() => {}} onBack={() => {}} defaultSide="right"
       waitingForPatient={false} onGoLive={() => {}}
+      cameraFrameStore={new CameraFrameStore()} calibrationStartedAt={null}
       {...props} visionHealthStore={store}
     />,
   );
@@ -31,17 +33,42 @@ describe("CalibrateStep", () => {
     expect(onNext).toHaveBeenCalled();
   });
 
-  it("emits fusion mode, affected side, and calibrate pose", () => {
+  it("emits fusion mode and affected side", () => {
     const onFusionMode = vi.fn();
     const onAffectedSide = vi.fn();
-    const onCalibratePose = vi.fn();
-    renderStep({ onFusionMode, onAffectedSide, onCalibratePose, defaultSide: "right" });
+    renderStep({ onFusionMode, onAffectedSide, defaultSide: "right" });
     fireEvent.click(screen.getByRole("button", { name: /mode c/i }));
     expect(onFusionMode).toHaveBeenCalledWith("C");
     fireEvent.click(screen.getByRole("button", { name: /^left$/i }));
     expect(onAffectedSide).toHaveBeenCalledWith("left");
-    fireEvent.click(screen.getByRole("button", { name: /calibrate rest pose/i }));
-    expect(onCalibratePose).toHaveBeenCalled();
+  });
+
+  it("no longer renders a manual rest-pose calibrate button or status", () => {
+    renderStep({});
+    expect(screen.queryByText(/calibrate rest pose/i)).toBeNull();
+    expect(screen.queryByTestId("calibration-status")).toBeNull();
+  });
+
+  it("shows the camera feed + three calibration status rows", () => {
+    renderStep({});
+    expect(screen.getByTestId("cal-status-inframe")).toBeTruthy();
+    expect(screen.getByTestId("cal-status-cv")).toBeTruthy();
+    expect(screen.getByTestId("cal-status-eeg")).toBeTruthy();
+  });
+
+  it("marks in-frame yes once pose landmarks arrive", () => {
+    const cameraFrameStore = new CameraFrameStore();
+    renderStep({ cameraFrameStore });
+    expect(screen.getByTestId("cal-status-inframe").textContent).toMatch(/no/i);
+    act(() =>
+      cameraFrameStore.push({
+        jpeg: "x",
+        landmarks: { pose: [[0.5, 0.5, 0.95]], hands: { left: null, right: null } },
+        fps: 10,
+        timestamp: 0,
+      }),
+    );
+    expect(screen.getByTestId("cal-status-inframe").textContent).toMatch(/yes/i);
   });
 
   it("pushes the patient's affected side to the engine on mount (no click needed)", () => {
@@ -50,16 +77,13 @@ describe("CalibrateStep", () => {
     expect(onAffectedSide).toHaveBeenCalledWith("left");
   });
 
-  it("reflects the live affected side + calibration state from vision_health", () => {
+  it("reflects the live affected side from vision_health", () => {
     const store = new VisionHealthStore();
     renderStep({ visionHealthStore: store, defaultSide: "right" });
-    // Before frames: waiting for camera.
-    expect(screen.getByTestId("calibration-status")).toHaveTextContent(/waiting for the patient camera/i);
     act(() => store.push({
       connection: "connected", fps: 15, kinematicActive: true, degraded: false,
       affectedSide: "left", calibration: "complete", restCalibrated: true, timestamp: 0,
     }));
-    expect(screen.getByTestId("calibration-status")).toHaveTextContent(/calibrated/i);
     // Live side (left) wins over the local default (right).
     expect(screen.getByRole("button", { name: /^left$/i }).className).toMatch(/btn-primary/);
   });

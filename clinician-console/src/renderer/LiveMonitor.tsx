@@ -3,12 +3,18 @@ import type { ScoreStore } from "../scoring/scoreStore";
 import type { ConnectionState } from "../net/scoreClient";
 import type { SidecarState } from "../main/sidecar";
 import type { EegQualityStore } from "../scoring/eegQualityStore";
-import type { VisionHealthStore } from "../scoring/visionHealthStore";
+import { VisionHealthStore } from "../scoring/visionHealthStore";
+import { CameraFrameStore } from "../scoring/cameraFrameStore";
 import type { Patient } from "../data/types";
 import { useScoreStore } from "./useScoreStore";
-import { useEegQualityStore } from "./useEegQualityStore";
-import { VisionHealthPanel } from "./VisionHealthPanel";
+import { useVisionHealthStore } from "./useVisionHealthStore";
+import { useCameraFrameStore } from "./useCameraFrameStore";
+import { CameraView } from "./CameraView";
+import { EegScope } from "./EegScope";
 import "./LiveMonitor.css";
+
+const EMPTY_VISION = new VisionHealthStore();
+const EMPTY_CAMERA = new CameraFrameStore();
 
 type Props = {
   store: ScoreStore;
@@ -16,6 +22,7 @@ type Props = {
   sidecarState: SidecarState;
   qualityStore?: EegQualityStore;
   visionHealthStore?: VisionHealthStore;
+  cameraFrameStore?: CameraFrameStore;
   patient?: Patient;
   onEndSession?: () => void;
   onSwitchMode?: (mode: "band_power_only" | "csp_lda_blend") => void;
@@ -29,8 +36,12 @@ function fmt(n: number | null, digits = 1): string {
 // clinician can intervene without interpreting raw EEG: plain-language status
 // tiles, 8-channel quality, the patient-view mirror, ERD/laterality/kinematic
 // sub-scores, and the big IntentScore. specsv2 wireframe C3.
-export function LiveMonitor({ store, connectionState, sidecarState, qualityStore, visionHealthStore, patient, onEndSession, onSwitchMode }: Props) {
+export function LiveMonitor({ store, connectionState, sidecarState, qualityStore, visionHealthStore, cameraFrameStore, patient, onEndSession, onSwitchMode }: Props) {
   const state = useScoreStore(store);
+  // Hooks must run unconditionally, so fall back to stable empty stores when a
+  // prop is absent (e.g. the isolated component test / EEG-only session).
+  const vh = useVisionHealthStore(visionHealthStore ?? EMPTY_VISION).latest;
+  const cam = useCameraFrameStore(cameraFrameStore ?? EMPTY_CAMERA).latest;
   const [elapsed, setElapsed] = useState(0);
   useEffect(() => {
     const t = setInterval(() => setElapsed((e) => e + 1), 1000);
@@ -50,6 +61,8 @@ export function LiveMonitor({ store, connectionState, sidecarState, qualityStore
         <div className="lm-rec">● REC {mm}:{ss}</div>
         <div className="lm-conn" data-testid="conn-badge">
           {connectionState === "open" ? "● live" : `○ ${connectionState}`} · sidecar {sidecarState}
+          {cam && ` · 📷 ${cam.fps.toFixed(1)} fps`}
+          {vh?.degraded && <span className="lm-flag" data-testid="vision-degraded-banner"> · vision degraded — EEG-only</span>}
         </div>
       </header>
 
@@ -72,21 +85,17 @@ export function LiveMonitor({ store, connectionState, sidecarState, qualityStore
         </div>
       </div>
 
-      {visionHealthStore && (
-        <VisionHealthPanel visionHealthStore={visionHealthStore} scoreStore={store} />
-      )}
-
       <div className="grid-2">
         <div className="panel">
           <div className="panel-title">EEG — 8 channel quality</div>
-          {qualityStore ? <ChannelStrip qualityStore={qualityStore} /> : <div className="placeholder">channel quality stream not connected</div>}
+          {qualityStore ? <EegScope qualityStore={qualityStore} /> : <div className="placeholder">channel quality stream not connected</div>}
         </div>
         <div className="panel">
           <div className="panel-title">Patient view (mirror)</div>
-          <div className="placeholder">
-            Live {patient ? patient.affectedSide.toLowerCase() : "affected"}-arm game feed —
-            patient-device camera via WebRTC (roadmap V2-2).
-          </div>
+          <CameraView
+            store={cameraFrameStore ?? EMPTY_CAMERA}
+            affectedSide={patient ? (patient.affectedSide.toLowerCase() as "left" | "right") : "right"}
+          />
         </div>
       </div>
 
@@ -104,6 +113,18 @@ export function LiveMonitor({ store, connectionState, sidecarState, qualityStore
         </div>
         <div className="lm-hero-sub">ERD {latest ? fmt(latest.erdScore) : "—"}% · /100</div>
         <Trace buffer={state.buffer.map((f) => f.intentScore)} />
+      </div>
+
+      <div className="lm-kin" data-testid="kinematic-graph">
+        <span className="lm-kin-label">KINEMATIC</span>
+        {vh?.restCalibrated ? (
+          <Trace buffer={state.buffer.map((f) => f.kinematicScore ?? 0)} thin />
+        ) : (
+          <span className="lm-kin-uncal">not calibrated</span>
+        )}
+        {latest?.compensationFlag && (
+          <span className="lm-flag" data-testid="compensation-indicator">⚠ trunk compensation</span>
+        )}
       </div>
 
       <footer className="lm-controls">
@@ -137,31 +158,18 @@ function lateralityHint(erd: number | null): string {
   return erd > 50 ? "contralateral ✓" : "weak";
 }
 
-function ChannelStrip({ qualityStore }: { qualityStore: EegQualityStore }) {
-  const { latest } = useEegQualityStore(qualityStore);
-  if (!latest) return <div className="placeholder">waiting for signal…</div>;
-  return (
-    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-      {latest.channels.map((c) => (
-        <span key={c.label} className="pill">
-          <span className="dot" style={{ background: `var(--${c.quality})` }} /> {c.label}
-        </span>
-      ))}
-    </div>
-  );
-}
-
-function Trace({ buffer }: { buffer: number[] }) {
-  if (buffer.length < 2) return <div className="lm-trace" />;
+function Trace({ buffer, thin = false }: { buffer: number[]; thin?: boolean }) {
+  const cls = thin ? "lm-trace lm-trace--thin" : "lm-trace";
+  if (buffer.length < 2) return <div className={cls} />;
   const w = 600,
-    h = 80,
+    h = thin ? 26 : 80,
     n = buffer.length;
   const pts = buffer
     .map((v, i) => `${(i / (n - 1)) * w},${h - (Math.max(0, Math.min(100, v)) / 100) * h}`)
     .join(" ");
   return (
-    <svg className="lm-trace" viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none">
-      <polyline points={pts} fill="none" stroke="#e89a52" strokeWidth="2" />
+    <svg className={cls} viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none">
+      <polyline points={pts} fill="none" stroke={thin ? "#4ea1ff" : "#e89a52"} strokeWidth="2" />
     </svg>
   );
 }

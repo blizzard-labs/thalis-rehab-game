@@ -1,6 +1,7 @@
 import { parseIntentScoreMessage, type ScoreFrame } from "../scoring/intentScoreMessage";
 import { parseEegQualityMessage, type EegQualityFrame } from "../scoring/eegQualityMessage";
 import { parseVisionHealthMessage, type VisionHealthFrame } from "../scoring/visionHealthMessage";
+import { parseCameraFrameMessage, type CameraFrame } from "../scoring/cameraFrameMessage";
 
 export type ConnectionState = "connecting" | "open" | "reconnecting" | "closed";
 
@@ -20,6 +21,8 @@ export type ScoreClientOptions = {
   onQuality?: (f: EegQualityFrame) => void;
   /** Optional: clinician-only camera-link health frames (V2-2c). */
   onVisionHealth?: (f: VisionHealthFrame) => void;
+  /** Optional: clinician-only camera feed frames (JPEG + landmarks). */
+  onCameraFrame?: (f: CameraFrame) => void;
   onState: (s: ConnectionState) => void;
   backoffBaseMs?: number;
   backoffMaxMs?: number;
@@ -59,6 +62,11 @@ export function createScoreClient(opts: ScoreClientOptions) {
       const v = parseVisionHealthMessage(raw);
       if (v.ok) {
         opts.onVisionHealth?.(v.frame);
+        return;
+      }
+      const cf = parseCameraFrameMessage(raw);
+      if (cf.ok) {
+        opts.onCameraFrame?.(cf.frame);
         return;
       }
       dropped += 1;

@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { ScoreStore } from "../scoring/scoreStore";
 import type { EegQualityStore } from "../scoring/eegQualityStore";
 import type { VisionHealthStore } from "../scoring/visionHealthStore";
+import type { CameraFrameStore } from "../scoring/cameraFrameStore";
 import type { ConnectionState } from "../net/scoreClient";
 import type { SidecarState } from "../main/sidecar";
 import type { Patient } from "../data/types";
@@ -23,6 +24,7 @@ type Props = {
   scoreStore: ScoreStore;
   qualityStore: EegQualityStore;
   visionHealthStore: VisionHealthStore;
+  cameraFrameStore: CameraFrameStore;
   connectionState: ConnectionState;
   sidecarState: SidecarState;
   onExit: () => void;
@@ -31,7 +33,12 @@ type Props = {
 export function SessionFlow(props: Props) {
   const { patient, onExit } = props;
   const s = useSession();
-  const cp = useCheckpoints();
+  const [calibrationStartedAt, setCalibrationStartedAt] = useState<number | null>(null);
+  // Patient "I'm ready" auto-starts rest-pose calibration (no manual button) and
+  // marks t0 for the EEG-baseline progress bar.
+  const cp = useCheckpoints({
+    onCalibrationReady: () => { void s.calibratePose(); setCalibrationStartedAt(Date.now()); },
+  });
   const [step, setStep] = useState<Step>("signal");
   const go = (next: Step) => setStep(next);
 
@@ -87,9 +94,10 @@ export function SessionFlow(props: Props) {
           waitingForPatient={cp.active && !cp.patientCalibrated}
           onFusionMode={s.setFusionMode}
           onAffectedSide={s.setAffectedSide}
-          onCalibratePose={s.calibratePose}
           defaultSide={patient.affectedSide.toLowerCase() as "left" | "right"}
           visionHealthStore={props.visionHealthStore}
+          cameraFrameStore={props.cameraFrameStore}
+          calibrationStartedAt={calibrationStartedAt}
         />
       )}
       {step === "live" && (
@@ -99,6 +107,7 @@ export function SessionFlow(props: Props) {
           visionHealthStore={props.visionHealthStore}
           connectionState={props.connectionState}
           sidecarState={props.sidecarState}
+          cameraFrameStore={props.cameraFrameStore}
           patient={patient}
           onBegin={s.begin}
           onEndSession={endSession}

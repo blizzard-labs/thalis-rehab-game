@@ -283,6 +283,28 @@ describe("LanServer", () => {
     p.ws.close();
   });
 
+  it("forwards calibration-ready without marking the patient calibrated", async () => {
+    sidecar = await fakeSidecar();
+    server = new LanServer(baseOpts());
+    await server.start();
+    const code = server.startSession(SESSION).code;
+    const p = connectPatient(server);
+    await p.open();
+    p.send({ type: "pair", code });
+    await p.waitFor("paired");
+
+    const seen: string[] = [];
+    server.on("patient-checkpoint", (c: string) => seen.push(c));
+    p.send({ type: "patient-checkpoint", checkpoint: "calibration-ready" });
+    await new Promise<void>((r) => {
+      const check = () => (seen.length ? r() : setTimeout(check, 10));
+      check();
+    });
+    expect(seen).toEqual(["calibration-ready"]);
+    expect(server.checkpointState().patientCalibrated).toBe(false);
+    p.ws.close();
+  });
+
   it("forwards a clinician go-live to the patient and remembers it", async () => {
     sidecar = await fakeSidecar();
     server = new LanServer(baseOpts());

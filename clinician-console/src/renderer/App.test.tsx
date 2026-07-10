@@ -5,6 +5,7 @@ import { PatientStore } from "../data/store";
 import { ScoreStore } from "../scoring/scoreStore";
 import { EegQualityStore } from "../scoring/eegQualityStore";
 import { VisionHealthStore } from "../scoring/visionHealthStore";
+import { CameraFrameStore } from "../scoring/cameraFrameStore";
 
 function renderApp() {
   return render(
@@ -13,6 +14,7 @@ function renderApp() {
       scoreStore={new ScoreStore()}
       qualityStore={new EegQualityStore()}
       visionHealthStore={new VisionHealthStore()}
+      cameraFrameStore={new CameraFrameStore()}
       connectionState="open"
       sidecarState="ready"
     />,
@@ -24,6 +26,11 @@ describe("App navigation", () => {
     renderApp();
     expect(screen.getByText("NeuroReach Console")).toBeTruthy();
     expect(screen.getByPlaceholderText(/search/i)).toBeTruthy();
+  });
+
+  it("does not show a clinician/clinic label in the top bar", () => {
+    renderApp();
+    expect(screen.queryByText(/Ortiz|Clinic A/)).toBeNull();
   });
 
   it("opens a patient workspace from the roster", () => {
