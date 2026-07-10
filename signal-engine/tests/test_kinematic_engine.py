@@ -56,3 +56,20 @@ def test_last_known_good_bridges_brief_dropout():
     eng.compute(_frame(wrist_x=2.5, ts=1.00))            # good, high reach
     bridged = eng.compute(_frame(vis=0.05, ts=1.05))     # dropout within lkg window
     assert bridged.pose_valid is True
+
+
+def test_compute_reports_joint_angles():
+    import vision.kinematics as kin
+    from vision.types import RestPose
+
+    eng = KinematicScoreEngine(affected_side="right")
+    eng.set_rest_pose(RestPose(shoulder_mid=np.zeros(3), shoulder_width=1.0,
+                               reach_extent=0.5, timestamp=0.0))
+    pose = np.zeros((33, 4)); pose[:, 3] = 1.0
+    pose[kin.RIGHT_SHOULDER, :3] = (0, 0, 0)
+    pose[kin.RIGHT_HIP, :3] = (0, 1, 0)
+    pose[kin.RIGHT_ELBOW, :3] = (1, 0, 0)
+    pose[kin.RIGHT_WRIST, :3] = (2, 0, 0)
+    res = eng.compute(PoseFrame(pose=pose, hands={}, timestamp=1.0))
+    assert abs(res.shoulder_abduction_deg - 90.0) < 10.0
+    assert res.elbow_deg > 150.0

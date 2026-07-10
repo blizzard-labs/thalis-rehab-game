@@ -26,6 +26,9 @@ class KinematicResult:
     movement_detected: bool
     pose_valid: bool
     timestamp: float
+    shoulder_flexion_deg: float = 0.0
+    shoulder_abduction_deg: float = 0.0
+    elbow_deg: float = 0.0
 
 
 @dataclass

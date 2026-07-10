@@ -54,7 +54,8 @@ class KinematicScoreEngine:
         # Bridge a brief dropout with the last good score, else absent evidence.
         if self._last_good is not None and (ts - self._last_good.timestamp) <= self.lkg_max_age_s:
             g = self._last_good
-            return KinematicResult(g.kinematic_score, 0.0, False, False, True, ts)
+            return KinematicResult(g.kinematic_score, 0.0, False, False, True, ts,
+                                   g.shoulder_flexion_deg, g.shoulder_abduction_deg, g.elbow_deg)
         return KinematicResult(0.0, 0.0, False, False, False, ts)
 
     def compute(self, frame: PoseFrame | None) -> KinematicResult:
@@ -80,6 +81,11 @@ class KinematicScoreEngine:
         )
         moved = abs(reach - base) > self.movement_deadband or flag
 
-        result = KinematicResult(score, penalty, flag, moved, True, frame.timestamp)
+        angles = dict(
+            shoulder_flexion_deg=kin.shoulder_flexion_angle(frame.pose, self.affected_side),
+            shoulder_abduction_deg=kin.shoulder_abduction_angle(frame.pose, self.affected_side),
+            elbow_deg=kin.elbow_extension_angle(frame.pose, self.affected_side),
+        )
+        result = KinematicResult(score, penalty, flag, moved, True, frame.timestamp, **angles)
         self._last_good = result
         return result
