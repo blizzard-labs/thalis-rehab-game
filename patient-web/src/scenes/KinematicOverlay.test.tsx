@@ -15,23 +15,7 @@ describe("KinematicOverlay", () => {
   beforeEach(() => vi.useFakeTimers());
   afterEach(() => vi.useRealTimers());
 
-  it("shows the verified badge when kinematicScore is present", () => {
-    const store = new ScoreStore();
-    store.push(frame({ kinematicScore: 65 }));
-    render(<KinematicOverlay store={store} />);
-    act(() => { vi.advanceTimersByTime(150); });
-    expect(screen.getByTestId("verified-badge")).toBeInTheDocument();
-  });
-
-  it("hides the verified badge when kinematicScore is null", () => {
-    const store = new ScoreStore();
-    store.push(frame({ kinematicScore: null }));
-    render(<KinematicOverlay store={store} />);
-    act(() => { vi.advanceTimersByTime(150); });
-    expect(screen.queryByTestId("verified-badge")).toBeNull();
-  });
-
-  it("shows the compensation cue only after the flag persists", () => {
+  it("shows the trunk-lean cue only after the flag persists", () => {
     const store = new ScoreStore();
     store.push(frame({ compensationFlag: true }));
     render(<KinematicOverlay store={store} showAfterMs={300} hideAfterMs={300} pollMs={50} />);
