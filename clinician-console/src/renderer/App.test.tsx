@@ -28,6 +28,11 @@ describe("App navigation", () => {
     expect(screen.getByPlaceholderText(/search/i)).toBeTruthy();
   });
 
+  it("does not show a clinician/clinic label in the top bar", () => {
+    renderApp();
+    expect(screen.queryByText(/Ortiz|Clinic A/)).toBeNull();
+  });
+
   it("opens a patient workspace from the roster", () => {
     renderApp();
     fireEvent.click(screen.getByText("Margaret R."));
