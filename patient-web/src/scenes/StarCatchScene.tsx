@@ -55,6 +55,7 @@ export function StarCatchScene({
   const [engaged, setEngaged] = useState(false);
   const [celebrate, setCelebrate] = useState(false);
   const [cue, setCue] = useState(model.current.current.label);
+  const [cueDetail, setCueDetail] = useState(model.current.current.cue);
   const [phase, setPhase] = useState(model.current.phase);
   const lastTs = useRef<number | null>(null);
   const celebrateUntil = useRef(0);
@@ -78,6 +79,7 @@ export function StarCatchScene({
       setScore(s);
       setEngaged(isEngaged);
       setCue(model.current.current.label);
+      setCueDetail(model.current.current.cue);
       setPhase(model.current.phase);
       setCelebrate(ts < celebrateUntil.current);
       raf = requestAnimationFrame(tick);
@@ -98,6 +100,7 @@ export function StarCatchScene({
   const shoulder: Pt = affectedSide === "left" ? { x: 150, y: 300 } : { x: 330, y: 300 };
   const mirror = affectedSide === "left";
   const j = store.latest()?.joints;
+  const tracking = j?.poseValid === true;
   const joint = model.current.current.joint;
   const elevationDeg =
     joint === "shoulder_abduction" ? (j?.shoulderAbductionDeg ?? 0)
@@ -109,11 +112,25 @@ export function StarCatchScene({
     upperLen: 150, foreLen: 140, mirror,
   });
 
+  // Fixed goal pose for the current cue: draw the star at the wrist the arm
+  // would reach at the calibrated target angle, so it stays put in space while
+  // the live hand moves toward it.
+  const targetDeg = model.current.current.targetDeg;
+  const goalElevationDeg = joint === "elbow_extension" ? 20 : targetDeg;
+  const goalElbowDeg = joint === "elbow_extension" ? targetDeg : 180;
+  const goal = fkArm({
+    shoulder, shoulderElevationDeg: goalElevationDeg, elbowDeg: goalElbowDeg,
+    upperLen: 150, foreLen: 140, mirror,
+  });
+
   return (
     <main className={`scene scene--stars${reduced ? " reduced-motion" : ""}`} data-testid="starcatch">
       <KinematicOverlay store={store} />
       <div className="stars-banner" data-engaged={engaged}>
-        <span className="rom-cue" data-testid="rom-cue" data-phase={phase}>{cue}</span>
+        <span className="rom-cue-block">
+          <span className="rom-cue" data-testid="rom-cue" data-phase={phase}>{cue}</span>
+          <span className="rom-cue-detail" data-testid="rom-cue-detail">{cueDetail}</span>
+        </span>
         <span className="status-pill" data-testid="status-pill" data-engaged={engaged}>
           {engaged ? "Great reaching — keep going" : "Reach toward the star"}
         </span>
@@ -139,14 +156,15 @@ export function StarCatchScene({
             aria-label={`${cue}: reach is ${Math.round(reach * 100)} percent toward the target`}
             preserveAspectRatio="xMidYMid meet"
           >
-            {/* goal star at the wrist target position when the arm is fully extended */}
-            <path
-              data-testid="reach-goal"
-              d={STAR}
-              transform={`translate(${wrist.x} ${wrist.y}) scale(${28 + reach * 8})`}
-              fill="var(--purple, #6a4c93)" stroke="#fff" strokeWidth="0.06"
-              opacity={0.35 + reach * 0.4}
-            />
+            {/* fixed goal star for the current cue — stays put; the net reaches to it */}
+            <g data-testid="reach-goal" transform={`translate(${goal.wrist.x} ${goal.wrist.y})`}>
+              <path
+                d={STAR}
+                transform={`scale(${28 + reach * 10})`}
+                fill="var(--purple, #6a4c93)" stroke="#fff" strokeWidth="0.06"
+                opacity={0.4 + reach * 0.5}
+              />
+            </g>
 
             {/* two-bone arm: shoulder → elbow → wrist, mirroring the real pose */}
             <line
@@ -162,13 +180,15 @@ export function StarCatchScene({
             <circle cx={shoulder.x} cy={shoulder.y} r="16" fill="#b06a4c" />
             <circle cx={elbow.x} cy={elbow.y} r="12" fill="#b06a4c" />
 
-            {/* current-reach star at the hand (glowing) */}
-            <path
-              data-testid="reach-hand"
-              data-reach={reach.toFixed(2)}
-              d={STAR} transform={`translate(${wrist.x} ${wrist.y}) scale(22)`}
-              fill="#f4c84a" stroke="#fff" strokeWidth="0.08"
-            />
+            {/* net on the hand — carried toward the fixed goal star */}
+            <g data-testid="net" data-reach={reach.toFixed(2)} transform={`translate(${wrist.x} ${wrist.y})`}>
+              <line x1="0" y1="0" x2="0" y2="30" stroke="#8a5a2b" strokeWidth="6" strokeLinecap="round" />
+              <circle cx="0" cy="-14" r="22" fill="rgba(255,255,255,0.18)" stroke="#c9a24a" strokeWidth="5" />
+              <path
+                d="M-20 -14 L20 -14 M-14 -30 L-14 2 M0 -34 L0 4 M14 -30 L14 2 M-18 -24 L18 -24 M-18 -4 L18 -4"
+                stroke="#c9a24a" strokeWidth="1.5" fill="none" opacity="0.7"
+              />
+            </g>
           </svg>
         </div>
 
@@ -195,6 +215,9 @@ export function StarCatchScene({
           End session
         </button>
         <span className="conn-badge" data-state={conn}>{conn}</span>
+        <span className="tracking-badge" data-testid="tracking-badge" data-tracking={tracking ? "on" : "off"}>
+          {tracking ? "Tracking arm ✓" : "Move into frame"}
+        </span>
       </div>
     </main>
   );

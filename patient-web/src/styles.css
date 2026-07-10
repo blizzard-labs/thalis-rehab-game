@@ -94,6 +94,10 @@ body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, sans-serif; co
 .end-button:hover { filter: brightness(0.99); box-shadow: 0 5px 16px rgba(51, 66, 90, 0.24); }
 .conn-badge { position: absolute; left: 24px; bottom: 28px; font-size: 12px;
   color: #fdf6ec; opacity: 0.75; }
+.tracking-badge { position: absolute; right: 24px; bottom: 28px; font-size: 12px;
+  padding: 4px 12px; border-radius: 999px; font-weight: 600; z-index: 5; }
+.tracking-badge[data-tracking="on"] { background: var(--good); color: #fff; }
+.tracking-badge[data-tracking="off"] { background: #d9c48a; color: #4a3a10; }
 .summary-tiles { display: flex; gap: 32px; }
 .summary-num { font-size: 48px; font-weight: 700; color: var(--warm-accent); text-align: center; }
 .cal-header { font-size: 18px; font-weight: 600; opacity: 0.7; }
@@ -245,6 +249,8 @@ body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, sans-serif; co
   gap: 16px;
   padding: 22px 120px 14px;
 }
+.rom-cue-block { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.rom-cue-detail { font-size: clamp(15px, 2vw, 22px); font-weight: 500; color: #fff; opacity: 0.9; }
 .stars-banner .status-pill {
   font-size: clamp(20px, 2.6vw, 30px);
   padding: 14px 32px;

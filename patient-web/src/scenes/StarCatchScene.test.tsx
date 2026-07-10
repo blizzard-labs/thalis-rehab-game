@@ -44,6 +44,14 @@ describe("StarCatchScene", () => {
     expect(screen.getByTestId("arm-fore")).toBeInTheDocument();
   });
 
+  it("shows a plain-language detail instruction naming the affected arm", () => {
+    const store = new ScoreStore();
+    store.push(frame(80, { flex: 30 })); // idx 0 = shoulder flexion
+    render(<StarCatchScene stats={new SessionStats()} engagementThreshold={60}
+                           store={store} conn="open" onEnd={() => {}} />);
+    expect(screen.getByTestId("rom-cue-detail")).toHaveTextContent(/affected arm up in front of you/i);
+  });
+
   it("collects a star when the measured joint angle meets the target while engaged", () => {
     const stats = new SessionStats();
     const store = new ScoreStore();
@@ -53,7 +61,7 @@ describe("StarCatchScene", () => {
     // flexion target defaults to 60; push a measured 80 deg (>= target) + engaged EEG.
     act(() => store.push(frame(95, { flex: 80 })));
     pump(3, 100); // reach saturates immediately (80/60 clamped to 1)
-    expect(Number(screen.getByTestId("reach-hand").getAttribute("data-reach"))).toBeGreaterThan(0.9);
+    expect(Number(screen.getByTestId("net").getAttribute("data-reach"))).toBeGreaterThan(0.9);
     expect(screen.getByTestId("status-pill")).toHaveAttribute("data-engaged", "true");
     pump(10, 100); // held past HOLD_S → a star collects
     expect(stats.trialsCompleted).toBeGreaterThanOrEqual(1);
@@ -66,6 +74,48 @@ describe("StarCatchScene", () => {
     act(() => store.push(frame(95, { flex: 10 }))); // 10 << 60 target
     pump(20, 100);
     expect(stats.trialsCompleted).toBe(0);
+  });
+
+  it("shows the tracking badge on when pose is valid", () => {
+    const store = new ScoreStore();
+    store.push(frame(80, { flex: 30 })); // frame() sets poseValid: true
+    render(<StarCatchScene stats={new SessionStats()} engagementThreshold={60}
+                           store={store} conn="open" onEnd={() => {}} />);
+    expect(screen.getByTestId("tracking-badge")).toHaveAttribute("data-tracking", "on");
+  });
+
+  it("shows the tracking badge off when pose is invalid", () => {
+    const store = new ScoreStore();
+    store.push(frame(80, null)); // joints null → not tracking
+    render(<StarCatchScene stats={new SessionStats()} engagementThreshold={60}
+                           store={store} conn="open" onEnd={() => {}} />);
+    expect(screen.getByTestId("tracking-badge")).toHaveAttribute("data-tracking", "off");
+  });
+
+  it("keeps the goal star fixed in space as the measured angle changes within a cue", () => {
+    const store = new ScoreStore();
+    store.push(frame(50, { flex: 20 })); // flexion cue, measured 20 (< 60 target)
+    render(<StarCatchScene stats={new SessionStats()} engagementThreshold={95}
+                           store={store} conn="open" onEnd={() => {}} />);
+    const translateOf = () =>
+      /translate\(([\-\d.]+) ([\-\d.]+)\)/.exec(
+        screen.getByTestId("reach-goal").getAttribute("transform") ?? "",
+      );
+    const before = translateOf();
+    act(() => store.push(frame(50, { flex: 45 }))); // same cue, different measured angle
+    pump(2, 100);
+    const after = translateOf();
+    expect(after?.[1]).toBe(before?.[1]);
+    expect(after?.[2]).toBe(before?.[2]);
+  });
+
+  it("draws a net on the hand instead of a star", () => {
+    const store = new ScoreStore();
+    store.push(frame(80, { flex: 30 }));
+    render(<StarCatchScene stats={new SessionStats()} engagementThreshold={60}
+                           store={store} conn="open" onEnd={() => {}} />);
+    expect(screen.getByTestId("net")).toBeInTheDocument();
+    expect(screen.queryByTestId("reach-hand")).toBeNull();
   });
 
   it("ends the session on the End button", () => {

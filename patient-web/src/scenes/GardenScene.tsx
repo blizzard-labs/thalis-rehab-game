@@ -67,6 +67,7 @@ export function GardenScene({
   }, [engagementThreshold, stats, store]);
 
   const reduced = prefersReducedMotion();
+  const tracking = store.latest()?.joints?.poseValid === true;
 
   // --- derive the illustration from a single growth value ---
   const stemLen = growth * STEM_MAX;
@@ -201,6 +202,9 @@ export function GardenScene({
           End session
         </button>
         <span className="conn-badge" data-state={conn}>{conn}</span>
+        <span className="tracking-badge" data-testid="tracking-badge" data-tracking={tracking ? "on" : "off"}>
+          {tracking ? "Tracking arm ✓" : "Move into frame"}
+        </span>
       </div>
     </main>
   );

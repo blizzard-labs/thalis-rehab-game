@@ -57,6 +57,20 @@ describe("GardenScene", () => {
     expect(screen.getByTestId("status-pill")).toHaveAttribute("data-engaged", "false");
   });
 
+  it("shows a tracking badge reflecting pose validity", () => {
+    const store = new ScoreStore();
+    store.push(frame(80)); // joints null → off
+    render(<GardenScene stats={new SessionStats()} engagementThreshold={55}
+                        store={store} conn="open" onEnd={() => {}} />);
+    const badge = screen.getByTestId("tracking-badge");
+    expect(badge).toHaveAttribute("data-tracking", "off");
+    act(() => store.push({ intentScore: 80, erdScore: null, classifierScore: null,
+      kinematicScore: 60, compensationFlag: false, isArtifact: false, mode: "C", timestamp: 0,
+      joints: { shoulderFlexionDeg: 10, shoulderAbductionDeg: 0, elbowDeg: 170, poseValid: true } }));
+    pump(1, 100);
+    expect(screen.getByTestId("tracking-badge")).toHaveAttribute("data-tracking", "on");
+  });
+
   it("ends the session on the End button", async () => {
     const onEnd = vi.fn();
     render(<GardenScene stats={new SessionStats()} engagementThreshold={55} store={new ScoreStore()} conn="open" onEnd={onEnd} />);

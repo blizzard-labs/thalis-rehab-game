@@ -36,6 +36,12 @@ doesn't model), a full
 publisher/preview stream unification, and goniometer ground-truth validation. **The Phase C verified-ROM
 Star Catcher game (two-bone FK rig + per-joint calibrated angle catalogue) is now built** — see
 [`2026-07-09-star-catcher-phase-c-verified-rom-design.md`](superpowers/specs/2026-07-09-star-catcher-phase-c-verified-rom-design.md).
+**Star Catcher UX pass done** (2026-07-10): plain-language affected-arm instruction subline; a **fixed goal
+star** per cue drawn at the calibrated-target wrist; a **net** on the hand (replaced the hand-star) reaching
+to it; and a bottom-right **"Tracking arm ✓" / "Move into frame"** badge on both games (mirrors the
+bottom-left connection badge) driven by `joints.poseValid` — see
+[`2026-07-10-star-catcher-clarity-targets-net-design.md`](superpowers/specs/2026-07-10-star-catcher-clarity-targets-net-design.md).
+Deferred: net rotation to match the forearm angle (currently upright).
 Designs/plans:
 [`2026-07-08-v2-2c-vision-ux-design.md`](superpowers/specs/2026-07-08-v2-2c-vision-ux-design.md),
 [`2026-07-07-v2-2b-kinematic-scoring-design.md`](superpowers/specs/2026-07-07-v2-2b-kinematic-scoring-design.md).

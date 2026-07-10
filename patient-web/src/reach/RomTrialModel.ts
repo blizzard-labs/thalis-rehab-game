@@ -6,9 +6,9 @@ export type JointId = "shoulder_flexion" | "shoulder_abduction" | "elbow_extensi
 export type RomTarget = { joint: JointId; label: string; cue: string; targetDeg: number };
 
 const CATALOGUE: { joint: JointId; label: string; cue: string }[] = [
-  { joint: "shoulder_flexion", label: "Reach up high", cue: "Lift your arm up in front of you" },
-  { joint: "shoulder_abduction", label: "Reach out wide", cue: "Lift your arm out to the side" },
-  { joint: "elbow_extension", label: "Straighten your arm", cue: "Stretch your arm out straight" },
+  { joint: "shoulder_flexion", label: "Reach up high", cue: "Lift your affected arm up in front of you — reach the net to the star." },
+  { joint: "shoulder_abduction", label: "Reach out wide", cue: "Lift your affected arm out to the side — reach the net to the star." },
+  { joint: "elbow_extension", label: "Straighten your arm", cue: "Stretch your affected arm out straight — reach the net to the star." },
 ];
 
 export const DEFAULT_TARGETS: Record<JointId, number> = {
