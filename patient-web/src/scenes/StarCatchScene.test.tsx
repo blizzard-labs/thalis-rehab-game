@@ -92,6 +92,23 @@ describe("StarCatchScene", () => {
     expect(screen.getByTestId("tracking-badge")).toHaveAttribute("data-tracking", "off");
   });
 
+  it("keeps the goal star fixed in space as the measured angle changes within a cue", () => {
+    const store = new ScoreStore();
+    store.push(frame(50, { flex: 20 })); // flexion cue, measured 20 (< 60 target)
+    render(<StarCatchScene stats={new SessionStats()} engagementThreshold={95}
+                           store={store} conn="open" onEnd={() => {}} />);
+    const translateOf = () =>
+      /translate\(([\-\d.]+) ([\-\d.]+)\)/.exec(
+        screen.getByTestId("reach-goal").getAttribute("transform") ?? "",
+      );
+    const before = translateOf();
+    act(() => store.push(frame(50, { flex: 45 }))); // same cue, different measured angle
+    pump(2, 100);
+    const after = translateOf();
+    expect(after?.[1]).toBe(before?.[1]);
+    expect(after?.[2]).toBe(before?.[2]);
+  });
+
   it("ends the session on the End button", () => {
     const onEnd = vi.fn();
     render(<StarCatchScene stats={new SessionStats()} engagementThreshold={55} store={new ScoreStore()} conn="open" onEnd={onEnd} />);
