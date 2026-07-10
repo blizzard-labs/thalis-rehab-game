@@ -61,7 +61,7 @@ describe("StarCatchScene", () => {
     // flexion target defaults to 60; push a measured 80 deg (>= target) + engaged EEG.
     act(() => store.push(frame(95, { flex: 80 })));
     pump(3, 100); // reach saturates immediately (80/60 clamped to 1)
-    expect(Number(screen.getByTestId("reach-hand").getAttribute("data-reach"))).toBeGreaterThan(0.9);
+    expect(Number(screen.getByTestId("net").getAttribute("data-reach"))).toBeGreaterThan(0.9);
     expect(screen.getByTestId("status-pill")).toHaveAttribute("data-engaged", "true");
     pump(10, 100); // held past HOLD_S → a star collects
     expect(stats.trialsCompleted).toBeGreaterThanOrEqual(1);
@@ -107,6 +107,15 @@ describe("StarCatchScene", () => {
     const after = translateOf();
     expect(after?.[1]).toBe(before?.[1]);
     expect(after?.[2]).toBe(before?.[2]);
+  });
+
+  it("draws a net on the hand instead of a star", () => {
+    const store = new ScoreStore();
+    store.push(frame(80, { flex: 30 }));
+    render(<StarCatchScene stats={new SessionStats()} engagementThreshold={60}
+                           store={store} conn="open" onEnd={() => {}} />);
+    expect(screen.getByTestId("net")).toBeInTheDocument();
+    expect(screen.queryByTestId("reach-hand")).toBeNull();
   });
 
   it("ends the session on the End button", () => {

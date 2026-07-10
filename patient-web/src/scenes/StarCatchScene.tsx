@@ -180,13 +180,15 @@ export function StarCatchScene({
             <circle cx={shoulder.x} cy={shoulder.y} r="16" fill="#b06a4c" />
             <circle cx={elbow.x} cy={elbow.y} r="12" fill="#b06a4c" />
 
-            {/* current-reach star at the hand (glowing) */}
-            <path
-              data-testid="reach-hand"
-              data-reach={reach.toFixed(2)}
-              d={STAR} transform={`translate(${wrist.x} ${wrist.y}) scale(22)`}
-              fill="#f4c84a" stroke="#fff" strokeWidth="0.08"
-            />
+            {/* net on the hand — carried toward the fixed goal star */}
+            <g data-testid="net" data-reach={reach.toFixed(2)} transform={`translate(${wrist.x} ${wrist.y})`}>
+              <line x1="0" y1="0" x2="0" y2="30" stroke="#8a5a2b" strokeWidth="6" strokeLinecap="round" />
+              <circle cx="0" cy="-14" r="22" fill="rgba(255,255,255,0.18)" stroke="#c9a24a" strokeWidth="5" />
+              <path
+                d="M-20 -14 L20 -14 M-14 -30 L-14 2 M0 -34 L0 4 M14 -30 L14 2 M-18 -24 L18 -24 M-18 -4 L18 -4"
+                stroke="#c9a24a" strokeWidth="1.5" fill="none" opacity="0.7"
+              />
+            </g>
           </svg>
         </div>
 
