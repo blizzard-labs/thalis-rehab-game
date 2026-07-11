@@ -5,10 +5,13 @@ const clamp01 = (x: number) => (x < 0 ? 0 : x > 1 ? 1 : x);
 export type ReachDir = "up" | "side" | "down";
 export type JointId = "shoulder_flexion" | "shoulder_abduction" | "elbow_extension";
 
-/** Normalized reach magnitude (torso-lengths) treated as a "full" reach, and the
- *  capture radius around the goal. Tunable after a live visual check. */
-export const REACH_MAG = 1.1;
-export const REACH_CAP_R = 0.5;
+/** Normalized reach magnitudes (torso-lengths) treated as a "full" reach per
+ *  direction, and the capture radius around the goal. Lateral (side) reach from a
+ *  seated patient is shorter than an overhead raise, so the side goal sits closer.
+ *  Tunable after a live visual check. */
+export const REACH_MAG = 1.05;      // vertical up/down
+export const REACH_MAG_SIDE = 0.8;  // lateral
+export const REACH_CAP_R = 0.62;    // capture radius (more forgiving)
 
 export type Trial = {
   joint: JointId; dir: ReachDir; label: string; cue: string;
@@ -37,7 +40,7 @@ type TrialLog = { joint: JointId; dir: ReachDir; achieved: number; compensationF
  * is engaged, held for HOLD_S; then a brief rest and the next direction.
  */
 export class RomTrialModel {
-  static readonly HOLD_S = 0.5;
+  static readonly HOLD_S = 0.35;
   static readonly REST_S = 1.2;
 
   private _side: string;
@@ -58,7 +61,7 @@ export class RomTrialModel {
     switch (dir) {
       case "up": return { x: 0, y: REACH_MAG };
       case "down": return { x: 0, y: -REACH_MAG };
-      case "side": return { x: sideSign(this._side) * REACH_MAG, y: 0 };
+      case "side": return { x: sideSign(this._side) * REACH_MAG_SIDE, y: 0 };
     }
   }
 
