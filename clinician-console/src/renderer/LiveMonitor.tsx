@@ -66,7 +66,7 @@ export function LiveMonitor({ store, connectionState, sidecarState, qualityStore
         <div className="lm-rec">● REC {mm}:{ss}</div>
         <div className="lm-conn" data-testid="conn-badge">
           {connectionState === "open" ? "● live" : `○ ${connectionState}`} · sidecar {sidecarState}
-          {cam && ` · 📷 ${cam.fps.toFixed(1)} fps`}
+          {cam && ` · ${cam.fps.toFixed(1)} fps`}
           {vh?.degraded && <span className="lm-flag" data-testid="vision-degraded-banner"> · vision degraded — EEG-only</span>}
         </div>
       </header>
@@ -117,7 +117,10 @@ export function LiveMonitor({ store, connectionState, sidecarState, qualityStore
         <SubTile label="MU/BETA ERD%" value={latest ? `${fmt(latest.erdScore)}%` : "—"} />
         <SubTile label="LATERALITY INDEX" value={latest ? lateralityHint(latest.erdScore) : "—"} />
         <SubTile label="KINEMATICS — ROM" value={patient ? `${patient.affectedSide} reach axis` : "—"} />
-        <SubTile label="TRUNK-LEAN" value="within range" />
+        <SubTile
+          label="TRUNK-LEAN"
+          value={!latest ? "—" : latest.compensationFlag ? "leaning — cue shown" : "within range"}
+        />
       </div>
 
       <div className="lm-hero">

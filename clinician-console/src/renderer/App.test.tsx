@@ -35,13 +35,13 @@ describe("App navigation", () => {
 
   it("opens a patient workspace from the roster", () => {
     renderApp();
-    fireEvent.click(screen.getByText("Margaret R."));
+    fireEvent.click(screen.getByText("Krishna B."));
     expect(screen.getByRole("button", { name: "History & Trends" })).toBeTruthy();
   });
 
   it("launches the session flow from the workspace and returns on exit", () => {
     renderApp();
-    fireEvent.click(screen.getByText("Margaret R."));
+    fireEvent.click(screen.getByText("Krishna B."));
     fireEvent.click(screen.getByRole("button", { name: /Start session/i }));
     // session flow, step 1
     expect(screen.getByText(/Signal check/i)).toBeTruthy();
@@ -52,7 +52,7 @@ describe("App navigation", () => {
 
   it("returns to the roster from the workspace", () => {
     renderApp();
-    fireEvent.click(screen.getByText("Margaret R."));
+    fireEvent.click(screen.getByText("Krishna B."));
     fireEvent.click(screen.getByText("← Roster"));
     expect(screen.getByPlaceholderText(/search/i)).toBeTruthy();
   });

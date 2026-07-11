@@ -9,13 +9,13 @@ describe("PatientStore", () => {
 
   it("seeds the four wireframe patients", () => {
     const ids = store.list().map((p) => p.id);
-    expect(ids).toContain("#0421"); // Margaret R.
+    expect(ids).toContain("#0421"); // Krishna B.
     expect(store.list().length).toBe(4);
   });
 
   it("looks a patient up by id", () => {
     const p = store.get("#0421");
-    expect(p?.name).toBe("Margaret R.");
+    expect(p?.name).toBe("Krishna B.");
     expect(p?.affectedSide).toBe("Left");
   });
 
@@ -24,7 +24,7 @@ describe("PatientStore", () => {
   });
 
   it("filters the roster by case-insensitive name search", () => {
-    const hits = store.search("margaret");
+    const hits = store.search("krishna");
     expect(hits.length).toBe(1);
     expect(hits[0].id).toBe("#0421");
   });

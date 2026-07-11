@@ -21,7 +21,7 @@ export function seedPatients(): Patient[] {
   return [
     {
       id: "#0421",
-      name: "Margaret R.",
+      name: "Krishna B.",
       sex: "F",
       age: 68,
       diagnosis: "L-hemiparesis",

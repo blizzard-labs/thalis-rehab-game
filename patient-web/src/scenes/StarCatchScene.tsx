@@ -122,8 +122,7 @@ export function StarCatchScene({
   return (
     <main className={`scene scene--stars${reduced ? " reduced-motion" : ""}`} data-testid="starcatch">
       <KinematicOverlay store={store} />
-      <div className="stars-banner" data-engaged={engaged}>
-        <span className="rom-cue" data-testid="rom-cue" data-phase={phase}>{cue}</span>
+      <div className="stars-banner" data-engaged={engaged} data-phase={phase}>
         <div className="stars-banner__row">
           <span className="status-pill" data-testid="status-pill" data-engaged={engaged}>
             {engaged ? "Great reaching — keep going" : "Reach toward the star"}

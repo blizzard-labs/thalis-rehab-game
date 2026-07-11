@@ -34,7 +34,7 @@ describe("ProtocolEditor (C5)", () => {
 
   it("toggles an enabled mini-game", () => {
     render(<ProtocolEditor store={store} patientId="#0421" />);
-    // River Rowing starts disabled for Margaret; enable it
+    // River Rowing starts disabled for this patient; enable it
     fireEvent.click(screen.getByLabelText("River Rowing"));
     fireEvent.click(screen.getByText(/Save protocol/i));
     expect(store.get("#0421")!.protocol.enabledGames).toContain("River Rowing");

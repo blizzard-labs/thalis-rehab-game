@@ -255,7 +255,6 @@ body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, sans-serif; co
   padding: 18px 120px 14px;
 }
 .stars-banner__row { display: flex; align-items: center; justify-content: center; gap: 16px; }
-.stars-banner .rom-cue { font-size: clamp(14px, 1.8vw, 18px); font-weight: 600; color: #d9d2ea; opacity: 0.85; }
 .rom-cue-detail { font-size: clamp(16px, 2vw, 22px); font-weight: 600; color: #f0952a; text-align: center; }
 .stars-banner .status-pill {
   font-size: clamp(20px, 2.6vw, 30px);
@@ -271,7 +270,51 @@ body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, sans-serif; co
   padding: 10px 22px;
 }
 .stars-row { position: relative; flex: 1 1 auto; width: 100%; min-height: 0; }
-.stars-sky { position: absolute; inset: 0; z-index: 0; }
+.stars-sky {
+  position: absolute; inset: 0; z-index: 0;
+  background-image:
+    radial-gradient(1.5px 1.5px at 33.1% 16.5%, rgba(255,255,255,0.43), transparent 100%),
+    radial-gradient(1.5px 1.5px at 53.4% 37.1%, rgba(255,255,255,0.76), transparent 100%),
+    radial-gradient(2.5px 2.5px at 22.6% 10.3%, rgba(255,255,255,0.43), transparent 100%),
+    radial-gradient(1.5px 1.5px at 10.7% 42.8%, rgba(255,255,255,0.78), transparent 100%),
+    radial-gradient(1.5px 1.5px at 62.5% 58.0%, rgba(255,255,255,0.63), transparent 100%),
+    radial-gradient(1.5px 1.5px at 40.1% 95.7%, rgba(255,255,255,0.62), transparent 100%),
+    radial-gradient(1.5px 1.5px at 14.8% 42.2%, rgba(255,255,255,0.63), transparent 100%),
+    radial-gradient(1.5px 1.5px at 55.8% 67.5%, rgba(255,255,255,0.63), transparent 100%),
+    radial-gradient(1.5px 1.5px at 63.3% 37.8%, rgba(255,255,255,0.63), transparent 100%),
+    radial-gradient(2.5px 2.5px at 61.4% 49.7%, rgba(255,255,255,0.71), transparent 100%),
+    radial-gradient(2px 2px at 46.7% 90.7%, rgba(255,255,255,0.52), transparent 100%),
+    radial-gradient(2px 2px at 78.3% 69.1%, rgba(255,255,255,0.43), transparent 100%),
+    radial-gradient(2px 2px at 30.8% 49.5%, rgba(255,255,255,0.69), transparent 100%),
+    radial-gradient(1.5px 1.5px at 29.6% 96.1%, rgba(255,255,255,0.6), transparent 100%),
+    radial-gradient(2.5px 2.5px at 17.8% 34.8%, rgba(255,255,255,0.57), transparent 100%),
+    radial-gradient(2px 2px at 94.4% 9.5%, rgba(255,255,255,0.54), transparent 100%),
+    radial-gradient(2.5px 2.5px at 35.6% 49.7%, rgba(255,255,255,0.43), transparent 100%),
+    radial-gradient(1.5px 1.5px at 11.0% 27.9%, rgba(255,255,255,0.42), transparent 100%),
+    radial-gradient(2.5px 2.5px at 69.3% 64.1%, rgba(255,255,255,0.51), transparent 100%),
+    radial-gradient(1.5px 1.5px at 39.0% 66.2%, rgba(255,255,255,0.78), transparent 100%),
+    radial-gradient(2.5px 2.5px at 36.1% 60.6%, rgba(255,255,255,0.42), transparent 100%),
+    radial-gradient(2px 2px at 75.8% 14.4%, rgba(255,255,255,0.56), transparent 100%),
+    radial-gradient(2px 2px at 90.0% 49.7%, rgba(255,255,255,0.58), transparent 100%),
+    radial-gradient(2.5px 2.5px at 54.7% 86.8%, rgba(255,255,255,0.75), transparent 100%),
+    radial-gradient(2px 2px at 28.7% 41.9%, rgba(255,255,255,0.67), transparent 100%),
+    radial-gradient(1.5px 1.5px at 38.5% 24.2%, rgba(255,255,255,0.47), transparent 100%),
+    radial-gradient(2.5px 2.5px at 24.3% 24.4%, rgba(255,255,255,0.73), transparent 100%),
+    radial-gradient(2px 2px at 19.5% 29.1%, rgba(255,255,255,0.57), transparent 100%),
+    radial-gradient(2px 2px at 37.4% 56.4%, rgba(255,255,255,0.68), transparent 100%),
+    radial-gradient(1.5px 1.5px at 51.5% 61.3%, rgba(255,255,255,0.58), transparent 100%),
+    radial-gradient(2.5px 2.5px at 85.6% 93.4%, rgba(255,255,255,0.56), transparent 100%),
+    radial-gradient(2.5px 2.5px at 39.8% 48.2%, rgba(255,255,255,0.42), transparent 100%),
+    radial-gradient(2px 2px at 8.5% 22.0%, rgba(255,255,255,0.44), transparent 100%),
+    radial-gradient(2px 2px at 59.7% 11.8%, rgba(255,255,255,0.61), transparent 100%),
+    radial-gradient(1.5px 1.5px at 93.1% 60.9%, rgba(255,255,255,0.75), transparent 100%),
+    radial-gradient(2px 2px at 61.0% 16.3%, rgba(255,255,255,0.78), transparent 100%),
+    radial-gradient(1.5px 1.5px at 59.8% 47.5%, rgba(255,255,255,0.74), transparent 100%),
+    radial-gradient(2.5px 2.5px at 97.3% 46.7%, rgba(255,255,255,0.52), transparent 100%),
+    radial-gradient(2px 2px at 15.8% 74.0%, rgba(255,255,255,0.59), transparent 100%),
+    radial-gradient(2px 2px at 68.4% 51.6%, rgba(255,255,255,0.78), transparent 100%);
+  background-repeat: no-repeat;
+}
 .stars-ground {
   position: absolute;
   left: 0; right: 0; bottom: 0;
@@ -330,6 +373,10 @@ body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, sans-serif; co
   width: 100%;
   background: linear-gradient(180deg, #f4c84a 0%, #e0ad2e 100%);
 }
+/* Star Catcher swaps the corner badges: tracking-arm goes to the far right,
+   trunk-lean sits to its left. */
+.scene--stars .tracking-badge { right: 24px; }
+.scene--stars .trunklean-badge { right: 200px; }
 .stars-footer {
   position: fixed;
   left: 0; right: 0; bottom: 0;

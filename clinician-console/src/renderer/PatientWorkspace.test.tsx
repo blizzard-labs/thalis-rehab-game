@@ -19,7 +19,7 @@ function renderWs(tab: any = "history", onStart = vi.fn(), onExit = vi.fn()) {
 describe("PatientWorkspace", () => {
   it("shows patient bio in the header", () => {
     renderWs();
-    expect(screen.getByText(/Margaret R\./)).toBeTruthy();
+    expect(screen.getByText(/Krishna B\./)).toBeTruthy();
     expect(screen.getByText(/L-hemiparesis/)).toBeTruthy();
   });
 

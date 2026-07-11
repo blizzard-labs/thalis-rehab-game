@@ -43,7 +43,7 @@ describe("StarCatchScene", () => {
     store.push(frame(80, { dx: 0, dy: -0.3 }));
     render(<StarCatchScene stats={new SessionStats()} engagementThreshold={60}
                            store={store} conn="open" onEnd={() => {}} />);
-    expect(screen.getByTestId("rom-cue")).toHaveTextContent(/reach up high/i);
+    expect(screen.getByTestId("reach-scene")).toHaveAttribute("aria-label", expect.stringMatching(/reach up high/i));
     expect(screen.getByTestId("arm-upper")).toBeInTheDocument();
     expect(screen.getByTestId("arm-fore")).toBeInTheDocument();
   });
