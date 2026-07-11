@@ -36,6 +36,12 @@ describe("RomTrialModel (directional)", () => {
     expect(m.collected).toBe(0);
   });
 
+  it("dev auto-collect: holding on-goal past the dev window collects while disengaged", () => {
+    const m = new RomTrialModel("right", 3); // 3s dev crutch
+    for (let i = 0; i < 40; i++) m.update(frame(0, -REACH_MAG), false, 0.1); // 4s on goal, disengaged
+    expect(m.collected).toBeGreaterThanOrEqual(1);
+  });
+
   it("collects the side star from a partial lateral reach (forgiving capture)", () => {
     const m = new RomTrialModel("right");
     for (let i = 0; i < 20; i++) m.update(frame(0, -REACH_MAG), true, 0.1); // collect up, advance to side

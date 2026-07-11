@@ -46,7 +46,7 @@ export function StarCatchScene({
   conn?: ConnectionState;
   onEnd: () => void;
 }) {
-  const model = useRef(new RomTrialModel(affectedSide));
+  const model = useRef(new RomTrialModel(affectedSide, config.devAutoCollectSeconds));
   const [reach, setReach] = useState(0);
   const [collected, setCollected] = useState(0);
   const [score, setScore] = useState(0);
