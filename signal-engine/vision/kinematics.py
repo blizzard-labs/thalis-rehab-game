@@ -47,6 +47,20 @@ def reach_extent(pose: np.ndarray, side: str) -> float:
     return float(np.linalg.norm(wrist - shoulder) / torso)
 
 
+def wrist_offset(pose: np.ndarray, side: str) -> tuple[float, float]:
+    """Wrist position relative to the shoulder, normalized by torso length
+    (‖shoulder−hip‖). Image coords: +x right, +y down. Reliable in the camera's
+    frontal plane (no depth), so it distinguishes reach direction."""
+    idx = side_indices(side)
+    shoulder = pose[idx["shoulder"], :3]
+    wrist = pose[idx["wrist"], :3]
+    hip = pose[idx["hip"], :3]
+    torso = float(np.linalg.norm(shoulder - hip))
+    if torso < 1e-9:
+        return 0.0, 0.0
+    return float((wrist[0] - shoulder[0]) / torso), float((wrist[1] - shoulder[1]) / torso)
+
+
 def shoulder_midpoint(pose: np.ndarray) -> np.ndarray:
     return (pose[LEFT_SHOULDER, :3] + pose[RIGHT_SHOULDER, :3]) / 2.0
 

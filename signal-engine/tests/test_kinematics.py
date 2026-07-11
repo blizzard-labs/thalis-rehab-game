@@ -86,3 +86,17 @@ def test_angles_degenerate_zero_length_return_zero():
     pose = _pose()  # all points at origin
     assert kin.shoulder_flexion_angle(pose, "right") == 0.0
     assert kin.shoulder_abduction_angle(pose, "right") == 0.0
+
+
+def test_wrist_offset_normalized_direction():
+    pose = _pose({kin.RIGHT_SHOULDER: (0.0, 0.0, 0.0),
+                  kin.RIGHT_HIP: (0.0, 0.5, 0.0),        # torso length 0.5
+                  kin.RIGHT_WRIST: (0.25, -0.5, 0.0)})   # 0.25 right, 0.5 up
+    dx, dy = kin.wrist_offset(pose, "right")
+    assert dx == pytest.approx(0.5)    # 0.25 / 0.5 torso
+    assert dy == pytest.approx(-1.0)   # -0.5 / 0.5 torso (up is negative image-y)
+
+
+def test_wrist_offset_zero_torso_returns_zero():
+    pose = _pose()  # all at origin -> torso 0
+    assert kin.wrist_offset(pose, "right") == (0.0, 0.0)

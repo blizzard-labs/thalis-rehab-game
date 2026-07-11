@@ -5,17 +5,21 @@ import { SessionStats } from "../session/SessionStats";
 import { ScoreStore } from "../scoring/scoreStore";
 import type { ScoreFrame } from "../scoring/intentScoreMessage";
 
+// Directional game: joints carry the normalized wrist offset (image coords:
+// +dx right, +dy down). The up goal is reached with the hand raised (dy < 0).
 const frame = (
   intent: number,
-  joints: Partial<{ flex: number; abd: number; elbow: number }> | null = null,
+  w: { dx: number; dy: number } | null = null,
 ): ScoreFrame => ({
   intentScore: intent, erdScore: null, classifierScore: null, kinematicScore: 60,
   compensationFlag: false, isArtifact: false, mode: "C", timestamp: 0,
-  joints: joints === null ? null : {
-    shoulderFlexionDeg: joints.flex ?? 0, shoulderAbductionDeg: joints.abd ?? 0,
-    elbowDeg: joints.elbow ?? 0, poseValid: true,
+  joints: w === null ? null : {
+    shoulderFlexionDeg: 0, shoulderAbductionDeg: 0, elbowDeg: 0,
+    wristDx: w.dx, wristDy: w.dy, poseValid: true,
   },
 });
+// On the first (reach-up) goal: hand raised straight up at full magnitude.
+const UP_GOAL = { dx: 0, dy: -1.1 };
 
 describe("StarCatchScene", () => {
   let raf: Array<FrameRequestCallback>;
@@ -36,7 +40,7 @@ describe("StarCatchScene", () => {
 
   it("shows the current target cue and renders a two-bone arm", () => {
     const store = new ScoreStore();
-    store.push(frame(80, { flex: 30 }));
+    store.push(frame(80, { dx: 0, dy: -0.3 }));
     render(<StarCatchScene stats={new SessionStats()} engagementThreshold={60}
                            store={store} conn="open" onEnd={() => {}} />);
     expect(screen.getByTestId("rom-cue")).toHaveTextContent(/reach up high/i);
@@ -46,39 +50,39 @@ describe("StarCatchScene", () => {
 
   it("shows a plain-language detail instruction naming the affected arm", () => {
     const store = new ScoreStore();
-    store.push(frame(80, { flex: 30 })); // idx 0 = shoulder flexion
+    store.push(frame(80, { dx: 0, dy: -0.3 })); // idx 0 = reach up
     render(<StarCatchScene stats={new SessionStats()} engagementThreshold={60}
                            store={store} conn="open" onEnd={() => {}} />);
-    expect(screen.getByTestId("rom-cue-detail")).toHaveTextContent(/affected arm up in front of you/i);
+    expect(screen.getByTestId("rom-cue-detail")).toHaveTextContent(/lift your affected arm up/i);
   });
 
-  it("collects a star when the measured joint angle meets the target while engaged", () => {
+  it("collects a star when the net reaches the goal star while engaged", () => {
     const stats = new SessionStats();
     const store = new ScoreStore();
     render(
       <StarCatchScene stats={stats} engagementThreshold={55} store={store} conn="open" onEnd={() => {}} />,
     );
-    // flexion target defaults to 60; push a measured 80 deg (>= target) + engaged EEG.
-    act(() => store.push(frame(95, { flex: 80 })));
-    pump(3, 100); // reach saturates immediately (80/60 clamped to 1)
+    // hand raised onto the up-goal + engaged EEG.
+    act(() => store.push(frame(95, UP_GOAL)));
+    pump(3, 100); // reach saturates on the goal
     expect(Number(screen.getByTestId("net").getAttribute("data-reach"))).toBeGreaterThan(0.9);
     expect(screen.getByTestId("status-pill")).toHaveAttribute("data-engaged", "true");
     pump(10, 100); // held past HOLD_S → a star collects
     expect(stats.trialsCompleted).toBeGreaterThanOrEqual(1);
   });
 
-  it("does not collect when the joint angle is below target", () => {
+  it("does not collect when the hand is nowhere near the goal star", () => {
     const stats = new SessionStats();
     const store = new ScoreStore();
     render(<StarCatchScene stats={stats} engagementThreshold={55} store={store} conn="open" onEnd={() => {}} />);
-    act(() => store.push(frame(95, { flex: 10 }))); // 10 << 60 target
+    act(() => store.push(frame(95, { dx: 0, dy: 0 }))); // at rest, far from the up goal
     pump(20, 100);
     expect(stats.trialsCompleted).toBe(0);
   });
 
   it("shows the tracking badge on when pose is valid", () => {
     const store = new ScoreStore();
-    store.push(frame(80, { flex: 30 })); // frame() sets poseValid: true
+    store.push(frame(80, { dx: 0, dy: -0.3 })); // frame() sets poseValid: true
     render(<StarCatchScene stats={new SessionStats()} engagementThreshold={60}
                            store={store} conn="open" onEnd={() => {}} />);
     expect(screen.getByTestId("tracking-badge")).toHaveAttribute("data-tracking", "on");
@@ -92,9 +96,9 @@ describe("StarCatchScene", () => {
     expect(screen.getByTestId("tracking-badge")).toHaveAttribute("data-tracking", "off");
   });
 
-  it("keeps the goal star fixed in space as the measured angle changes within a cue", () => {
+  it("places the up-trial goal star above the arm and keeps it fixed as the hand moves", () => {
     const store = new ScoreStore();
-    store.push(frame(50, { flex: 20 })); // flexion cue, measured 20 (< 60 target)
+    store.push(frame(50, { dx: 0, dy: -0.2 }));
     render(<StarCatchScene stats={new SessionStats()} engagementThreshold={95}
                            store={store} conn="open" onEnd={() => {}} />);
     const translateOf = () =>
@@ -102,7 +106,9 @@ describe("StarCatchScene", () => {
         screen.getByTestId("reach-goal").getAttribute("transform") ?? "",
       );
     const before = translateOf();
-    act(() => store.push(frame(50, { flex: 45 }))); // same cue, different measured angle
+    // up goal is above the centered shoulder (y = 330)
+    expect(Number(before?.[2])).toBeLessThan(330);
+    act(() => store.push(frame(50, { dx: 0.4, dy: -0.4 }))); // hand moves, same trial
     pump(2, 100);
     const after = translateOf();
     expect(after?.[1]).toBe(before?.[1]);
@@ -111,7 +117,7 @@ describe("StarCatchScene", () => {
 
   it("draws a net on the hand instead of a star", () => {
     const store = new ScoreStore();
-    store.push(frame(80, { flex: 30 }));
+    store.push(frame(80, { dx: 0, dy: -0.3 }));
     render(<StarCatchScene stats={new SessionStats()} engagementThreshold={60}
                            store={store} conn="open" onEnd={() => {}} />);
     expect(screen.getByTestId("net")).toBeInTheDocument();

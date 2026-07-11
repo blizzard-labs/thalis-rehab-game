@@ -55,7 +55,8 @@ class KinematicScoreEngine:
         if self._last_good is not None and (ts - self._last_good.timestamp) <= self.lkg_max_age_s:
             g = self._last_good
             return KinematicResult(g.kinematic_score, 0.0, False, False, True, ts,
-                                   g.shoulder_flexion_deg, g.shoulder_abduction_deg, g.elbow_deg)
+                                   g.shoulder_flexion_deg, g.shoulder_abduction_deg, g.elbow_deg,
+                                   g.wrist_dx, g.wrist_dy)
         return KinematicResult(0.0, 0.0, False, False, False, ts)
 
     def compute(self, frame: PoseFrame | None) -> KinematicResult:
@@ -86,6 +87,8 @@ class KinematicScoreEngine:
             shoulder_abduction_deg=kin.shoulder_abduction_angle(frame.pose, self.affected_side),
             elbow_deg=kin.elbow_extension_angle(frame.pose, self.affected_side),
         )
+        wdx, wdy = kin.wrist_offset(frame.pose, self.affected_side)
+        angles["wrist_dx"], angles["wrist_dy"] = wdx, wdy
         result = KinematicResult(score, penalty, flag, moved, True, frame.timestamp, **angles)
         self._last_good = result
         return result

@@ -66,7 +66,7 @@ describe("GardenScene", () => {
     expect(badge).toHaveAttribute("data-tracking", "off");
     act(() => store.push({ intentScore: 80, erdScore: null, classifierScore: null,
       kinematicScore: 60, compensationFlag: false, isArtifact: false, mode: "C", timestamp: 0,
-      joints: { shoulderFlexionDeg: 10, shoulderAbductionDeg: 0, elbowDeg: 170, poseValid: true } }));
+      joints: { shoulderFlexionDeg: 10, shoulderAbductionDeg: 0, elbowDeg: 170, wristDx: 0, wristDy: 0, poseValid: true } }));
     pump(1, 100);
     expect(screen.getByTestId("tracking-badge")).toHaveAttribute("data-tracking", "on");
   });

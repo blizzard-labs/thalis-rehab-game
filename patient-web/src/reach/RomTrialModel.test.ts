@@ -1,57 +1,46 @@
 import { describe, it, expect } from "vitest";
-import { RomTrialModel } from "./RomTrialModel";
+import { RomTrialModel, REACH_MAG } from "./RomTrialModel";
 import type { ScoreFrame } from "../scoring/intentScoreMessage";
 
-function frame(deg: Partial<{ flex: number; abd: number; elbow: number }>, intent = 80): ScoreFrame {
-  return {
-    intentScore: intent, erdScore: null, classifierScore: null, kinematicScore: 60,
-    compensationFlag: false, isArtifact: false, mode: "C", timestamp: 0,
-    joints: {
-      shoulderFlexionDeg: deg.flex ?? 0, shoulderAbductionDeg: deg.abd ?? 0,
-      elbowDeg: deg.elbow ?? 0, poseValid: true,
-    },
-  };
-}
+const frame = (dx: number, dy: number): ScoreFrame => ({
+  intentScore: 90, erdScore: null, classifierScore: null, kinematicScore: 60,
+  compensationFlag: false, isArtifact: false, mode: "C", timestamp: 0,
+  joints: { shoulderFlexionDeg: 0, shoulderAbductionDeg: 0, elbowDeg: 0,
+    wristDx: dx, wristDy: dy, poseValid: true },
+});
 
-describe("RomTrialModel", () => {
-  it("first target is shoulder_flexion with the default target", () => {
-    const m = new RomTrialModel();
-    expect(m.current.joint).toBe("shoulder_flexion");
-    expect(m.current.targetDeg).toBe(60);
+describe("RomTrialModel (directional)", () => {
+  it("first trial is reach-up; reach saturates when the wrist is on the up goal", () => {
+    const m = new RomTrialModel("right");
+    expect(m.current.dir).toBe("up");
+    m.update(frame(0, -REACH_MAG), true, 0.1); // straight up, full magnitude
+    expect(m.reach).toBeGreaterThan(0.9);
   });
 
-  it("reach reflects achieved/target of the current joint", () => {
-    const m = new RomTrialModel();
-    m.update(frame({ flex: 30 }), true, 0.1); // 30/60 = 0.5
-    expect(m.reach).toBeCloseTo(0.5, 1);
+  it("does not saturate the up trial when the wrist goes sideways", () => {
+    const m = new RomTrialModel("right");
+    m.update(frame(REACH_MAG, 0), true, 0.1); // sideways, not up
+    expect(m.reach).toBeLessThan(0.5);
   });
 
-  it("collects after holding at/above target while engaged, then advances", () => {
-    const m = new RomTrialModel();
-    for (let t = 0; t < 8; t++) m.update(frame({ flex: 70 }), true, 0.1);
-    expect(m.collected).toBe(1);
-    expect(m.lastTrial?.joint).toBe("shoulder_flexion");
-    for (let t = 0; t < 20; t++) m.update(frame({ flex: 0 }), false, 0.1);
-    expect(m.current.joint).toBe("shoulder_abduction");
+  it("collects the up star after holding on-goal while engaged, then advances to side", () => {
+    const m = new RomTrialModel("right");
+    for (let i = 0; i < 20; i++) m.update(frame(0, -REACH_MAG), true, 0.1);
+    expect(m.collected).toBeGreaterThanOrEqual(1);
+    expect(m.current.dir).toBe("side");
   });
 
-  it("does NOT collect when not EEG-engaged even if angle is met", () => {
-    const m = new RomTrialModel();
-    for (let t = 0; t < 8; t++) m.update(frame({ flex: 70 }), false, 0.1);
+  it("does not collect while EEG-disengaged even if on-goal", () => {
+    const m = new RomTrialModel("right");
+    for (let i = 0; i < 10; i++) m.update(frame(0, -REACH_MAG), false, 0.1);
     expect(m.collected).toBe(0);
   });
 
-  it("uses provided per-patient targets over defaults", () => {
-    const m = new RomTrialModel({ shoulder_flexion: 40 });
-    expect(m.current.targetDeg).toBe(40);
-  });
-
-  it("absent pose (poseValid false) holds reach at 0, no collect", () => {
-    const m = new RomTrialModel();
-    const f = frame({ flex: 70 });
-    f.joints = { ...f.joints!, poseValid: false };
-    for (let t = 0; t < 8; t++) m.update(f, true, 0.1);
-    expect(m.collected).toBe(0);
-    expect(m.reach).toBe(0);
+  it("places the side goal toward the affected side (left → negative x)", () => {
+    const mL = new RomTrialModel("left");
+    // advance to the side trial
+    for (let i = 0; i < 20; i++) mL.update(frame(0, -REACH_MAG), true, 0.1);
+    expect(mL.current.dir).toBe("side");
+    expect(mL.current.goal.x).toBeLessThan(0);
   });
 });
