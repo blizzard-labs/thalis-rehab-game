@@ -44,17 +44,26 @@ export class RomTrialModel {
   static readonly REST_S = 1.2;
 
   private _side: string;
+  private _devAutoCollectS: number;
   private _idx = 0;
   private _reach = 0;
   private _collected = 0;
   private _justCollected = false;
   private _holdTime = 0;
+  private _onGoalTime = 0;
   private _restTime = 0;
   private _phase: "reaching" | "rest" = "reaching";
   private _lastTrial: TrialLog | null = null;
 
-  constructor(affectedSide: string = "right") {
+  /**
+   * @param affectedSide  "left" | "right"
+   * @param devAutoCollectS  TEMPORARY prototyping crutch — when > 0, holding the
+   *   net on the goal for this many seconds force-collects even if the (often
+   *   simulated) EEG engagement gate never fires. 0 disables it.
+   */
+  constructor(affectedSide: string = "right", devAutoCollectS: number = 0) {
     this._side = affectedSide;
+    this._devAutoCollectS = devAutoCollectS;
   }
 
   private goalFor(dir: ReachDir): { x: number; y: number } {
@@ -88,6 +97,7 @@ export class RomTrialModel {
 
     if (this._phase === "rest") {
       this._reach = 0;
+      this._onGoalTime = 0;
       this._restTime += dt;
       if (this._restTime >= RomTrialModel.REST_S) {
         this._idx = (this._idx + 1) % CATALOGUE.length;
@@ -102,7 +112,15 @@ export class RomTrialModel {
     const dist = w === null ? Infinity : Math.hypot(w.x - g.x, w.y - g.y);
     this._reach = w === null ? 0 : clamp01(1 - dist / REACH_MAG);
 
-    if (dist <= REACH_CAP_R && engaged) {
+    const onGoal = dist <= REACH_CAP_R;
+    this._onGoalTime = onGoal ? this._onGoalTime + dt : 0;
+    // TEMPORARY prototyping crutch: after holding on the goal past the dev
+    // window, treat the patient as engaged even if the (simulated) EEG gate
+    // never fired, so the star still collects.
+    const effEngaged =
+      engaged || (this._devAutoCollectS > 0 && this._onGoalTime >= this._devAutoCollectS);
+
+    if (onGoal && effEngaged) {
       this._holdTime += dt;
       if (this._holdTime >= RomTrialModel.HOLD_S) {
         this._collected += 1;
