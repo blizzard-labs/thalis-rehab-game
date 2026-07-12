@@ -6,15 +6,13 @@ import { ElectrodeMap } from "./ElectrodeMap";
 type Props = {
   qualityStore: EegQualityStore;
   patient: Patient;
-  source: "sim" | "live";
-  onSourceChange: (s: "sim" | "live") => void;
   onNext: () => void;
   onBack: () => void;
 };
 
-// Step 1 — Signal check (C2). Electrode contact + live MI trace + the EEG source
-// toggle (simulated dev stream vs live headset). Runs on flat rest (sim idle).
-export function SignalCheckStep({ qualityStore, patient, source, onSourceChange, onNext, onBack }: Props) {
+// Step 1 — Signal check (C2). Electrode contact + live MI trace.
+// EEG source is always the simulated stream.
+export function SignalCheckStep({ qualityStore, patient, onNext, onBack }: Props) {
   const { latest } = useEegQualityStore(qualityStore);
   const channels = latest?.channels ?? [];
   const problems = channels.filter((c) => c.quality !== "good");
@@ -23,16 +21,6 @@ export function SignalCheckStep({ qualityStore, patient, source, onSourceChange,
     <div className="content">
       <div className="ws-bio">{patient.name} · Signal check</div>
 
-      <fieldset className="source-toggle" aria-label="EEG source">
-        <label>
-          <input type="radio" name="eeg-source" checked={source === "sim"} onChange={() => onSourceChange("sim")} />
-          Simulated EEG (dev)
-        </label>
-        <label>
-          <input type="radio" name="eeg-source" checked={source === "live"} onChange={() => onSourceChange("live")} />
-          Live headset
-        </label>
-      </fieldset>
       <div className="ws-sub">Affected side: {patient.affectedSide} · mode {patient.mode}</div>
 
       <div className="grid-2">

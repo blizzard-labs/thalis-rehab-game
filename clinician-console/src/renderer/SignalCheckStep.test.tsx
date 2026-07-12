@@ -15,8 +15,6 @@ function renderStep(over: Partial<Parameters<typeof SignalCheckStep>[0]> = {}) {
   const props = {
     qualityStore: storeWith([{ label: "C3", quality: "good" as const, p2p: 10 }]),
     patient: margaret,
-    source: "sim" as const,
-    onSourceChange: vi.fn(),
     onNext: vi.fn(),
     onBack: vi.fn(),
     ...over,
@@ -34,13 +32,6 @@ describe("SignalCheckStep", () => {
     });
     expect(container.querySelector(".electrode.poor")?.textContent).toBe("Cz");
     expect(container.querySelector(".electrode.good")?.textContent).toBe("C3");
-  });
-
-  it("defaults the source toggle to Simulated and reports changes", () => {
-    const { props } = renderStep();
-    expect((screen.getByRole("radio", { name: /simulated/i }) as HTMLInputElement).checked).toBe(true);
-    fireEvent.click(screen.getByRole("radio", { name: /live headset/i }));
-    expect(props.onSourceChange).toHaveBeenCalledWith("live");
   });
 
   it("advances on Next", () => {
