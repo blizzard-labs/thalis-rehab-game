@@ -11,9 +11,6 @@ patient's mental effort into a continuously growing, non-punitive reward.
 NeuroReach is **offline-first and clinic-LAN-only**: a full session runs with zero internet connectivity
 and no patient health information ever leaves the clinic PC.
 
-> ⚠️ **Research/engineering system, not a medical device.** No therapeutic efficacy is claimed. See
-> [`docs/specs.md`](docs/specs.md) §12 for the intended-use and regulatory framing.
-
 ---
 
 ## How it works
@@ -126,14 +123,6 @@ thalis-rehab-game/
 ├── clinician-console/     # Electron + React console + LAN server
 └── patient-web/           # React + Vite patient game
 ```
-
-## Status
-
-Signal engine, clinician console (C1–C5), and the patient web game are **built and passing on
-mock/synthetic data**. The current milestone is **V2-2: the remote-camera vision pipeline** (WebRTC →
-aiortc → MediaPipe → kinematic fusion), which unblocks Blended/Active modes, verified range-of-motion
-games, and covert-MI validity gating. See [`docs/todos.md`](docs/todos.md) for the component-level
-breakdown and the on-head hardware validation schedule.
 
 ## License
 
