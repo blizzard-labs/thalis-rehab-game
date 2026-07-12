@@ -2,7 +2,9 @@
 
 > Repository: `thalis-rehab-game`
 
-![NeuroReach Logo](patient-web/img/logo.png)
+<div align="center">
+  <img src="patient-web/img/logo-small.png" alt="NeuroReach Logo" width="450">
+</div>
 
 A closed-loop **EEG neurofeedback rehabilitation game** for stroke survivors. Patients perform motor
 imagery; the system decodes sensorimotor-rhythm (mu/beta) event-related desynchronization (ERD) from a
