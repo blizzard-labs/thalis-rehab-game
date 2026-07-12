@@ -1,10 +1,10 @@
 # 🧠 NeuroReach: EEG-Assisted Stroke Rehabilitation
 
-> Repository: `thalis-rehab-game`
-
 <div align="center">
-  <img src="patient-web/img/logo-small.png" alt="NeuroReach Logo" width="450">
+  <img src="patient-web/img/logo-small.png" alt="NeuroReach Logo" width="500">
 </div>
+
+> Repository: `thalis-rehab-game`
 
 A closed-loop **EEG neurofeedback rehabilitation game** for stroke survivors. Patients perform motor
 imagery; the system decodes sensorimotor-rhythm (mu/beta) event-related desynchronization (ERD) from a
