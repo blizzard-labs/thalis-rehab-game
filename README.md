@@ -11,6 +11,11 @@ patient's mental effort into a continuously growing, non-punitive reward.
 NeuroReach is **offline-first and clinic-LAN-only**: a full session runs with zero internet connectivity
 and no patient health information ever leaves the clinic PC.
 
+
+* **Brief Introduction: [https://youtu.be/hHVyAqoD-6w](https://youtu.be/hHVyAqoD-6w)**
+* **System Walkthrough: [https://youtu.be/Uo2iDNLLS2w](https://youtu.be/Uo2iDNLLS2w)**
+
+
 ---
 
 ## How it works
@@ -53,6 +58,8 @@ specification is in **[`docs/specs.md`](docs/specs.md)**; current status is in
   browser device to the live session.
 - **Accessibility-first** — WCAG-AA contrast, colorblind-safe palettes, `prefers-reduced-motion`, no
   strobe, large targets, plain-language non-comparative copy.
+
+View a sample auto-generated report **[`here`](NeuroReach-StarCatcher-Session-Report-Sample.pdf)**
 
 ## Quick start
 
@@ -123,8 +130,3 @@ thalis-rehab-game/
 ├── clinician-console/     # Electron + React console + LAN server
 └── patient-web/           # React + Vite patient game
 ```
-
-## License
-
-Not yet licensed for redistribution. Note that the g.tec Unicorn software is **not** redistributable
-without a separate agreement (see [`docs/specs.md`](docs/specs.md) §14.2).
