@@ -2,6 +2,8 @@
 
 > Repository: `thalis-rehab-game`
 
+![NeuroReach Logo](patient-web/img/logo.png)
+
 A closed-loop **EEG neurofeedback rehabilitation game** for stroke survivors. Patients perform motor
 imagery; the system decodes sensorimotor-rhythm (mu/beta) event-related desynchronization (ERD) from a
 [g.tec Unicorn Hybrid Black](https://www.gtec.at/product/unicorn-hybrid-black/) headset, fuses it with
