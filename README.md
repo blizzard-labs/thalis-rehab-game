@@ -1,4 +1,4 @@
-# 🧠 NeuroReach: EEG-Assisted Stroke Rehabilitation
+# NeuroReach: EEG-Assisted Stroke Rehabilitation
 > Repository: `thalis-rehab-game`
 
 <div align="center">
