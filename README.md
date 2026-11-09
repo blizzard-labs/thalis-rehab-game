@@ -85,3 +85,15 @@ thalis-rehab-game/
 ├── clinician-console/     # Electron + React console + LAN server
 └── patient-web/           # React + Vite patient game
 ```
+
+### Pair a separate supervised display
+
+In the localhost staff workspace, select a participant and game, then **Pair a patient display**. The invitation expires in ten minutes and can be claimed once. Open it in a second browser window, press **Pair this display**, then start play from the workstation. Staff can pause, resume, or end the game. The patient screen can also end the session. Its access is scoped to the current game.
+
+By default the invitation points to a second window on the same computer. To host a tablet on the clinic LAN, first provision a TLS certificate trusted by that tablet for the station hostname. Build the web app, then start the companion directly with the LAN listener explicitly enabled:
+
+```sh
+conda run --no-capture-output -n eeg python signal-engine/local_companion.py --display-host station.clinic.example --display-port 8443 --cert station-chain.pem --key station-key.pem
+```
+
+Substitute the station's real DNS name and certificate files. Open staff tools at the loopback URL and scan the resulting QR code on the tablet. The LAN listener serves the patient app and authorized session controls. Access to staff records stays on loopback.

@@ -17,6 +17,7 @@ from datetime import datetime, timezone
 from xml.sax.saxutils import escape
 
 from aiohttp import web
+from server.display_pairing import DisplayPairing
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table
 
@@ -130,7 +131,7 @@ def render_report(row, participant, fmt):
     return buf.getvalue(), "application/pdf"
 
 
-def register_clinic(app, root=None):
+def register_clinic(app, root=None, display_origin="http://localhost:8766"):
     root = Path(root or os.environ.get("NEUROREACH_DATA_DIR", Path.home()/".neuroreach"))
     tokens = {}
     attempts = []
@@ -219,6 +220,8 @@ def register_clinic(app, root=None):
         if not p:
             raise web.HTTPNotFound(text="Participant not found.")
         if request.method == "DELETE":
+            if pairing.current and pairing.current.participant == pid:
+                pairing.current = None
             with db:
                 db.execute("DELETE FROM participants WHERE id=?",(pid,))
             model_dir = root / "models" / UUID(pid).hex
@@ -241,10 +244,7 @@ def register_clinic(app, root=None):
         for row in rows: row["record"] = json.loads(row["record"])
         return web.json_response(rows)
 
-    async def session(request):
-        db = staff(request)
-        b = await request.json()
-        r, pid, status = b.get("record"), b.get("participant"), b.get("status")
+    def save_session(db,r,pid,status):
         validate_record(r)
         checked(status in ("playing","complete","interrupted"),"Invalid session state")
         checked(db.execute("SELECT 1 FROM participants WHERE id=?",(pid,)).fetchone(),"Unknown participant")
@@ -254,10 +254,15 @@ def register_clinic(app, root=None):
                 checked(prev["participant"] == pid,"Session belongs to a different participant")
                 old = json.loads(prev["record"])
                 if prev["status"] == "complete" or old["elapsed"] > r["elapsed"]:
-                    return web.json_response({"ok":True})
+                    return
             db.execute("""INSERT INTO sessions VALUES(?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET
                 record=excluded.record,status=excluded.status,updated=excluded.updated""",
                 (r["id"],pid,json.dumps(r),status,now()))
+
+    async def session(request):
+        db = staff(request)
+        b = await request.json()
+        save_session(db,b.get("record"),b.get("participant"),b.get("status"))
         return web.json_response({"ok":True})
 
     async def report(request):
@@ -298,6 +303,8 @@ def register_clinic(app, root=None):
 
     async def cleanup(app):
         if db is not None: db.close()
+    pairing = DisplayPairing(staff,connection,save_session,display_origin)
+    pairing.register(app)
     app.on_cleanup.append(cleanup)
     app.router.add_get(PREFIX+"/state", state)
     app.router.add_post(PREFIX+"/setup", unlock); app.router.add_post(PREFIX+"/login", unlock)
@@ -308,3 +315,4 @@ def register_clinic(app, root=None):
     app.router.add_put(PREFIX+"/sessions",session)
     app.router.add_get(PREFIX+"/reports/{sid}.{fmt:pdf|csv}", report)
     app.router.add_get(PREFIX+"/backup",backup); app.router.add_post(PREFIX+"/backup",backup)
+    return pairing

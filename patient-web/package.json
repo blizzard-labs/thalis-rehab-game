@@ -2,7 +2,7 @@
   "name": "neuroreach-patient-web",
   "version": "0.0.1",
   "private": true,
-  "description": "NeuroReach patient web client \u2014 V2-1 Garden Grow prototype",
+  "description": "NeuroReach patient web client — V2-1 Garden Grow prototype",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -21,6 +21,7 @@
     "@testing-library/jest-dom": "^6.4.0",
     "@testing-library/react": "^16.0.0",
     "@testing-library/user-event": "^14.5.0",
+    "@types/qrcode": "1.5.6",
     "@types/react": "^18.3.0",
     "@types/react-dom": "^18.3.0",
     "@types/three": "^0.169.0",
@@ -36,6 +37,7 @@
     "@mediapipe/tasks-vision": "0.10.17",
     "@react-three/drei": "^9.122.0",
     "@react-three/fiber": "^8.18.0",
+    "qrcode": "1.5.4",
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
     "three": "^0.169.0"

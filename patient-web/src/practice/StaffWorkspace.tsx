@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { gameNames, PracticeRound, sourceNames } from "./session";
 import type { Game, PracticeRecord, Side, Source } from "./session";
 import { SensorSession } from "./SensorSession";
+import { DisplayMonitor, type DisplayState } from "./DisplayMonitor";
 import { Play } from "./GameView";
 
 type Participant = { id:string; name:string; side:Side; consent:string; protocol:{ source:Source; easy:boolean };
@@ -31,6 +32,7 @@ export function StaffWorkspace({onExit}:{onExit:()=>void}) {
   const [busy,setBusy] = useState(false);
   const [remove,setRemove] = useState(false);
   const [round,setRound] = useState<PracticeRound|null>(null);
+  const [display,setDisplay] = useState<DisplayState|null>(null);
   const [finishing,setFinishing] = useState(false);
   const [visits,setVisits] = useState<Visit[]>([]);
   const [game,setGame] = useState<Game>("garden");
@@ -38,7 +40,11 @@ export function StaffWorkspace({onExit}:{onExit:()=>void}) {
   async function load() {
     const session = await api<Auth>("state");
     setAuth(session);
-    if (session.authenticated) setPeople(await api<Participant[]>("participants"));
+    if (session.authenticated) {
+      setPeople(await api<Participant[]>("participants"));
+      const active = await api<DisplayState|null>("display");
+      if (active && active.state!=="complete") setDisplay(active);
+    }
   }
   async function act(work:()=>Promise<void>) {
     if (busy) return;
@@ -52,7 +58,7 @@ export function StaffWorkspace({onExit}:{onExit:()=>void}) {
     if (selected && !round) api<Visit[]>("participants/"+selected)
       .then(rows=>{ if(current) setVisits(rows); }).catch(err=>{ if(current) setError(errorText(err)); });
     return ()=>{current=false;};
-  },[selected,round]);
+  },[selected,round,display]);
   useEffect(()=>{
     if (!round || finishing) return;
     let current=true, writing=false;
@@ -76,6 +82,7 @@ export function StaffWorkspace({onExit}:{onExit:()=>void}) {
     });
   }
 
+  if (display) return <DisplayMonitor initial={display} onClose={()=>setDisplay(null)} />;
   if (round && participant) return <div>
     {finishing ? <div className="practice-panel"><h1>Finish session</h1>
       <button disabled={busy} onClick={end}>Save final report</button></div>
@@ -137,6 +144,9 @@ export function StaffWorkspace({onExit}:{onExit:()=>void}) {
             await api("sessions","PUT",{participant:selected,record:session.record,status:"playing"});
             setRound(session);setFinishing(false);
           })}>Start supervised session</button>
+          <button disabled={busy} onClick={()=>act(async()=>{
+            setDisplay(await api<DisplayState>("display","POST",{participant:selected,game}));
+          })}>Pair a patient display</button>
         </fieldset>
         <h3>Session history</h3>{!visits.length && <p>No sessions recorded yet.</p>}
         <ul className="session-list">{visits.map(v=><li key={v.id}><span><strong>{gameNames[v.record.game]}</strong><br/>

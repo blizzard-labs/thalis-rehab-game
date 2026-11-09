@@ -53,3 +53,5 @@
 .staff-panel input:not([type=checkbox]),.practice-panel select{min-height:44px;border-radius:6px;border:1px solid #99ab9b;background:white;color:var(--forest);padding:6px;font:inherit;max-width:100%}
 .staff-panel a{color:#265d53;font-weight:600}.staff-panel label{flex-wrap:wrap}.staff-panel form{margin-bottom:16px}.staff-panel [role=alert]{color:#903c30}
 .sr-only {position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.display-invite{display:flex;align-items:center;gap:18px;flex-wrap:wrap;margin:20px 0}
+.display-invite img{width:160px;height:160px}.display-invite a{color:var(--forest);font-weight:700}

@@ -21,8 +21,8 @@ export function Garden({ growth, bloom }: { growth: number; bloom: boolean }) {
   </div>;
 }
 
-export function Play({ round, onEnd, observation = () => null, status }: {
-  round: PracticeRound; onEnd: () => void; observation?: () => number | null; status?: string;
+export function Play({ round, onEnd, observation = () => null, status, lockedPause = false }: {
+  round: PracticeRound; onEnd: () => void; observation?: () => number | null; status?: string; lockedPause?: boolean;
 }) {
   const [, redraw] = useState(0);
   const observe = useRef(observation);
@@ -64,7 +64,7 @@ export function Play({ round, onEnd, observation = () => null, status }: {
       {manual && <button ref={action} className="primary" disabled={round.paused}
         onKeyDown={e => { if (e.repeat) e.preventDefault(); }}
         onClick={() => { round.press(); redraw(n => n+1); }}>{garden ? "Water" : "Catch"}</button>}
-      <button onClick={() => { round.setPaused(!round.paused); redraw(n => n+1); }}>{round.paused ? "Resume" : "Pause"}</button>
+      <button disabled={lockedPause} onClick={() => { round.setPaused(!round.paused); redraw(n => n+1); }}>{round.paused ? "Resume" : "Pause"}</button>
       <button onClick={onEnd}>End session</button>
     </div></div>
   </section>;

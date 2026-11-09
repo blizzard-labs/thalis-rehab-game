@@ -17,10 +17,12 @@ export function useHeadset(enabled: boolean, side: Side, participant?: string) {
     if (!enabled) return;
     setPhase("connecting"); setDevices([]); setMessage("Discovering Unicorn streams…");
     const local = location.hostname === "127.0.0.1" || location.hostname === "localhost";
-    if (!local) {
+    const display = location.hash.startsWith("#display=");
+    if (!local && !display) {
       setPhase("error"); setMessage("Open the Windows companion on the computer connected to your headset."); return;
     }
-    const ws = new WebSocket(`ws://${location.host}/api/eeg`);
+    const scheme = location.protocol === "https:" ? "wss" : "ws";
+    const ws = new WebSocket(`${scheme}://${location.host}/api/${display ? "display/" : ""}eeg`);
     socket.current = ws;
     let closed = false, failed = false;
     const fail = (why: string) => { failed = true; score.current = null; setPhase("error"); setMessage(why); };
