@@ -48,7 +48,9 @@ jobs:
       - run: python -m PyInstaller --clean --noconfirm packaging/companion.spec
       - shell: pwsh
         run: |
-          $server = Start-Process dist/NeuroReach/NeuroReach.exe -ArgumentList "--port","18766" -PassThru
+          & dist/NeuroReach/NeuroReach.exe --help
+          if ($LASTEXITCODE -ne 0) { throw "Frozen executable failed to import its runtime" }
+          $server = Start-Process -RedirectStandardError "$env:RUNNER_TEMP/companion-err.log" -RedirectStandardOutput "$env:RUNNER_TEMP/companion-out.log" dist/NeuroReach/NeuroReach.exe -ArgumentList "--port","18766" -PassThru
           try {
             $ready = $false
             for ($i=0; $i -lt 45; $i++) {
@@ -65,6 +67,8 @@ jobs:
             if ($model.RawContentLength -lt 5000000) { throw "Bundled camera model missing" }
           } finally {
             if (-not $server.HasExited) { Stop-Process -Id $server.Id }
+            Get-Content "$env:RUNNER_TEMP/companion-err.log"
+            Get-Content "$env:RUNNER_TEMP/companion-out.log"
           }
       - shell: pwsh
         run: '& "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" packaging/windows.iss'
