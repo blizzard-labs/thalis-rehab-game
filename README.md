@@ -33,6 +33,12 @@ The companion recognizes 17-channel, 250 Hz Unicorn streams whose names start wi
 
 For an existing Python 3.10 EEG environment, the version pins are in `signal-engine/requirements.txt`. The Unicorn driver/streaming software and native liblsl runtime must be available on the acquisition computer.
 
+### Supervised sessions
+
+Open **Staff workspace** on localhost with the companion running. Set the station password, add a participant label with consent, choose an arm and session settings, and start either game. The station checkpoints progress, records pauses, and produces CSV and PDF reports. Locking the workspace protects record access; an OS account with encrypted storage protects the files on disk. The roster supports assessments, deletion, and exporting or restoring a station backup. Restore requires an empty roster. Browser guest history is independent.
+
+The default SQLite database is `~/.neuroreach/clinic.sqlite3`. Set `NEUROREACH_DATA_DIR` to use another local directory. Back up the database or export a backup from the workspace before moving stations.
+
 The bundled model is Google's [MediaPipe Pose Landmarker Lite, float16, version 1](https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task), SHA-256 `59929e1d1ee95287735ddd833b19cf4ac46d29bc7afddbbf6753c459690d574a`. The build copies the pinned MediaPipe WebAssembly runtime locally.
 
 

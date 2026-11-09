@@ -10,6 +10,7 @@ export function useHeadset(enabled: boolean, side: Side) {
   const [phase, setPhase] = useState<Phase>("connecting");
   const [devices, setDevices] = useState<Device[]>([]);
   const [message, setMessage] = useState("Opening the local companion…");
+  const [calibration,setCalibration] = useState<{method:string;accuracy:number|null}>();
   const socket = useRef<WebSocket | null>(null);
   const score = useRef<{ level: number; time: number } | null>(null);
   useEffect(() => {
@@ -30,7 +31,7 @@ export function useHeadset(enabled: boolean, side: Side) {
         setPhase("choose"); setDevices(event.devices);
         setMessage(event.devices.length ? "Select your headset." : "No Unicorn found. Start the Unicorn Suite LSL stream, then scan again.");
       } else if (event.type === "phase") { setPhase("calibrating"); setMessage([event.message, ...(event.contacts ?? [])].join(" · ")); }
-      else if (event.type === "ready") { setPhase("ready"); setMessage(event.message); }
+      else if (event.type === "ready") { setPhase("ready"); setMessage(event.message); setCalibration({method:event.method,accuracy:event.accuracy}); }
       else if (event.type === "score") {
         score.current = Number.isFinite(event.level) ? { level:event.level, time:performance.now() } : null;
         setMessage(event.message);
@@ -53,6 +54,6 @@ export function useHeadset(enabled: boolean, side: Side) {
     setPhase("calibrating"); setMessage("Connecting to the selected headset…");
     socket.current.send(JSON.stringify({ cmd:"start", device, side, train, profile }));
   }
-  return { devices, phase, message, start, retry: () => setAttempt(i => i+1),
+  return { devices, phase, message, calibration, start, retry: () => setAttempt(i => i+1),
     latest: () => score.current && performance.now() - score.current.time < 500 ? score.current.level : null };
 }

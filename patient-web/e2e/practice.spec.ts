@@ -7,7 +7,7 @@ test("guest grows a flower, rests, saves locally and clears the shared browser",
   await page.getByRole("button", { name: /Garden Grow/ }).click();
   await page.getByRole("button", { name: "Start game" }).click();
   for (let i = 0; i < 4; i++) await page.keyboard.press("Space");
-  await expect(page.getByText(/1 blooms/)).toBeVisible();
+  await expect(page.getByText(/1 bloom/)).toBeVisible();
   await page.getByRole("button", { name: "Pause" }).click();
   await expect(page.getByRole("button", { name: "Water" })).toBeDisabled();
   await page.getByRole("button", { name: "End session" }).click();
@@ -29,7 +29,7 @@ test("a phone player selects and catches a star by touch", async ({ page }) => {
   await page.getByRole("button", { name: "Start game" }).click();
   await expect(page.locator(".slot-1")).toHaveAttribute("data-scan", "true");
   await page.getByRole("button", { name: "Catch" }).click();
-  await expect(page.getByText(/1 stars/)).toBeVisible();
+  await expect(page.getByText(/1 star/)).toBeVisible();
   await page.getByRole("button", { name: "End session" }).click();
   await expect(page.getByRole("heading", { name: "Session complete" })).toBeVisible();
 });

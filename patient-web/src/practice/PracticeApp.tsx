@@ -1,28 +1,10 @@
-import { useEffect, useRef, useState } from "react";
-import { Flower } from "../garden/Flower";
+import { useEffect, useState } from "react";
+import { duration, Garden, NightSky, Play } from "./GameView";
 import { downloadRecord, gameNames, historyStore, PracticeRound, sourceNames } from "./session";
 import type { Game, PracticeRecord, Side, Source } from "./session";
+import { StaffWorkspace } from "./StaffWorkspace";
 import { SensorSession } from "./SensorSession";
 import "./practice.css";
-
-function duration(seconds: number) {
-  const whole = Math.floor(seconds);
-  return `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, "0")}`;
-}
-
-function NightSky({ target, scan }: { target: number; scan?: number }) {
-  return <div className="night-sky" aria-label={`Star at position ${target + 1}`}>
-    {[0, 1, 2].map(slot => <div key={slot} className={`sky-slot slot-${slot}`} data-scan={scan === slot}>
-      <span>{slot === target ? "★" : "✧"}</span>
-    </div>)}
-  </div>;
-}
-
-function Garden({ growth, bloom }: { growth: number; bloom: boolean }) {
-  return <div className="plant-scene"><div className="garden-sun" /><div className="plant-bed" />
-    <Flower growth={growth} bloom={bloom} />
-  </div>;
-}
 
 function History({ onBack }: { onBack: () => void }) {
   const [records, setRecords] = useState<PracticeRecord[]>([]);
@@ -70,51 +52,6 @@ function Summary({ record, onBack }: { record: PracticeRecord; onBack: () => voi
   </section>;
 }
 
-function Play({ round, onEnd, observation = () => null, status }: {
-  round: PracticeRound; onEnd: () => void; observation?: () => number | null; status?: string;
-}) {
-  const [, redraw] = useState(0);
-  const observe = useRef(observation);
-  observe.current = observation;
-  const action = useRef<HTMLButtonElement>(null);
-  useEffect(() => {
-    let last = performance.now();
-    const timer = window.setInterval(() => {
-      const now = performance.now();
-      round.tick((now - last) / 1000, observe.current());
-      last = now;
-      redraw(n => n + 1);
-    }, 80);
-    const visibility = () => { if (document.hidden) round.setPaused(true); };
-    document.addEventListener("visibilitychange", visibility);
-    action.current?.focus();
-    return () => { clearInterval(timer); document.removeEventListener("visibilitychange", visibility); };
-  }, [round]);
-  const manual = round.source === "button";
-  const garden = round.record.game === "garden";
-  let instruction = manual
-    ? garden ? "Press Water four times to open a flower." : "Press Catch when the ring reaches the filled star."
-    : "Reach to your comfortable position, then return to rest.";
-  if (round.source === "eeg") instruction = "Follow your imagery cue, then relax between actions.";
-  return <section className="practice-panel play-panel">
-    <header className="play-title"><h1>{gameNames[round.record.game]}</h1><span>{duration(round.record.elapsed)}</span></header>
-    <div className="play-stage">{garden
-      ? <Garden growth={0.2 + round.progress * 0.8 + (round.record.rewards && !round.progress ? 0.8 : 0)} bloom={round.record.rewards > 0 && !round.progress} />
-      : <NightSky target={round.target} scan={manual ? round.scanSlot : undefined} />}</div>
-    <div className="play-controls"><div>
-      <p aria-live="polite"><strong>{round.paused ? "Paused" : instruction}</strong></p>
-      <p>{sourceNames[round.source]} · {round.record.rewards} {garden ? "blooms" : "stars"}</p>
-      {status && <p role="status">{status}</p>}
-    </div><div className="button-row">
-      {manual && <button ref={action} className="primary" disabled={round.paused}
-        onKeyDown={e => { if (e.repeat) e.preventDefault(); }}
-        onClick={() => { round.press(); redraw(n => n+1); }}>{garden ? "Water" : "Catch"}</button>}
-      <button onClick={() => { round.setPaused(!round.paused); redraw(n => n+1); }}>{round.paused ? "Resume" : "Pause"}</button>
-      <button onClick={onEnd}>End session</button>
-    </div></div>
-  </section>;
-}
-
 function GameSetup({ game, onBack, onStart }: { game: Game; onBack: () => void;
   onStart: (source: Source, easy: boolean, side: Side) => void }) {
   const [easy, setEasy] = useState(true);
@@ -137,7 +74,7 @@ function GameSetup({ game, onBack, onStart }: { game: Game; onBack: () => void;
 }
 
 export function PracticeApp() {
-  const [page, setPage] = useState<"home" | "history" | "setup" | "play" | "summary">("home");
+  const [page, setPage] = useState<"home" | "history" | "setup" | "play" | "summary" | "staff">("home");
   const [game, setGame] = useState<Game>("garden");
   const [side, setSide] = useState<Side>("right");
   const [round, setRound] = useState<PracticeRound | null>(null);
@@ -152,10 +89,12 @@ export function PracticeApp() {
           <div className="card-art" aria-hidden="true">{id === "garden" ? <Garden growth={0.85} bloom /> : <NightSky target={1} />}</div>
           <div className="card-copy"><h2>{gameNames[id]}</h2><p>{id === "garden" ? "Grow a flower, one action at a time." : "Find a star and bring it home."}</p><span aria-hidden="true">↗</span></div>
         </button>)}</div></>}
+    {page === "staff" && <StaffWorkspace onExit={back} />}
     {page === "history" && <History onBack={back} />}
     {page === "setup" && <GameSetup game={game} onBack={back} onStart={(source, easy, arm) => { setSide(arm); setRound(new PracticeRound(game, source, easy)); setPage("play"); }} />}
     {page === "play" && round && <SensorSession round={round} side={side} end={() => setPage("summary")}
       play={(observation, status) => <Play round={round} observation={observation} status={status} onEnd={() => setPage("summary")} />} />}
     {page === "summary" && round && <Summary record={round.record} onBack={back} />}
-  </main><footer className="practice-foot">NeuroReach · Wellness &amp; engagement</footer></div>;
+  </main><footer className="practice-foot">NeuroReach · Wellness &amp; engagement
+    {page === "home" && ["127.0.0.1","localhost"].includes(location.hostname) && <button onClick={()=>setPage("staff")}>Staff workspace</button>}</footer></div>;
 }

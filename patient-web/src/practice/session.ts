@@ -12,7 +12,9 @@ export interface PracticeRecord {
   elapsed: number;
   actions: number;
   rewards: number;
-  events: { seconds: number; kind: "pause" | "resume" | "switch" | "reward"; source: Source }[];
+  measurements: Partial<Record<Source, { validSeconds: number; missingSeconds: number; weightedLevel: number }>>;
+  calibration?: { method: string; accuracy: number | null };
+  events: { seconds: number; kind: "action" | "pause" | "resume" | "switch" | "reward"; source: Source }[];
 }
 
 /** Observations are normalized against this player's comfortable range. */
@@ -32,7 +34,7 @@ export class PracticeRound {
     this.source = source;
     this.threshold = easy ? 0.35 : 0.55;
     this.record = { id: crypto.randomUUID(), started: new Date().toISOString(), game, sources: [source],
-      elapsed: 0, actions: 0, rewards: 0, events: [] };
+      elapsed: 0, actions: 0, rewards: 0, measurements: {}, events: [] };
   }
 
   get target() { return (this.record.rewards * 2 + 1) % 3; }
@@ -56,6 +58,7 @@ export class PracticeRound {
   press() {
     if (this.paused || this.source !== "button") return;
     this.record.actions++;
+    this.log("action");
     if (this.record.game === "garden") {
       this.progress = Math.min(1, this.progress + 0.25);
       if (this.progress >= 1) this.reward();
@@ -73,17 +76,22 @@ export class PracticeRound {
       this.scanning += dt;
       return;
     }
+    const measurement = this.record.measurements[this.source] ??= { validSeconds: 0, missingSeconds: 0, weightedLevel: 0 };
     if (observation === null || !Number.isFinite(observation)) {
+      measurement.missingSeconds += dt;
       this.level = 0;
       this.held = 0;
       return;
     }
     this.level = Math.max(0, Math.min(1, observation));
+    measurement.validSeconds += dt;
+    measurement.weightedLevel += this.level * dt;
     if (this.level < this.threshold * 0.65) this.released = true;
     if (this.level < this.threshold || !this.released) { this.held = 0; return; }
     this.held += dt;
     if (this.held < 0.4) return;
     this.record.actions++;
+    this.log("action");
     this.released = false;
     this.held = 0;
     this.progress = this.record.game === "garden" ? Math.min(1, this.progress + 0.25) : 1;

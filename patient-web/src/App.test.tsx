@@ -23,7 +23,7 @@ describe("App flow", () => {
     await user.click(screen.getByRole("button", { name: /garden grow/i }));
     await user.click(screen.getByRole("button", { name: /start game/i }));
     for (let i = 0; i < 4; i++) await user.click(screen.getByRole("button", { name: "Water" }));
-    expect(screen.getByText(/1 blooms/)).toBeInTheDocument();
+    expect(screen.getByText(/1 bloom/)).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "End session" }));
     expect(screen.getByText("Session complete")).toBeInTheDocument();
     expect(socket).not.toHaveBeenCalled();

@@ -21,6 +21,7 @@ export function SensorSession({ round, side, end, play }: {
   const [chosen, setChosen] = useState("");
   const [played, setPlayed] = useState(false);
   const eeg = useHeadset(eegNeeded && (!cameraNeeded || !!reach), side);
+  useEffect(() => { if (eeg.calibration) round.record.calibration = eeg.calibration; }, [round, eeg.calibration]);
   const camera = useMotionCamera(cameraNeeded, side);
   const preview = useRef<HTMLVideoElement>(null);
   useEffect(() => { if (preview.current) preview.current.srcObject = camera.stream; }, [camera.stream]);

@@ -48,3 +48,8 @@
 @media(prefers-reduced-motion:reduce){.practice-app *, .practice-app *::before,.practice-app *::after{animation:none!important;transition:none!important}}
 .practice-preview {display:block;width:min(100%,480px);aspect-ratio:4/3;object-fit:contain;background:#263b32;border-radius:12px;transform:scaleX(-1)}
 .input-switch {max-width:780px;margin:16px auto}
+.practice-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.staff-panel h1{margin-top:22px}.staff-panel h2{margin-top:20px}.staff-panel details{margin:18px 0;border-top:1px solid var(--line);padding-top:12px}.staff-panel summary{cursor:pointer;min-height:44px;font-weight:600}
+.staff-panel input:not([type=checkbox]),.practice-panel select{min-height:44px;border-radius:6px;border:1px solid #99ab9b;background:white;color:var(--forest);padding:6px;font:inherit;max-width:100%}
+.staff-panel a{color:#265d53;font-weight:600}.staff-panel label{flex-wrap:wrap}.staff-panel form{margin-bottom:16px}.staff-panel [role=alert]{color:#903c30}
+.sr-only {position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap}

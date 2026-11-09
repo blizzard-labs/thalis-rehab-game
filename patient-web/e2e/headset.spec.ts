@@ -17,7 +17,7 @@ test("an EEG-only game uses the selected LSL stream and a complete resting basel
     await page.getByRole("button", {name:"Begin resting calibration"}).click();
     await expect(page.getByText(/60 clean seconds/)).toBeVisible({timeout:12000});
     await page.getByRole("button", {name:"Begin play"}).click({timeout:90000});
-    await expect(page.getByText(/1 stars/)).toBeVisible({timeout:25000});
+    await expect(page.getByText(/1 star/)).toBeVisible({timeout:25000});
     fixture.kill();
     await expect(page.getByText(/EEG signal lost|EEG disconnected/)).toBeVisible({timeout:10000});
     await page.getByRole("button", {name:"Continue with one button"}).click();

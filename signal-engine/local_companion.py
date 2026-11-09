@@ -7,6 +7,7 @@ from urllib.parse import urlparse
 
 from aiohttp import web, WSMsgType
 from acquisition.practice_eeg import devices, run
+from server.clinic_records import register_clinic
 
 DIST = Path(__file__).resolve().parents[1] / "patient-web" / "dist"
 
@@ -25,9 +26,12 @@ def create_app(port=8766):
                 raise web.HTTPForbidden()
             if request.headers.get("Upgrade", "").lower() == "websocket" and not origin:
                 raise web.HTTPForbidden()
-        return await handler(request)
+        response = await handler(request)
+        if request.path.startswith("/api/staff"):
+            response.headers["Cache-Control"] = "no-store"
+        return response
 
-    app = web.Application(middlewares=[local_only])
+    app = web.Application(middlewares=[local_only], client_max_size=32 * 1024 * 1024)
 
     async def eeg(request):
         ws = web.WebSocketResponse(heartbeat=10, max_msg_size=4096)
@@ -84,6 +88,7 @@ def create_app(port=8766):
             raise web.HTTPServiceUnavailable(text="Run npm run build from the project root first.")
         return web.FileResponse(DIST/"index.html")
 
+    register_clinic(app)
     app.router.add_get("/api/eeg", eeg)
     app.router.add_get("/", index)
     if DIST.is_dir():

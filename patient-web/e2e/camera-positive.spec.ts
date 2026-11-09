@@ -41,7 +41,7 @@ test("real landmark inference calibrates a reach, catches a star and stops the t
     await page.getByRole("button", {name:"Set comfortable reach"}).click({timeout:1000});
     await expect(page.getByRole("button", {name:"Pause"})).toBeVisible({timeout:700});
   }).toPass({timeout:8000});
-  await expect(page.getByText(/1 stars/)).toBeVisible({timeout:8000});
+  await expect(page.getByText(/1 star/)).toBeVisible({timeout:8000});
   await page.getByRole("button", {name:"End session"}).click();
   await expect.poll(() => page.evaluate(() => (window as Window & {cameraTrack?:MediaStreamTrack}).cameraTrack?.readyState)).toBe("ended");
 });
