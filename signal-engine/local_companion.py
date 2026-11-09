@@ -2,6 +2,8 @@
 import argparse
 import asyncio
 import threading
+import sys
+import webbrowser
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -9,7 +11,8 @@ from aiohttp import web, WSMsgType
 from acquisition.practice_eeg import devices, run
 from server.clinic_records import register_clinic
 
-DIST = Path(__file__).resolve().parents[1] / "patient-web" / "dist"
+DIST = (Path(sys._MEIPASS) / "web" if getattr(sys, "frozen", False)
+        else Path(__file__).resolve().parents[1] / "patient-web" / "dist")
 
 
 def create_app(port=8766):
@@ -88,6 +91,9 @@ def create_app(port=8766):
             raise web.HTTPServiceUnavailable(text="Run npm run build from the project root first.")
         return web.FileResponse(DIST/"index.html")
 
+    async def health(request):
+        return web.json_response({"app":"NeuroReach","version":1})
+    app.router.add_get("/api/health",health)
     register_clinic(app)
     app.router.add_get("/api/eeg", eeg)
     app.router.add_get("/", index)
@@ -99,5 +105,11 @@ def create_app(port=8766):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--port", type=int, default=8766)
+    parser.add_argument("--open-browser", action="store_true")
     args = parser.parse_args()
-    web.run_app(create_app(args.port), host="127.0.0.1", port=args.port)
+    app = create_app(args.port)
+    if args.open_browser:
+        async def open_browser(app):
+            asyncio.get_running_loop().call_later(0.5, webbrowser.open, f"http://127.0.0.1:{args.port}")
+        app.on_startup.append(open_browser)
+    web.run_app(app, host="127.0.0.1", port=args.port)

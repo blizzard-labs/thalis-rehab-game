@@ -1,0 +1,81 @@
+name: Verify NeuroReach
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm --prefix patient-web ci
+      - run: npm --prefix clinician-console ci
+      - run: npm test
+      - run: npm run build
+      - run: npm --prefix clinician-console run build:main
+      - run: npm --prefix clinician-console run build:renderer
+      - run: npm --prefix clinician-console test
+      - working-directory: patient-web
+        run: npx playwright install --with-deps chromium
+      - working-directory: patient-web
+        env:
+          NEUROREACH_BROWSER: chromium
+        run: npm run test:e2e
+      - uses: actions/upload-artifact@v4
+        with:
+          name: neuroreach-web
+          path: patient-web/dist
+  windows-companion:
+    runs-on: windows-latest
+    needs: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: neuroreach-web
+          path: patient-web/dist
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - run: python -m pip install -r signal-engine/requirements-companion.txt pyinstaller==6.16.0 pytest
+      - run: python -m pytest -q signal-engine/tests/test_clinic_records.py signal-engine/tests/test_local_companion.py
+      - run: python -m PyInstaller --clean --noconfirm packaging/companion.spec
+      - shell: pwsh
+        run: |
+          $server = Start-Process dist/NeuroReach/NeuroReach.exe -ArgumentList "--port","18766" -PassThru
+          try {
+            $ready = $false
+            for ($i=0; $i -lt 45; $i++) {
+              if ($server.HasExited) { throw "Companion exited unexpectedly" }
+              try {
+                $health = Invoke-RestMethod http://127.0.0.1:18766/api/health
+                if ($health.app -eq "NeuroReach") { $ready = $true; break }
+              } catch { Start-Sleep -Seconds 1 }
+            }
+            if (-not $ready) { throw "Companion failed to start" }
+            $page = Invoke-WebRequest http://127.0.0.1:18766/
+            if ($page.Content -notmatch "NeuroReach") { throw "App entry point missing" }
+            $model = Invoke-WebRequest http://127.0.0.1:18766/models/pose_landmarker_lite.task
+            if ($model.RawContentLength -lt 5000000) { throw "Bundled camera model missing" }
+          } finally {
+            if (-not $server.HasExited) { Stop-Process -Id $server.Id }
+          }
+      - shell: pwsh
+        run: '& "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" packaging/windows.iss'
+      - shell: pwsh
+        run: |
+          $install = Start-Process dist/NeuroReach-Setup.exe -ArgumentList "/VERYSILENT","/NORESTART" -Wait -PassThru
+          if ($install.ExitCode -ne 0) { throw "Installer failed" }
+          $app = Join-Path $env:LOCALAPPDATA "Programs\NeuroReach"
+          if (-not (Test-Path "$app\NeuroReach.exe")) { throw "Installed executable missing" }
+          Start-Process "$app\unins000.exe" -ArgumentList "/VERYSILENT","/NORESTART" -Wait
+      - uses: actions/upload-artifact@v4
+        with:
+          name: neuroreach-windows-prototype
+          path: dist/NeuroReach-Setup.exe

@@ -1,11 +1,19 @@
 # NeuroReach — Development Status & TODOs
 
-_Last updated: 2026-07-10. Reference spec: [`docs/specs.md`](specs.md). Game design docs:
+_Paired-prototype inventory dated 2026-07-10. Reference spec: [`docs/specs.md`](specs.md). Game design docs:
 [`gardengrow.md`](gardengrow.md), [`reachcollect.md`](reachcollect.md)._
 
-This is the **whole-project** status board across all three subsystems. Each subsystem section lists
-what is **implemented ✅**, the **tests that exist 🧪**, **missing capabilities ⚠️**, and **tests still
-lined up 🔜**. Detailed change history lives in git + claude-mem, not here.
+## Localhost prototype
+
+| Entry | Current behavior |
+|---|---|
+| Root `npm start` | Starts the browser player on loopback and attempts to start the optional Python companion. |
+| Standalone play | Garden Grow and Star Catcher support one-button, camera, Unicorn EEG and blended input. Progress can be saved in IndexedDB or exported. Camera calibration sets the player's reach. |
+| EEG companion | Discovers supported Unicorn streams, checks continuity and contact, collects 60 clean seconds of rest, optionally trains and reuses a personal CSP/LDA model, and stops scoring on missing data. |
+| Staff workspace | Local password, consent, assessments, participant protocols, SQLite sessions, source-labeled events, PDF/CSV, backup and restore. |
+| Browser coverage | End-to-end tests exercise button play, a real pose model on a fixture, permission denial, offline reload and synthetic Unicorn-format acquisition. On-head validation and field pilots remain open. |
+
+The inventory below documents the earlier paired Electron prototype and its subsystem test history. The current localhost launch and verification commands are in the [README](../README.md).
 
 > **Editing this file? Read [§6 Maintaining this document](#6-maintaining-this-document--agent-update-protocol) first.** It is a status board, **not** a changelog — keep it current, keep it terse, don't append a running log.
 

@@ -1,12 +1,6 @@
-aiohttp==3.13.3
+-r requirements-companion.txt
+# Additional dependencies for the paired Electron station's WebRTC/vision sidecar.
 aiortc==1.14.0
 av==16.1.0
-joblib==1.5.2
 mediapipe==0.10.14
-mne==1.10.2
-numpy==2.2.6
-pylsl==1.17.6
-reportlab==4.4.10
-scikit-learn==1.7.2
-scipy==1.15.3
 websockets==16.0

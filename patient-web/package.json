@@ -2,7 +2,7 @@
   "name": "neuroreach-patient-web",
   "version": "0.0.1",
   "private": true,
-  "description": "NeuroReach patient web client — V2-1 Garden Grow prototype",
+  "description": "NeuroReach patient web client \u2014 V2-1 Garden Grow prototype",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -13,7 +13,8 @@
     "test:integration": "vitest run --config vitest.integration.config.ts",
     "predev": "node scripts/prepare-camera.mjs",
     "prebuild": "node scripts/prepare-camera.mjs",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "postbuild": "node scripts/build-offline.mjs"
   },
   "devDependencies": {
     "@playwright/test": "1.61.1",

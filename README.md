@@ -5,15 +5,7 @@
   <img src="patient-web/img/logo-small.png" alt="NeuroReach Logo" width="500">
 </div>
 
-A closed-loop **EEG neurofeedback rehabilitation game** for stroke survivors. Patients perform motor
-imagery; the system decodes sensorimotor-rhythm (mu/beta) event-related desynchronization (ERD) from a
-[g.tec Unicorn Hybrid Black](https://www.gtec.at/product/unicorn-hybrid-black/) headset, fuses it with
-optional camera-based movement verification, and drives a real-time web game — turning the quality of a
-patient's mental effort into a continuously growing, non-punitive reward.
-
-NeuroReach is **offline-first and clinic-LAN-only**: a full session runs with zero internet connectivity
-and no patient health information ever leaves the clinic PC.
-
+NeuroReach is an open-source wellness and engagement prototype for seated upper-limb practice. Garden Grow and Star Catcher accept keyboard, switch, touch, webcam movement, or motor-imagery input from a supported Unicorn EEG headset. The public player runs in a browser. The optional local companion handles EEG and supervised records. Camera video and raw EEG stay on the acquisition device or the clinic LAN.
 
 * **Brief Introduction: [https://youtu.be/hHVyAqoD-6w](https://youtu.be/hHVyAqoD-6w)**
 * **System Walkthrough: [https://youtu.be/Uo2iDNLLS2w](https://youtu.be/Uo2iDNLLS2w)**
@@ -27,11 +19,16 @@ From the repository root, run `npm --prefix patient-web ci` once, then `npm star
 
 ### Local EEG companion
 
-Start the g.tec Unicorn Suite LSL bridge with your headset streaming. In a second terminal run `npm run companion` with the `eeg` Conda environment installed. The companion binds to **127.0.0.1:8766**. You can also run `npm run build` and open **http://127.0.0.1:8766** to use the built app without Vite. On the game setup screen choose **EEG headset** or **Camera + EEG**, choose the arm and device, and follow the resting instructions. No headset is required to start either server.
+Start the g.tec Unicorn Suite LSL bridge with your headset streaming. The root `npm start` launcher also starts the companion if the `eeg` Conda environment is installed. Set `NEUROREACH_PYTHON` to select another Python environment. For a standalone companion with the built web app, run `npm run companion`. The companion binds to **127.0.0.1:8766**. You can also run `npm run build` and open **http://127.0.0.1:8766** to use the built app without Vite. On the game setup screen choose **EEG headset** or **Camera + EEG**, choose the arm and device, and follow the resting instructions. No headset is required to start either server.
 
 The companion recognizes 17-channel, 250 Hz Unicorn streams whose names start with `UN-`. It requires 60 clean seconds of rest and excludes motion artifacts, invalid contact, and sample gaps. Optional cued training uses ten rest and ten imagined-hand trials. A model that clears the held-out quality threshold can be saved locally by choosing the calibration checkbox on a personal computer. Otherwise play uses rest-calibrated band power. Blended mode needs fresh input from both sources; a user can explicitly switch to button input. No raw EEG or video is written to session history.
 
-For an existing Python 3.10 EEG environment, the version pins are in `signal-engine/requirements.txt`. The Unicorn driver/streaming software and native liblsl runtime must be available on the acquisition computer.
+Install the companion dependencies with Python 3.10. On macOS, install liblsl and set `PYLSL_LIB` to its library path if your environment cannot locate it. Windows wheels for pylsl normally include the LSL runtime. Install g.tec's software separately on the headset computer.
+
+```sh
+conda create -n eeg python=3.10 -y
+conda run -n eeg python -m pip install -r signal-engine/requirements-companion.txt
+```
 
 ### Supervised sessions
 
@@ -42,103 +39,37 @@ The default SQLite database is `~/.neuroreach/clinic.sqlite3`. Set `NEUROREACH_D
 The bundled model is Google's [MediaPipe Pose Landmarker Lite, float16, version 1](https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task), SHA-256 `59929e1d1ee95287735ddd833b19cf4ac46d29bc7afddbbf6753c459690d574a`. The build copies the pinned MediaPipe WebAssembly runtime locally.
 
 
-## How it works
+## Run the paired-screen Electron prototype
 
-```
-Unicorn EEG (8ch, 250 Hz)  ─BLE→  Clinic PC ─────────────────────────────┐
-                                   Electron Clinician Console             │
-                                     ├─ Python signal-engine sidecar      │  clinic LAN
-                                     │    filter → CAR → ERD/CSP+LDA       │  (HTTPS/WSS/WebRTC)
-                                     │    → IntentScore (0–100 @ 20 Hz)    │
-                                     └─ LAN server: serves the web game,   │
-                                        pairs a device, relays the score   ▼
-                                                          Patient device (any browser)
-                                                          React game · webcam → clinic
+The Electron console hosts a separate HTTPS LAN workflow for a patient display. It includes the original developer roster, signal monitor, WebRTC camera processing, and an explicitly simulated signal source by default. The localhost **Staff workspace** above holds the real participant records and automatic reports.
+
+```sh
+conda run -n eeg python -m pip install -r signal-engine/requirements.txt
+npm run build
+npm --prefix clinician-console ci
+npm --prefix clinician-console run dev
 ```
 
-A single normalized **IntentScore (0–100)** drives all game mechanics. The full engineering
-specification is in **[`docs/specs.md`](docs/specs.md)**; current status is in
-**[`docs/todos.md`](docs/todos.md)**.
+Use `EEG_SOURCE=live` and `UNICORN_STREAM_NAME` to select a physical bridge for this engineering workflow. Use the localhost companion for resting and classifier calibration. For a second device, provision a certificate trusted by the patient browser using your clinic's IT process.
 
-## Subsystems
+## Build and verification
 
-| Directory | What | Stack |
-|---|---|---|
-| [`signal-engine/`](signal-engine/) | Real-time EEG acquisition, preprocessing, ERD + CSP/LDA scoring, IntentScore fusion, 20 Hz WebSocket transport | Python 3.10+, `numpy`/`scipy`/`mne`/`scikit-learn`, `pylsl`, `websockets` |
-| [`clinician-console/`](clinician-console/) | Desktop console (patient roster, live monitor, history, protocol editor) + LAN server that serves the patient game and pairs devices | Electron, React, TypeScript, Vite |
-| [`patient-web/`](patient-web/) | Patient-facing web game (Garden Grow, Star Catcher) driven by the live score | React, TypeScript, Vite |
-
-## Features
-
-- **Real-time MI decoding** — causal filtering, common-average reference, artifact gating, mu/beta ERD +
-  laterality index, per-patient CSP+LDA classifier with a cross-validation quality gate.
-- **Adaptive, non-punitive feedback** — EMA-smoothed score, per-session adaptive normalization; the game
-  grows quickly and wilts gently, never resets punitively.
-- **"BCI illiteracy" fallback** — Blended/Active modes let camera-confirmed movement carry scoring weight
-  for the ~40% of patients who don't decode well from EEG alone _(vision pipeline is the next milestone)_.
-- **Clinician console (C1–C5)** — searchable roster, live signal-quality + score monitor, history/trends,
-  clinical-scale assessments with CSV export, protocol editor.
-- **Zero-install patient client** — served over the clinic LAN; a QR + short session code pairs any
-  browser device to the live session.
-- **Accessibility-first** — WCAG-AA contrast, colorblind-safe palettes, `prefers-reduced-motion`, no
-  strobe, large targets, plain-language non-comparative copy.
-
-View a sample auto-generated report **[`here`](NeuroReach-StarCatcher-Session-Report-Sample.pdf)**
-
-## Quick start
-
-Prerequisites: **Conda** (Python env `eeg`), **Node.js ≥ 18** + npm. No EEG headset required — a mock
-Unicorn outlet with a virtual motor-imagery driver ships in-repo.
-
-### 1. Signal engine (mock EEG → live score)
-
-```bash
-# One-time: create the conda env with the signal stack (numpy, scipy, mne, scikit-learn, pylsl, websockets)
-conda create -n eeg python=3.10 -y && conda activate eeg
-pip install numpy scipy mne scikit-learn pyriemann pylsl websockets pyedflib joblib
-
-# Run the server: MockUnicornOutlet → scoring pipeline → ws://localhost:8765 (20 Hz IntentScore)
-conda run -n eeg python signal-engine/run_ws_server.py
+```sh
+npm test
+npm run build
+npm --prefix clinician-console test
+conda run -n eeg python -m pip install pytest
+conda run -n eeg python -m pytest signal-engine/tests
+npm --prefix patient-web run test:e2e
 ```
 
-The virtual-MI driver cycles ERD (6 s on / 3 s rest) so the score actually moves. Disable with
-`NEUROREACH_NO_MI=1`.
+The browser tests use installed Chrome by default. Set `NEUROREACH_BROWSER=chromium` for Playwright's installed Chromium. The optional EEG browser test takes about 80 seconds and needs the running companion plus `NEUROREACH_TEST_PYTHON` pointing to the EEG environment's Python executable. The positive camera test accepts `NEUROREACH_POSE_FIXTURE`, the path to [MediaPipe's test image](https://storage.googleapis.com/mediapipe-assets/pose.jpg). Both use test signals or images. Physical on-head validation uses `THALIS_LIVE_UNICORN=1` with the existing `signal-engine/tests/test_live_unicorn.py` hardware checks.
 
-### 2. Patient web game
+The production web build in `patient-web/dist` can be served at the root of an HTTPS site. The service worker caches versioned app, model, and runtime assets after the first load. Guest sessions work offline; EEG and staff features use a running local companion. Publish a complete build atomically and keep the previous version for rollback. The included GitHub Actions workflow builds and tests the web archive and packages a Windows prototype installer. The installer does not bundle g.tec drivers. Deployments for general distribution still require code signing and on-head validation.
 
-```bash
-cd patient-web && npm install
-npm run dev        # http://localhost:5173 — connects to ws://localhost:8765
-```
+To create the Windows prototype installer locally, build the web app, install the companion requirements and PyInstaller 6.16, run `python -m PyInstaller packaging/companion.spec`, then compile `packaging/windows.iss` with Inno Setup 6. User records live outside the application installation and survive replacement of the executable. Download a station backup before upgrading.
 
-### 3. Clinician console (Electron)
-
-```bash
-cd clinician-console && npm install
-npm run dev        # Electron main spawns the sidecar + LAN server; opens the console
-```
-
-> The console's LAN pairing features (QR, remote device) only run under Electron (`npm run dev`), not the
-> plain Vite renderer — `window.neuroreach` (the preload bridge) is the guard.
-
-## Testing
-
-```bash
-# Signal engine — 59 passed, 6 skipped (skips are opt-in on-head/live tests)
-conda run -n eeg python -m pytest signal-engine/tests/
-
-# Patient web — 58 unit tests (Vitest + jsdom)
-cd patient-web && npm run test
-npm run test:integration     # boots the real mock-EEG sidecar and drives the plant
-
-# Clinician console — 88 unit tests (Vitest)
-cd clinician-console && npm run test
-npm run test:integration     # boots the real sidecar + LAN spine
-```
-
-**Live hardware tests** (real Unicorn worn): `THALIS_LIVE_UNICORN=1 conda run -n eeg python -m pytest
-signal-engine/tests/test_live_unicorn.py`. The real Unicorn LSL stream advertises type `Data` with no
-channel labels — connect with `EEGInlet(stream_type="Data")` or `EEGInlet(stream_name="<device-serial>")`.
+The [sample session report](NeuroReach-StarCatcher-Session-Report-Sample.pdf) is a design reference. Generated reports contain the measurements actually recorded for that session.
 
 ## Repository layout
 
