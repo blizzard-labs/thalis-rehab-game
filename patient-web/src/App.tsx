@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { PracticeApp } from "./practice/PracticeApp";
 import { WelcomeScene } from "./scenes/WelcomeScene";
 import { CalibrationScene } from "./scenes/CalibrationScene";
 import { GameModeSelect } from "./scenes/GameModeSelect";
@@ -14,6 +15,10 @@ import { useCameraPublish } from "./net/useCameraPublish";
 type View = "pairing" | "welcome" | "calibration" | "modeselect" | "garden" | "stars" | "summary";
 
 export default function App() {
+  return readSessionCode() ? <ClinicApp /> : <PracticeApp />;
+}
+
+function ClinicApp() {
   // A pairing code in the URL (`?c=`) means this device was launched from the
   // clinician console over the LAN: pair before Welcome. Without a code we are
   // in local/dev mode and boot straight to Welcome against the localhost sidecar.

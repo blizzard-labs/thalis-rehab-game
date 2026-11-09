@@ -21,8 +21,15 @@ type Props = {
 export function PairDeviceStep({ code, url, connected, bridgeReady, waitingForPatient, onOpen, onNext, onBack }: Props) {
   const [qr, setQr] = useState<string | null>(null);
   useEffect(() => {
-    if (url) QRCode.toDataURL(url).then(setQr);
-    else setQr(null);
+    let current = true;
+    setQr(null);
+    if (url) {
+      QRCode.toDataURL(url).then(
+        (image) => { if (current) setQr(image); },
+        () => { if (current) setQr(null); },
+      );
+    }
+    return () => { current = false; };
   }, [url]);
 
   // Mint the pairing code as soon as the bridge is ready and none exists yet.

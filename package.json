@@ -1,0 +1,9 @@
+{
+  "name": "neuroreach-localhost",
+  "private": true,
+  "scripts": {
+    "start": "npm --prefix patient-web run dev -- --host 127.0.0.1 --port 5173 --strictPort",
+    "build": "npm --prefix patient-web run build",
+    "test": "npm --prefix patient-web test"
+  }
+}

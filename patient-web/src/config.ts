@@ -5,15 +5,7 @@ export const config = {
   patient: { firstName: "Krishna", affectedSide: "left" as AffectedSide },
   /** Intent score (0–100) at/above which the patient counts as "engaged". */
   engagementThreshold: 55,
-  /**
-   * TEMPORARY PROTOTYPING CRUTCH — remove before clinical use.
-   * With the simulated EEG the engagement gate can stall a catch for a long
-   * time even with the net on the star. When > 0, holding the net on the goal
-   * for this many seconds force-collects the star regardless of the EEG gate.
-   * Applies to BOTH `npm run dev` and the built/QR LAN version. Set to 0 to
-   * restore the pure EEG-gated behaviour.
-   */
-  devAutoCollectSeconds: 3,
+  devAutoCollectSeconds: 0,
 };
 
 /**

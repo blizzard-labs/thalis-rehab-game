@@ -26,3 +26,6 @@ graphify-out/
 CLAUDE.md
 .superpowers/
 archive/
+/patient-web/public/vision-wasm/
+/patient-web/test-results/
+/patient-web/playwright-report/
