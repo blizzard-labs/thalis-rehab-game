@@ -109,3 +109,15 @@ describe("cameraPublisher", () => {
     expect(peer.close).toHaveBeenCalled();
   });
 });
+
+it("releases camera permission arriving after session end", async () => {
+  let grant!: (s:MediaStream)=>void;
+  const stream = fakeStream();
+  const createPeer = vi.fn();
+  const publisher = createCameraPublisher({getStream:()=>new Promise(res=>{grant=res;}),createPeer,send:vi.fn()});
+  const start = publisher.start();
+  publisher.stop();
+  grant(stream); await start;
+  expect(stream._track.stop).toHaveBeenCalledOnce();
+  expect(createPeer).not.toHaveBeenCalled();
+});

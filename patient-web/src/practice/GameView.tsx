@@ -46,7 +46,9 @@ export function Play({ round, onEnd, observation = () => null, status }: {
   let instruction = manual
     ? garden ? "Press Water four times to open a flower." : "Press Catch when the ring reaches the filled star."
     : "Reach to your comfortable position, then return to rest.";
-  if (round.source === "eeg") instruction = "Follow your imagery cue, then relax between actions.";
+  if (!manual && round.needsRest) instruction = "Return to rest before the next action.";
+  else if (round.source === "eeg") instruction = "Imagine moving your selected hand, then relax.";
+  else if (round.source === "blended") instruction = "Imagine moving your hand as you reach, then relax.";
   return <section className="practice-panel play-panel">
     <header className="play-title"><h1>{gameNames[round.record.game]}</h1><span>{duration(round.record.elapsed)}</span></header>
     <div className="play-stage">{garden
@@ -56,6 +58,7 @@ export function Play({ round, onEnd, observation = () => null, status }: {
       <p aria-live="polite"><strong>{round.paused ? "Paused" : instruction}</strong></p>
       <p>{sourceNames[round.source]} · {round.record.rewards} {garden ? (round.record.rewards === 1 ? "bloom" : "blooms") : (round.record.rewards === 1 ? "star" : "stars")}</p>
       {!garden && manual && <span className="sr-only" aria-live="polite">{round.scanSlot === round.target ? "Star selected. Press Catch." : "Scanning."}</span>}
+      {!manual && <label className="effort-meter">Current input <meter min={0} max={1} value={round.level} /></label>}
       {status && <p role="status">{status}</p>}
     </div><div className="button-row">
       {manual && <button ref={action} className="primary" disabled={round.paused}

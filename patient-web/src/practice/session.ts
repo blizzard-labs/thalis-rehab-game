@@ -26,7 +26,8 @@ export class PracticeRound {
   level = 0;
   scanning = 0;
   private held = 0;
-  private released = true;
+  private released = false;
+  get needsRest() { return !this.released; }
   private threshold: number;
   private elapsedSinceReward = 0;
 

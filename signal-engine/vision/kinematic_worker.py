@@ -54,6 +54,7 @@ class KinematicWorker:
         self._cal_status = "idle"
         # Per-joint max-ROM calibration (separate from rest-pose calibration).
         self._rom_calibrator = None
+        self._rom_rest_angles = {}
         self._rom_status = "idle"
         self._rom_targets = None
         # Newest PoseFrame from estimate(), for the console camera overlay. Set on
@@ -83,6 +84,7 @@ class KinematicWorker:
         self._calibrator = None
         self._cal_status = "idle"
         self._rom_calibrator = None
+        self._rom_rest_angles = {}
         self._rom_status = "idle"
         self._rom_targets = None
 
@@ -90,6 +92,8 @@ class KinematicWorker:
 
     def begin_rom_calibration(self) -> None:
         from vision.rom_calibrator import RomCalibrator
+        self._rom_rest_angles = self._rest_angles()
+        self._rom_targets = None
         self._rom_calibrator = RomCalibrator(affected_side=self.engine.affected_side)
         self._rom_status = "collecting"
 
@@ -156,7 +160,7 @@ class KinematicWorker:
         if self._rom_calibrator is not None and pose_frame is not None:
             self._rom_calibrator.add(pose_frame)
             if self._rom_calibrator.is_complete():
-                self._rom_targets = self._rom_calibrator.build(self._rest_angles())
+                self._rom_targets = self._rom_calibrator.build(self._rom_rest_angles)
                 self._rom_status = "complete"
                 self._rom_calibrator = None
         self.latest.set(self.engine.compute(pose_frame))

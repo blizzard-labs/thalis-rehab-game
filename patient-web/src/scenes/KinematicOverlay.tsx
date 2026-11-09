@@ -22,7 +22,7 @@ export function KinematicOverlay({ store, showAfterMs = 400, hideAfterMs = 600, 
 
   useEffect(() => {
     const id = setInterval(() => {
-      const latest = store.latest();
+      const latest = store.fresh();
       const now = Date.now();
 
       const flagged = Boolean(latest?.compensationFlag);

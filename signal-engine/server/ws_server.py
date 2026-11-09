@@ -61,6 +61,8 @@ class NeuroReachWSServer:
         self.scoring_service = scoring_service
         self.host = host
         self.port = port
+        self._paused = False
+        self._last_rom_targets = None
         self.broadcast_hz = float(broadcast_hz)
         # Contact-quality / live-trace frames for the console C2 setup screen go
         # out on their own slower cadence; the score-frame contract is untouched.
@@ -108,6 +110,8 @@ class NeuroReachWSServer:
             "get_status": self._cmd_get_status,
             "set_mode": self._cmd_set_mode,
             "start_session": self._cmd_start_session,
+            "pause_session": self._cmd_rest,
+            "resume_session": self._cmd_rest,
             "end_session": self._cmd_end_session,
             "calibrate_pose": self._cmd_calibrate_pose,
             "begin_rom_calibration": self._cmd_begin_rom_calibration,
@@ -153,7 +157,11 @@ class NeuroReachWSServer:
         # Start the synchronous scoring thread (the producer of output_queue).
         self.scoring_service.start()
 
-        self._server = await websockets.serve(self._handler, self.host, self.port)
+        self._server = await websockets.serve(
+            self._handler, self.host, self.port,
+            origins=[None, "file://", "http://localhost:5273", "http://127.0.0.1:5273"],
+            max_size=128 * 1024,
+        )
         self._tasks = [
             asyncio.ensure_future(self._drain_loop()),
             asyncio.ensure_future(self._broadcast_loop()),
@@ -229,6 +237,8 @@ class NeuroReachWSServer:
                     continue  # nothing to send / nobody listening -> keep ticking
                 if self.session_controller is not None and not self._session_active:
                     continue  # session gated: no scores until start_session (dev sim)
+                if self._paused or time.time() - self._last_result.timestamp > 0.5:
+                    continue
                 payload = json.dumps(self._format(self._last_result))
                 await self._broadcast(payload)
         except asyncio.CancelledError:
@@ -263,6 +273,13 @@ class NeuroReachWSServer:
                 if not self.clients:
                     continue
                 snap = self.vision_health_monitor.sample()
+                worker = self.kinematic_worker
+                if worker is not None and hasattr(worker, "rom_calibration_status"):
+                    snap["rom_calibration"] = worker.rom_calibration_status()
+                    targets = worker.rom_targets()
+                    if targets is not self._last_rom_targets:
+                        self._last_rom_targets = targets
+                        await self._broadcast(json.dumps({"type":"rom_targets","targets":targets or {}}))
                 payload = json.dumps(
                     {"type": "vision_health", **snap, "timestamp": time.time()}
                 )
@@ -365,6 +382,8 @@ class NeuroReachWSServer:
 
     async def _handler(self, websocket) -> None:
         self.clients.add(websocket)
+        if self._last_rom_targets:
+            await self._send(websocket, {"type":"rom_targets","targets":self._last_rom_targets})
         addr = websocket.remote_address
         logger.info("client connected %s (clients=%d)", addr, len(self.clients))
         try:
@@ -488,10 +507,17 @@ class NeuroReachWSServer:
             websocket, {"type": "rom_calibration", "status": worker.rom_calibration_status()}
         )
 
+    async def _cmd_rest(self, websocket, data) -> None:
+        self._paused = data["cmd"] == "pause_session"
+        self._last_result = None
+        await self._send(websocket, {"type": "rest", "paused": self._paused})
+
     async def _cmd_start_session(self, websocket, data) -> None:
+        self._paused = False
         await self._session_command(websocket, arm=True)
 
     async def _cmd_end_session(self, websocket, data) -> None:
+        self._paused = False
         await self._session_command(websocket, arm=False)
 
     async def _session_command(self, websocket, *, arm: bool) -> None:

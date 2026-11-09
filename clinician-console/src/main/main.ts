@@ -99,8 +99,11 @@ function startLan() {
   ipcMain.handle("session:begin-rom-calibration", () => {
     sendControl(beginRomCalibrationCommand());
   });
-  ipcMain.handle("session:clinician-checkpoint", (_e, checkpoint: "go-live") =>
-    lan!.sendClinicianCheckpoint(checkpoint),
+  ipcMain.handle("session:clinician-checkpoint", (_e, checkpoint: "go-live" | "pause" | "resume") => {
+    if (!["go-live","pause","resume"].includes(checkpoint)) throw new Error("Invalid clinician command");
+    if (checkpoint !== "go-live") sendControl(JSON.stringify({cmd: checkpoint+"_session"}));
+    lan!.sendClinicianCheckpoint(checkpoint);
+  },
   );
   ipcMain.handle("session:checkpoint-state", () => lan!.checkpointState());
 }

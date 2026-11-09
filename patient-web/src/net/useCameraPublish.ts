@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import type { PatientLink } from "./usePatientLink";
+import { acquireCamera } from "./sharedCamera";
 import { createCameraPublisher } from "./cameraPublisher";
 
 /**
@@ -14,9 +15,14 @@ export function useCameraPublish(link: PatientLink, enabled: boolean): void {
   useEffect(() => {
     if (!enabled) return;
 
+    let release: (() => void) | undefined;
     const publisher = createCameraPublisher({
-      getStream: () =>
-        navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false }),
+      getStream: async () => {
+        const lease = await acquireCamera();
+        release = lease.release;
+        return lease.stream;
+      },
+      releaseStream: () => release?.(),
       createPeer: () => new RTCPeerConnection({ iceServers: [] }), // host candidates only
       send: sendSignaling,
     });
@@ -27,6 +33,7 @@ export function useCameraPublish(link: PatientLink, enabled: boolean): void {
 
     publisher.start().catch((err) => {
       // no camera / permission denied / no RTCPeerConnection -> stay EEG-only
+      publisher.stop();
       console.warn("camera publish failed; continuing EEG-only:", err);
     });
 

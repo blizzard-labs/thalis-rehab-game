@@ -12,7 +12,7 @@ describe("practice inputs", () => {
   });
   it("requires fresh effort and a release between measured trials", () => {
     const r = new PracticeRound("stars", "camera", true);
-    for (const level of [1,null,1,1,1,1]) r.tick(.25, level);
+    for (const level of [0,1,null,1,1,1,1]) r.tick(.25, level);
     expect(r.record.rewards).toBe(1);
     r.tick(.25,0); r.tick(.25,1); r.tick(.25,1);
     expect(r.record.rewards).toBe(2);

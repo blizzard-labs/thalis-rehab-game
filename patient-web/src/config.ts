@@ -5,7 +5,6 @@ export const config = {
   patient: { firstName: "Krishna", affectedSide: "left" as AffectedSide },
   /** Intent score (0–100) at/above which the patient counts as "engaged". */
   engagementThreshold: 55,
-  devAutoCollectSeconds: 0,
 };
 
 /**

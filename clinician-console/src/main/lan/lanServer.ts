@@ -27,6 +27,7 @@ const MIME: Record<string, string> = {
   ".json": "application/json",
   ".svg": "image/svg+xml",
   ".png": "image/png",
+  ".wasm": "application/wasm",
   ".ico": "image/x-icon",
 };
 
@@ -37,6 +38,7 @@ export class LanServer extends EventEmitter {
   private patientSocket: WebSocket | null = null;
   private relay: ReturnType<typeof createScoreRelay> | null = null;
   private signalingRelay: ReturnType<typeof createSignalingRelay> | null = null;
+  private paused = false;
   private nextId = 1;
   private port = 0;
   private checkpoints = { patientBegan: false, patientCalibrated: false, clinicianLive: false };
@@ -47,7 +49,7 @@ export class LanServer extends EventEmitter {
     this.http = createServer({ key: opts.cert.key, cert: opts.cert.cert }, (req, res) =>
       this.serveStatic(req, res),
     );
-    this.wss = new WebSocketServer({ noServer: true });
+    this.wss = new WebSocketServer({ noServer: true, maxPayload: 128*1024 });
     this.http.on("upgrade", (req, socket, head) => {
       const origin = req.headers.origin;
       if (origin !== this.origin()) {
@@ -76,6 +78,7 @@ export class LanServer extends EventEmitter {
 
   private onConnection(ws: WebSocket): void {
     const id = `sock-${this.nextId++}`;
+    let failures = 0;
     ws.on("message", (data) => {
       let msg: any;
       try {
@@ -83,8 +86,12 @@ export class LanServer extends EventEmitter {
       } catch {
         return;
       }
+      if (!msg || typeof msg !== "object") return;
       if (msg.type === "pair") {
-        this.handlePair(ws, id, msg.code);
+        if (!this.pairing.validate(msg.code, msg.resumeToken) && ++failures >= 5) {
+          ws.close(1008, "Too many invalid pairing attempts"); return;
+        }
+        this.handlePair(ws, id, msg.code, msg.resumeToken, msg.secureResume === true);
         return;
       }
       if (this.pairing.boundSocketId() !== id) return; // only the paired socket may proceed
@@ -117,8 +124,8 @@ export class LanServer extends EventEmitter {
     });
   }
 
-  private handlePair(ws: WebSocket, id: string, code: string): void {
-    if (!this.pairing.validate(code)) {
+  private handlePair(ws: WebSocket, id: string, code: string, token?: string, secure = false): void {
+    if (!this.pairing.validate(code, token)) {
       ws.send(JSON.stringify({ type: "error", reason: "bad_code" }));
       return;
     }
@@ -127,10 +134,12 @@ export class LanServer extends EventEmitter {
       return;
     }
     this.patientSocket = ws;
-    ws.send(JSON.stringify({ type: "paired", session: this.pairing.session() }));
+    ws.send(JSON.stringify({ type: "paired", session: this.pairing.session(),
+      ...(secure ? {resumeToken: this.pairing.mintResumeToken()} : {}) }));
     if (this.checkpoints.clinicianLive) {
       ws.send(JSON.stringify({ type: "clinician-checkpoint", checkpoint: "go-live" }));
     }
+    if (this.paused) ws.send(JSON.stringify({ type: "clinician-checkpoint", checkpoint: "pause" }));
     this.emit("patient-connected");
     // Fan the sidecar score out to this patient.
     this.relay?.stop();
@@ -156,12 +165,13 @@ export class LanServer extends EventEmitter {
   }
 
   startSession(session: SessionInfo): { code: string; url: string } {
-    this.resetCheckpoints();
+    this.endSession();
     const code = this.pairing.mint(session);
     return { code, url: `${this.origin()}/?c=${code}` };
   }
 
   sendClinicianCheckpoint(checkpoint: ClinicianCheckpoint): void {
+    if (checkpoint === "pause" || checkpoint === "resume") this.paused = checkpoint === "pause";
     if (checkpoint === "go-live") this.checkpoints.clinicianLive = true;
     const raw = JSON.stringify({ type: "clinician-checkpoint", checkpoint });
     if (this.patientSocket?.readyState === WebSocket.OPEN) this.patientSocket.send(raw);
@@ -176,6 +186,8 @@ export class LanServer extends EventEmitter {
   }
 
   endSession(): void {
+    this.sendClinicianCheckpoint("end");
+    this.paused = false;
     this.resetCheckpoints();
     this.relay?.stop();
     this.relay = null;

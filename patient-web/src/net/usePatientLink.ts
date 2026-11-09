@@ -1,3 +1,4 @@
+import type { JointId } from "../reach/RomTrialModel";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createLanClient, type PairedSession } from "./lanClient";
 import type { ConnectionState, WsLike } from "./scoreClient";
@@ -13,6 +14,9 @@ export type PatientLink = {
   session: PairedSession | null;
   error: string | null;
   clinicianLive: boolean;
+  paused: boolean;
+  ended: boolean;
+  wristTargets: Partial<Record<JointId,{x:number;y:number}>>;
   romTargets: Partial<Record<string, number>> | null;
   notify: (checkpoint: PatientCheckpoint) => void;
   sendSignaling: (msg: SignalingMessage) => void;
@@ -39,7 +43,11 @@ export function usePatientLink(
   const [conn, setConn] = useState<ConnectionState>("connecting");
   const [session, setSession] = useState<PairedSession | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const endedRef = useRef(false);
+  const [paused, setPaused] = useState(false);
+  const [ended, setEnded] = useState(false);
   const [clinicianLive, setClinicianLive] = useState(false);
+  const [wristTargets,setWristTargets] = useState<PatientLink["wristTargets"]>({});
   const [romTargets, setRomTargets] = useState<Partial<Record<string, number>> | null>(null);
   const factoryRef = useRef(createSocket);
   factoryRef.current = createSocket;
@@ -48,6 +56,9 @@ export function usePatientLink(
 
   useEffect(() => {
     let stopped = false;
+    const storageKey = "neuroreach-pair-" + code;
+    let resumeToken: string | null = null;
+    try { resumeToken = code && sessionStorage.getItem(storageKey); } catch { /* ephemeral browser */ }
     let attempt = 0;
     let timer: ReturnType<typeof setTimeout> | null = null;
     let client: ReturnType<typeof createLanClient> | null = null;
@@ -60,6 +71,11 @@ export function usePatientLink(
         code,
         wssUrl,
         localhostUrl: config.wsUrl,
+        resumeToken,
+        onResumeToken: token => {
+          resumeToken = token;
+          try { sessionStorage.setItem(storageKey, token); } catch { /* reconnect in memory */ }
+        },
         createSocket: factory,
         onScoreFrame: (raw) => {
           const r = parseIntentScoreMessage(raw);
@@ -75,19 +91,34 @@ export function usePatientLink(
           // rom_targets: { joint: { rest_deg, max_deg, target_deg } } -> { joint: target_deg }
           if (typeof targets !== "object" || targets === null) return;
           const out: Record<string, number> = {};
+          const wrists: PatientLink["wristTargets"] = {};
           for (const [joint, v] of Object.entries(targets as Record<string, unknown>)) {
+            if (!v || typeof v !== "object") continue;
+            const point = (v as {target_wrist?: unknown}).target_wrist;
+            if (["elbow_extension","shoulder_flexion","shoulder_abduction"].includes(joint)
+              && Array.isArray(point) && point.length===2 && point.every(Number.isFinite)) {
+              wrists[joint as JointId] = {x:point[0], y:point[1]};
+            }
             const td = (v as { target_deg?: unknown })?.target_deg;
             if (typeof td === "number" && Number.isFinite(td)) out[joint] = td;
           }
-          setRomTargets(out);
+          setWristTargets(wrists); setRomTargets(out);
         },
         onError: (reason) => setError(reason),
         onSignaling: (m) => signalingSubRef.current?.(m),
         onCheckpoint: (m) => {
-          if (m.type === "clinician-checkpoint" && m.checkpoint === "go-live") setClinicianLive(true);
+          if (m.type !== "clinician-checkpoint") return;
+          if (m.checkpoint === "go-live") setClinicianLive(true);
+          if (m.checkpoint === "pause" || m.checkpoint === "resume") {
+            storeRef.current.clear(); setPaused(m.checkpoint === "pause");
+          }
+          if (m.checkpoint === "end") {
+            try { sessionStorage.removeItem(storageKey); } catch { /* ephemeral browser */ }
+            endedRef.current = true; setEnded(true); storeRef.current.clear(); }
         },
         onClose: () => {
-          if (stopped) return;
+          storeRef.current.clear();
+          if (stopped || endedRef.current) return;
           setConn("reconnecting");
           const delay = Math.min(500 * 2 ** attempt, 5000);
           attempt += 1;
@@ -130,7 +161,8 @@ export function usePatientLink(
     session,
     error,
     clinicianLive,
-    romTargets,
+    paused, ended,
+    wristTargets, romTargets,
     notify,
     sendSignaling,
     subscribeSignaling,

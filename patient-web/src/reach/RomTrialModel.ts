@@ -44,26 +44,18 @@ export class RomTrialModel {
   static readonly REST_S = 1.2;
 
   private _side: string;
-  private _devAutoCollectS: number;
+  wristTargets: Partial<Record<JointId, { x: number; y: number }>> = {};
   private _idx = 0;
   private _reach = 0;
   private _collected = 0;
   private _justCollected = false;
   private _holdTime = 0;
-  private _onGoalTime = 0;
   private _restTime = 0;
   private _phase: "reaching" | "rest" = "reaching";
   private _lastTrial: TrialLog | null = null;
 
-  /**
-   * @param affectedSide  "left" | "right"
-   * @param devAutoCollectS  TEMPORARY prototyping crutch — when > 0, holding the
-   *   net on the goal for this many seconds force-collects even if the (often
-   *   simulated) EEG engagement gate never fires. 0 disables it.
-   */
-  constructor(affectedSide: string = "right", devAutoCollectS: number = 0) {
+  constructor(affectedSide: string = "right") {
     this._side = affectedSide;
-    this._devAutoCollectS = devAutoCollectS;
   }
 
   private goalFor(dir: ReachDir): { x: number; y: number } {
@@ -83,7 +75,9 @@ export class RomTrialModel {
 
   get current(): Trial {
     const c = CATALOGUE[this._idx];
-    return { ...c, goal: this.goalFor(c.dir) };
+    const target = this.wristTargets[c.joint];
+    const goal = target ? { x: target.x * sideSign(this._side), y: -target.y } : this.goalFor(c.dir);
+    return { ...c, goal };
   }
   get reach(): number { return this._reach; }
   get collected(): number { return this._collected; }
@@ -97,7 +91,6 @@ export class RomTrialModel {
 
     if (this._phase === "rest") {
       this._reach = 0;
-      this._onGoalTime = 0;
       this._restTime += dt;
       if (this._restTime >= RomTrialModel.REST_S) {
         this._idx = (this._idx + 1) % CATALOGUE.length;
@@ -112,15 +105,9 @@ export class RomTrialModel {
     const dist = w === null ? Infinity : Math.hypot(w.x - g.x, w.y - g.y);
     this._reach = w === null ? 0 : clamp01(1 - dist / REACH_MAG);
 
-    const onGoal = dist <= REACH_CAP_R;
-    this._onGoalTime = onGoal ? this._onGoalTime + dt : 0;
-    // TEMPORARY prototyping crutch: after holding on the goal past the dev
-    // window, treat the patient as engaged even if the (simulated) EEG gate
-    // never fired, so the star still collects.
-    const effEngaged =
-      engaged || (this._devAutoCollectS > 0 && this._onGoalTime >= this._devAutoCollectS);
-
-    if (onGoal && effEngaged) {
+    const calibrated = this.wristTargets[this.current.joint];
+    const radius = calibrated ? Math.min(REACH_CAP_R, Math.max(0.04, Math.hypot(g.x,g.y) * 0.20)) : REACH_CAP_R;
+    if (dist <= radius && engaged) {
       this._holdTime += dt;
       if (this._holdTime >= RomTrialModel.HOLD_S) {
         this._collected += 1;

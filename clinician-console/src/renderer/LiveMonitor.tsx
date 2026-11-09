@@ -28,6 +28,7 @@ type Props = {
   visionHealthStore?: VisionHealthStore;
   cameraFrameStore?: CameraFrameStore;
   patient?: Patient;
+  onRest?: (paused: boolean) => Promise<void>;
   onEndSession?: () => void;
   onSwitchMode?: (mode: "band_power_only" | "csp_lda_blend") => void;
 };
@@ -40,8 +41,11 @@ function fmt(n: number | null, digits = 1): string {
 // clinician can intervene without interpreting raw EEG: plain-language status
 // tiles, 8-channel quality, the patient-view mirror, ERD/laterality/kinematic
 // sub-scores, and the big IntentScore. specsv2 wireframe C3.
-export function LiveMonitor({ store, connectionState, sidecarState, qualityStore, visionHealthStore, cameraFrameStore, patient, onEndSession, onSwitchMode }: Props) {
+export function LiveMonitor({ store, connectionState, sidecarState, qualityStore, visionHealthStore, cameraFrameStore, patient, onEndSession, onSwitchMode, onRest }: Props) {
   const state = useScoreStore(store);
+  const [paused, setPaused] = useState(false);
+  const [restError,setRestError] = useState("");
+
   // Hooks must run unconditionally, so fall back to stable empty stores when a
   // prop is absent (e.g. the isolated component test / EEG-only session).
   const vh = useVisionHealthStore(visionHealthStore ?? EMPTY_VISION).latest;
@@ -152,7 +156,11 @@ export function LiveMonitor({ store, connectionState, sidecarState, qualityStore
         >
           Switch mode ▾
         </button>
-        <button disabled title="Pause/rest command not built yet">Pause / rest</button>
+        <button disabled={!onRest} onClick={async () => {
+          try { await onRest?.(!paused); setPaused(!paused); setRestError(""); }
+          catch { setRestError("Could not change rest state. Retry."); }
+        }}>{paused ? "Resume play" : "Pause / rest"}</button>
+        {restError && <span role="alert">{restError}</span>}
         <button className="lm-end" disabled={!onEndSession} onClick={() => onEndSession?.()}>
           End session
         </button>

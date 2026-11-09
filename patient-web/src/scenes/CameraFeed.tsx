@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 
+import { acquireCamera } from "../net/sharedCamera";
+
 const MIN_LUMA = 40; // 0..255 average; below this the frame is too dark
 
 /**
@@ -42,24 +44,14 @@ export function CameraFeed({
   // `framing` must not touch this effect — re-requesting getUserMedia mid-block
   // would flash/restart the feed.
   useEffect(() => {
-    const md = navigator.mediaDevices;
-    if (!md?.getUserMedia) {
-      setError("Camera unavailable");
-      return;
-    }
-    let live: MediaStream | null = null;
+    let release: (() => void) | undefined;
     let cancelled = false;
-    md.getUserMedia({ video: { facingMode: "user" }, audio: false })
-      .then((s) => {
-        if (cancelled) { s.getTracks().forEach((t) => t.stop()); return; }
-        live = s;
-        setStream(s);
-      })
-      .catch(() => setError("Camera unavailable"));
-    return () => {
-      cancelled = true;
-      live?.getTracks().forEach((t) => t.stop());
-    };
+    acquireCamera().then(lease => {
+      if (cancelled) { lease.release(); return; }
+      release = lease.release;
+      setStream(lease.stream);
+    }).catch(() => { if (!cancelled) setError("Camera unavailable"); });
+    return () => { cancelled = true; release?.(); };
   }, []);
 
   // Bind the shared stream to both the inline (cover) and hover-expand (contain)
@@ -114,9 +106,9 @@ export function CameraFeed({
       )}
       <canvas ref={canvasRef} style={{ display: "none" }} />
       {recording && (
-        <div className="cal-rec" data-testid="rec-indicator" aria-label="Recording">
+        <div className="cal-rec" data-testid="rec-indicator" aria-label="Live camera preview">
           <span className="cal-rec__dot" />
-          REC
+          LIVE
         </div>
       )}
     </div>

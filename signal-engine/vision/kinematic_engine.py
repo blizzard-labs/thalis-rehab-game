@@ -54,7 +54,7 @@ class KinematicScoreEngine:
         # Bridge a brief dropout with the last good score, else absent evidence.
         if self._last_good is not None and (ts - self._last_good.timestamp) <= self.lkg_max_age_s:
             g = self._last_good
-            return KinematicResult(g.kinematic_score, 0.0, False, False, True, ts,
+            return KinematicResult(g.kinematic_score, 0.0, False, False, False, ts,
                                    g.shoulder_flexion_deg, g.shoulder_abduction_deg, g.elbow_deg,
                                    g.wrist_dx, g.wrist_dy)
         return KinematicResult(0.0, 0.0, False, False, False, ts)

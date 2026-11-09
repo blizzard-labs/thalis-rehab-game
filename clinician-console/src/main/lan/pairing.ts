@@ -1,3 +1,4 @@
+import { randomBytes, randomInt } from "node:crypto";
 export const CODE_ALPHABET = "23456789ABCDEFGHJKMNPQRSTVWXYZ";
 const CODE_LENGTH = 6;
 
@@ -8,7 +9,7 @@ export type SessionInfo = {
   source: "sim" | "live";
 };
 
-type Active = { code: string; session: SessionInfo; mintedAt: number; socketId: string | null };
+type Active = { code: string; session: SessionInfo; mintedAt: number; socketId: string | null; resumeToken: string | null };
 
 export class SessionPairing {
   private active: Active | null = null;
@@ -19,7 +20,7 @@ export class SessionPairing {
   constructor(opts: { ttlMs?: number; now?: () => number; rng?: () => number } = {}) {
     this.ttlMs = opts.ttlMs ?? 600_000; // 10 min
     this.now = opts.now ?? Date.now;
-    this.rng = opts.rng ?? Math.random;
+    this.rng = opts.rng ?? (() => randomInt(CODE_ALPHABET.length) / CODE_ALPHABET.length);
   }
 
   private generateCode(): string {
@@ -36,17 +37,23 @@ export class SessionPairing {
 
   mint(session: SessionInfo): string {
     const code = this.generateCode();
-    this.active = { code, session, mintedAt: this.now(), socketId: null };
+    this.active = { code, session, mintedAt: this.now(), socketId: null, resumeToken: null };
     return code;
   }
 
-  validate(code: string): boolean {
-    if (!this.active || this.expired()) return false;
-    return this.active.code === code;
+  validate(code: string, resumeToken?: string): boolean {
+    if (!this.active || this.active.code !== code) return false;
+    if (this.active.resumeToken) return this.active.resumeToken === resumeToken;
+    return !this.expired();
+  }
+
+  mintResumeToken(): string {
+    if (!this.active?.socketId) throw new Error("No paired socket");
+    return this.active.resumeToken ??= randomBytes(24).toString("hex");
   }
 
   bind(socketId: string): boolean {
-    if (!this.active || this.expired()) return false;
+    if (!this.active || (!this.active.resumeToken && this.expired())) return false;
     if (this.active.socketId !== null) return false;
     this.active.socketId = socketId;
     return true;
@@ -66,7 +73,7 @@ export class SessionPairing {
   }
 
   session(): SessionInfo | null {
-    return this.active && !this.expired() ? this.active.session : null;
+    return this.active && (this.active.resumeToken || !this.expired()) ? this.active.session : null;
   }
 
   end(): void {

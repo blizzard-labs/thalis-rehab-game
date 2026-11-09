@@ -22,7 +22,7 @@ describe("usePatientLink", () => {
 
     expect(dialed).toBe("wss://clinic:8443"); // NOT localhost
     act(() => sock.emitOpen());
-    expect(sock.send).toHaveBeenCalledWith(JSON.stringify({ type: "pair", code: "ABC234" }));
+    expect(sock.send).toHaveBeenCalledWith(JSON.stringify({ type: "pair", code: "ABC234", secureResume:true }));
 
     act(() => sock.emit({ type: "paired", session: { patientFirstName: "Jordan", affectedSide: "right", mode: "band_power_only" } }));
     await waitFor(() => expect(result.current.conn).toBe("open"));
@@ -114,4 +114,15 @@ describe("usePatientLink", () => {
     expect(result.current.sendSignaling).toBe(send1);
     expect(result.current.subscribeSignaling).toBe(sub1);
   });
+});
+
+it("stops rewarding stale samples on clinician pause or session end", () => {
+  const sock = fakeSocket();
+  const {result} = renderHook(()=>usePatientLink("ABC234","wss://clinic",()=>sock));
+  act(()=>{ sock.emitOpen();sock.emit(scoreFrame(90));sock.emit({type:"clinician-checkpoint",checkpoint:"pause"}); });
+  expect(result.current.paused).toBe(true); expect(result.current.store.latest()).toBeNull();
+  act(()=>sock.emit({type:"clinician-checkpoint",checkpoint:"resume"}));
+  expect(result.current.paused).toBe(false);
+  act(()=>sock.emit({type:"clinician-checkpoint",checkpoint:"end"}));
+  expect(result.current.ended).toBe(true);
 });

@@ -91,7 +91,7 @@ export function CalibrateStep(
 
         <RomCaptureStep
           onBegin={() => { onBeginRomCalibration?.(); setRomStatus("collecting"); }}
-          status={romStatus}
+          status={vh?.romCalibration ?? romStatus}
           onDone={() => {}}
         />
       </div>

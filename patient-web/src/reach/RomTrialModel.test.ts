@@ -36,10 +36,13 @@ describe("RomTrialModel (directional)", () => {
     expect(m.collected).toBe(0);
   });
 
-  it("dev auto-collect: holding on-goal past the dev window collects while disengaged", () => {
-    const m = new RomTrialModel("right", 3); // 3s dev crutch
-    for (let i = 0; i < 40; i++) m.update(frame(0, -REACH_MAG), false, 0.1); // 4s on goal, disengaged
-    expect(m.collected).toBeGreaterThanOrEqual(1);
+  it("uses the actual calibrated wrist target and never credits disengaged dwell", () => {
+    const m = new RomTrialModel("right");
+    m.wristTargets = {shoulder_flexion: {x:0.3,y:-0.2}};
+    for (let i=0; i<100; i++) m.update(frame(.3,-.2),false,.1);
+    expect(m.collected).toBe(0);
+    for (let i=0; i<4; i++) m.update(frame(.3,-.2),true,.1);
+    expect(m.collected).toBe(1);
   });
 
   it("collects the side star from a partial lateral reach (forgiving capture)", () => {

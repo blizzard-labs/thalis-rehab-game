@@ -40,6 +40,10 @@ export function LiveStep(props: Props) {
       connectionState={props.connectionState}
       sidecarState={props.sidecarState}
       patient={props.patient}
+      onRest={async paused => {
+        const host = (window as Window & {neuroreach?: {sendClinicianCheckpoint(c: string): Promise<void>}}).neuroreach;
+        if (host) await host.sendClinicianCheckpoint(paused ? "pause" : "resume");
+      }}
       onEndSession={props.onEndSession}
       onSwitchMode={props.onSwitchMode}
     />

@@ -16,12 +16,14 @@ export function GardenScene({
   engagementThreshold,
   store,
   conn = "connecting",
+  paused = false,
   onEnd,
 }: {
   stats: SessionStats;
   engagementThreshold: number;
   store: ScoreStore;
   conn?: ConnectionState;
+  paused?: boolean;
   onEnd: () => void;
 }) {
   const [growth, setGrowth] = useState(0);
@@ -33,11 +35,13 @@ export function GardenScene({
   const lastTs = useRef<number | null>(null);
 
   useEffect(() => {
+    lastTs.current = null;
+    if (paused) return;
     let raf = 0;
     const tick = (ts: number) => {
-      const dt = lastTs.current === null ? 0 : (ts - lastTs.current) / 1000;
+      const dt = lastTs.current === null ? 0 : Math.min(.25, (ts - lastTs.current) / 1000);
       lastTs.current = ts;
-      const latest = store.latest();
+      const latest = store.fresh();
       const s = latest ? latest.intentScore : 0;
       plant.current.update(s / 100, dt);
       const isEngaged = s >= engagementThreshold;
@@ -53,10 +57,10 @@ export function GardenScene({
     return () => {
       cancelAnimationFrame(raf);
     };
-  }, [engagementThreshold, stats, store]);
+  }, [engagementThreshold, stats, store, paused]);
 
   const reduced = prefersReducedMotion();
-  const tracking = store.latest()?.joints?.poseValid === true;
+  const tracking = store.fresh()?.joints?.poseValid === true;
 
   // --- derive the illustration from a single growth value ---
   const pct = Math.round(score);

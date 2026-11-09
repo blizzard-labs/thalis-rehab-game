@@ -37,6 +37,8 @@ export function StarCatchScene({
   affectedSide = config.patient.affectedSide,
   store,
   conn = "connecting",
+  wristTargets,
+  paused = false,
   onEnd,
 }: {
   stats: SessionStats;
@@ -44,9 +46,12 @@ export function StarCatchScene({
   affectedSide?: "left" | "right";
   store: ScoreStore;
   conn?: ConnectionState;
+  wristTargets?: RomTrialModel["wristTargets"];
+  paused?: boolean;
   onEnd: () => void;
 }) {
-  const model = useRef(new RomTrialModel(affectedSide, config.devAutoCollectSeconds));
+  const model = useRef(new RomTrialModel(affectedSide));
+  useEffect(() => { model.current.wristTargets = wristTargets ?? {}; }, [wristTargets]);
   const [reach, setReach] = useState(0);
   const [collected, setCollected] = useState(0);
   const [score, setScore] = useState(0);
@@ -59,11 +64,13 @@ export function StarCatchScene({
   const celebrateUntil = useRef(0);
 
   useEffect(() => {
+    lastTs.current = null;
+    if (paused) return;
     let raf = 0;
     const tick = (ts: number) => {
-      const dt = lastTs.current === null ? 0 : (ts - lastTs.current) / 1000;
+      const dt = lastTs.current === null ? 0 : Math.min(.25, (ts - lastTs.current) / 1000);
       lastTs.current = ts;
-      const latest = store.latest();
+      const latest = store.fresh();
       const s = latest ? latest.intentScore : 0;
       const isEngaged = s >= engagementThreshold;
       model.current.update(latest, isEngaged, dt);
@@ -87,7 +94,7 @@ export function StarCatchScene({
     return () => {
       cancelAnimationFrame(raf);
     };
-  }, [engagementThreshold, stats, store]);
+  }, [engagementThreshold, stats, store, paused]);
 
   const reduced = prefersReducedMotion();
   const pct = Math.round(score);
@@ -102,7 +109,7 @@ export function StarCatchScene({
   const bendSign = affectedSide === "left" ? -1 : 1;
   const side = affectedSide === "left" ? -1 : 1;
 
-  const j = store.latest()?.joints;
+  const j = store.fresh()?.joints;
   const tracking = j?.poseValid === true;
   const rx = j && j.wristDx !== null && j.wristDx !== undefined ? j.wristDx * side : 0;
   const ry = j && j.wristDy !== null && j.wristDy !== undefined ? -j.wristDy : 0;

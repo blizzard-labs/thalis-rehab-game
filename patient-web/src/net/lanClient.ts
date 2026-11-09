@@ -12,6 +12,8 @@ export type LanClientOptions = {
   code: string | null;
   wssUrl: string;
   localhostUrl: string;
+  resumeToken?: string | null;
+  onResumeToken?: (token: string) => void;
   createSocket: (url: string) => WsLike;
   onScoreFrame: (raw: string) => void;
   onRomTargets?: (targets: unknown) => void;
@@ -33,7 +35,7 @@ export function createLanClient(opts: LanClientOptions) {
     const s = opts.createSocket(url);
     socket = s;
     s.onopen = () => {
-      if (opts.code) s.send?.(JSON.stringify({ type: "pair", code: opts.code }));
+      if (opts.code) s.send?.(JSON.stringify({ type: "pair", code: opts.code, ...(opts.onResumeToken ? {secureResume:true, resumeToken:opts.resumeToken ?? undefined} : {}) }));
       else opts.onPaired(DEV_SESSION); // dev: localhost score socket, no pairing handshake
     };
     s.onmessage = (ev) => {
@@ -44,7 +46,11 @@ export function createLanClient(opts: LanClientOptions) {
       } catch {
         return;
       }
-      if (msg.type === "paired") opts.onPaired(msg.session as PairedSession);
+      if (!msg || typeof msg !== "object") return;
+      if (msg.type === "paired") {
+        if (typeof msg.resumeToken === "string") opts.onResumeToken?.(msg.resumeToken);
+        opts.onPaired(msg.session as PairedSession);
+      }
       else if (msg.type === "error") opts.onError(msg.reason);
       else if (msg.type === "intent_score") opts.onScoreFrame(raw);
       else if (msg.type === "rom_targets") opts.onRomTargets?.(msg.targets);

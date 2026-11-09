@@ -55,3 +55,19 @@ describe("SessionPairing", () => {
     expect(p.mint(SESSION)).toBe("222222");
   });
 });
+
+it("requires the original tab's secret after redeeming a code and allows it to resume past the QR expiry", () => {
+  let now = 0;
+  const pairing = new SessionPairing({ttlMs:50, now:()=>now});
+  const code = pairing.mint({patientFirstName:"A", mode:"A", affectedSide:"right", source:"live"});
+  expect(pairing.bind("one")).toBe(true);
+  const token = pairing.mintResumeToken();
+  pairing.releaseSocket();
+  now=100;
+  expect(pairing.validate(code)).toBe(false);
+  expect(pairing.validate(code,token)).toBe(true);
+  expect(pairing.bind("two")).toBe(true);
+  expect(pairing.session()?.affectedSide).toBe("right");
+  pairing.end();
+  expect(pairing.validate(code,token)).toBe(false);
+});

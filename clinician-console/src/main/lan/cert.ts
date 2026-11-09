@@ -31,6 +31,6 @@ export function loadOrCreateCert(
     }
   }
   const fresh = generate(days, now);
-  writeFileSync(path, JSON.stringify(fresh), "utf8");
+  writeFileSync(path, JSON.stringify(fresh), { encoding:"utf8", mode:0o600 });
   return fresh;
 }

@@ -8,6 +8,7 @@ export type VisionHealthFrame = {
   degraded: boolean;
   affectedSide: "left" | "right";
   calibration: string;
+  romCalibration?: "idle" | "collecting" | "complete";
   restCalibrated: boolean;
   timestamp: number;
 };
@@ -39,6 +40,7 @@ export function parseVisionHealthMessage(raw: string): VisionHealthParseResult {
       degraded: Boolean(d.degraded),
       affectedSide: d.affected_side === "left" ? "left" : "right",
       calibration: typeof d.calibration === "string" ? d.calibration : "idle",
+      romCalibration: d.rom_calibration === "collecting" || d.rom_calibration === "complete" ? d.rom_calibration : undefined,
       restCalibrated: Boolean(d.rest_calibrated),
       timestamp: typeof d.timestamp === "number" ? d.timestamp : 0,
     },

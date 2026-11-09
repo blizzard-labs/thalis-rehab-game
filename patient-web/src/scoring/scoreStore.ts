@@ -4,11 +4,14 @@ import type { ScoreFrame } from "./intentScoreMessage";
 export class ScoreStore {
   private buf: ScoreFrame[] = [];
   private head = 0; // index of the next write
+  private receivedAt = 0;
   private count = 0;
 
   constructor(private capacity = 600) {}
 
   push(f: ScoreFrame): void {
+    if (!this.count || this.latest()?.timestamp !== f.timestamp || !f.timestamp)
+      this.receivedAt = performance.now();
     this.buf[this.head] = f;
     this.head = (this.head + 1) % this.capacity;
     this.count = Math.min(this.count + 1, this.capacity);
@@ -33,6 +36,11 @@ export class ScoreStore {
 
   latest(): ScoreFrame | null {
     return this.at(0);
+  }
+
+  fresh(): ScoreFrame | null {
+    const frame = this.latest();
+    return frame && !frame.isArtifact && performance.now() - this.receivedAt <= 500 ? frame : null;
   }
 
   recentAverage(n: number): number {

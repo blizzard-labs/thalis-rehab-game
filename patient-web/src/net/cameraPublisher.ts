@@ -1,6 +1,7 @@
 import type { SignalingMessage } from "./signaling";
 
 export type CameraPublisherDeps = {
+  releaseStream?: (stream: MediaStream) => void;
   getStream: () => Promise<MediaStream>;
   createPeer: () => RTCPeerConnection;
   send: (msg: SignalingMessage) => void;
@@ -16,9 +17,14 @@ export function createCameraPublisher(deps: CameraPublisherDeps) {
   let pc: RTCPeerConnection | null = null;
   let stream: MediaStream | null = null;
 
+  let stopped = false;
+  const release = deps.releaseStream ?? ((s: MediaStream) => s.getTracks().forEach(t => t.stop()));
+
   return {
     async start(): Promise<void> {
-      stream = await deps.getStream();
+      const acquired = await deps.getStream();
+      if (stopped) { release(acquired); return; }
+      stream = acquired;
       const peer = deps.createPeer();
       pc = peer;
       stream.getTracks().forEach((t) => peer.addTrack(t, stream as MediaStream));
@@ -26,7 +32,9 @@ export function createCameraPublisher(deps: CameraPublisherDeps) {
         if (e.candidate) deps.send({ type: "webrtc-ice", candidate: e.candidate.toJSON() });
       };
       const offer = await peer.createOffer();
+      if (stopped) return;
       await peer.setLocalDescription(offer);
+      if (stopped) return;
       deps.send({ type: "webrtc-offer", sdp: offer.sdp as string });
     },
 
@@ -40,7 +48,8 @@ export function createCameraPublisher(deps: CameraPublisherDeps) {
     },
 
     stop(): void {
-      stream?.getTracks().forEach((t) => t.stop());
+      stopped = true;
+      if (stream) release(stream);
       pc?.close();
       pc = null;
       stream = null;

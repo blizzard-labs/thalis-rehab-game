@@ -37,3 +37,15 @@ describe("ScoreStore", () => {
     expect(st.recentAverage(3)).toBe(4); // (3+4+5)/3
   });
 });
+
+it("expires a repeated stale timestamp and rejects artifact-held values", () => {
+  const store = new ScoreStore();
+  const clock = vi.spyOn(performance,"now");
+  try {
+    clock.mockReturnValue(0);store.push({...frame(90),timestamp:7});
+    clock.mockReturnValue(800);store.push({...frame(90),timestamp:7});
+    expect(store.fresh()).toBeNull();
+    store.push({...frame(90),timestamp:8,isArtifact:true});
+    expect(store.fresh()).toBeNull();
+  } finally { clock.mockRestore(); }
+});

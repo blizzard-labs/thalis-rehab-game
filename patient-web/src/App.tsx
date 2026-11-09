@@ -30,9 +30,12 @@ function ClinicApp() {
   const link = usePatientLink(code, wssUrl);
   // Publish the patient camera over the paired socket's WebRTC signaling once
   // paired and connected. Local/dev (no code) stays preview-only.
-  useCameraPublish(link, Boolean(code) && link.conn === "open");
+
   const paired = link.session;
   const [view, setView] = useState<View>(code ? "pairing" : "welcome");
+  const cameraActive = ["calibration","modeselect","garden","stars"].includes(view) && !link.ended;
+  useCameraPublish(link, !!code && link.conn === "open" && cameraActive);
+  useEffect(() => { if (link.ended) setView("summary"); }, [link.ended]);
   const identity = (code ? paired : null) ?? config.patient;
   const firstName = code && paired ? paired.patientFirstName : config.patient.firstName;
   const stats = useMemo(() => new SessionStats(), []);
@@ -70,6 +73,7 @@ function ClinicApp() {
         return (
           <GardenScene
             stats={stats}
+            paused={link.paused || link.conn !== "open"}
             engagementThreshold={config.engagementThreshold}
             store={link.store}
             conn={link.conn}
@@ -79,7 +83,9 @@ function ClinicApp() {
       case "stars":
         return (
           <StarCatchScene
+            wristTargets={link.wristTargets}
             stats={stats}
+            paused={link.paused || link.conn !== "open"}
             engagementThreshold={config.engagementThreshold}
             affectedSide={identity.affectedSide}
             store={link.store}
@@ -88,14 +94,15 @@ function ClinicApp() {
           />
         );
       case "summary":
-        return <SummaryScene stats={stats} onRestart={quit} />;
+        return <SummaryScene stats={stats} onRestart={link.ended ? undefined : quit} />;
     }
   })();
 
   return (
     <>
       {scene}
-      {view !== "welcome" && (
+      {link.paused && <div role="status" className="rest-notice">Rest break · Your clinician will resume the game.</div>}
+      {view !== "welcome" && !link.ended && (
         <button type="button" className="app-quit-btn" data-testid="quit-btn" onClick={quit}>
           Quit
         </button>

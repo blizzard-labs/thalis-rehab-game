@@ -51,11 +51,11 @@ def test_all_low_visibility_is_invalid():
     assert r.pose_valid is False
 
 
-def test_last_known_good_bridges_brief_dropout():
+def test_last_known_good_is_not_valid_measurement_during_dropout():
     eng = _engine_with_rest()
     eng.compute(_frame(wrist_x=2.5, ts=1.00))            # good, high reach
     bridged = eng.compute(_frame(vis=0.05, ts=1.05))     # dropout within lkg window
-    assert bridged.pose_valid is True
+    assert bridged.pose_valid is False
 
 
 def test_compute_reports_joint_angles():
