@@ -6,8 +6,8 @@ import { useHeadset } from "./useHeadset";
 import { useMotionCamera } from "./useMotionCamera";
 import type { PracticeRound, Side } from "./session";
 
-export function SensorSession({ round, side, end, play }: {
-  round: PracticeRound; side: Side; end: () => void;
+export function SensorSession({ round, side, end, play, participant }: {
+  round: PracticeRound; side: Side; participant?: string; end: () => void;
   play: (observation: () => number | null, status?: string) => ReactNode;
 }) {
   const [source, setSource] = useState(round.source);
@@ -20,7 +20,7 @@ export function SensorSession({ round, side, end, play }: {
   const [remember, setRemember] = useState(false);
   const [chosen, setChosen] = useState("");
   const [played, setPlayed] = useState(false);
-  const eeg = useHeadset(eegNeeded && (!cameraNeeded || !!reach), side);
+  const eeg = useHeadset(eegNeeded && (!cameraNeeded || !!reach), side, participant);
   useEffect(() => { if (eeg.calibration) round.record.calibration = eeg.calibration; }, [round, eeg.calibration]);
   const camera = useMotionCamera(cameraNeeded, side);
   const preview = useRef<HTMLVideoElement>(null);

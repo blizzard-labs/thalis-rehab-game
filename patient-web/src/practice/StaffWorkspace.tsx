@@ -79,13 +79,16 @@ export function StaffWorkspace({onExit}:{onExit:()=>void}) {
   if (round && participant) return <div>
     {finishing ? <div className="practice-panel"><h1>Finish session</h1>
       <button disabled={busy} onClick={end}>Save final report</button></div>
-      : <SensorSession round={round} side={participant.side} end={end}
+      : <SensorSession round={round} participant={participant.id} side={participant.side} end={end}
           play={(observation,status)=><Play round={round} observation={observation} status={status} onEnd={end} />} />}
     {error && <p role="alert">{error}</p>}
   </div>;
 
   return <section className="practice-panel staff-panel">
-    <div className="button-row"><button onClick={onExit}>← Games</button>
+    <div className="button-row"><button disabled={busy} onClick={()=>act(async()=>{
+      if(auth?.authenticated) await api("logout","POST");
+      onExit();
+    })}>← Games</button>
       {auth?.authenticated && <button onClick={()=>act(async()=>{
         await api("logout","POST");setSelected("");setPeople([]);setVisits([]);await load();
       })}>Lock workstation</button>}</div>

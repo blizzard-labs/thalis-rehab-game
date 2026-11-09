@@ -44,13 +44,17 @@ def quality(window, imu, labels):
 def baseline(inlet, stop, emit):
     accepted, pending, motion = [], [], []
     count = 0
-    deadline = time.monotonic() + BASELINE_SECONDS + 90
+    last_sample = time.monotonic()
+    deadline = last_sample + BASELINE_SECONDS + 90
     while len(accepted) < BASELINE_SECONDS and not stop.is_set():
         if time.monotonic() >= deadline:
             raise ValueError("Could not capture enough clean resting EEG. Check contact and retry.")
         eeg, imu = inlet.get_chunk(max_samples=FS, timeout=0.25)
         if eeg.shape[1] == 0:
+            if time.monotonic() - last_sample > 3:
+                raise ValueError("EEG signal lost during calibration. Reconnect the headset and retry.")
             continue
+        last_sample = time.monotonic()
         if inlet.last_chunk_gap:
             pending, motion, count = [], [], 0
             continue
@@ -115,7 +119,11 @@ def calibration(inlet, stop, options, path, emit):
         return None
     emit({"type": "phase", "message": "Checking imagery classification on held-out trials…"})
     model = CSPLDAClassifier()
-    result = model.fit(dataset)
+    try:
+        result = model.fit(dataset)
+    except (ValueError, FloatingPointError, np.linalg.LinAlgError):
+        emit({"type": "phase", "message": "Imagery training was unreliable. Using rest-calibrated band power."})
+        return None
     if not result.is_reliable or not np.isfinite(result.per_fold_accuracies).all():
         return None
     if path:

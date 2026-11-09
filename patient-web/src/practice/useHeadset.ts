@@ -5,7 +5,7 @@ type Device = { id: string; name: string };
 type Phase = "connecting" | "choose" | "calibrating" | "ready" | "error";
 const profileKey = "neuroreach-eeg-profile";
 
-export function useHeadset(enabled: boolean, side: Side) {
+export function useHeadset(enabled: boolean, side: Side, participant?: string) {
   const [attempt, setAttempt] = useState(0);
   const [phase, setPhase] = useState<Phase>("connecting");
   const [devices, setDevices] = useState<Device[]>([]);
@@ -46,8 +46,11 @@ export function useHeadset(enabled: boolean, side: Side) {
     let profile: string | null = null;
     if (remember) {
       try {
-        profile = localStorage.getItem(profileKey) || crypto.randomUUID();
-        localStorage.setItem(profileKey, profile);
+        if (participant) profile = participant;
+        else {
+          profile = localStorage.getItem(profileKey) || crypto.randomUUID();
+          localStorage.setItem(profileKey, profile);
+        }
       } catch { setMessage("This browser cannot save a model. Clear Remember calibration and try again."); return; }
     }
     if (socket.current?.readyState !== WebSocket.OPEN) return;

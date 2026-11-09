@@ -9,6 +9,7 @@ import math
 import os
 from pathlib import Path
 import secrets
+import shutil
 import sqlite3
 import time
 from uuid import UUID, uuid4
@@ -220,6 +221,9 @@ def register_clinic(app, root=None):
         if request.method == "DELETE":
             with db:
                 db.execute("DELETE FROM participants WHERE id=?",(pid,))
+            model_dir = root / "models" / UUID(pid).hex
+            if model_dir.is_dir():
+                shutil.rmtree(model_dir)
             return web.json_response({"ok":True})
         if request.method == "PUT":
             b = await request.json()
@@ -278,6 +282,7 @@ def register_clinic(app, root=None):
         try:
             with db:
                 for p in b["participants"]:
+                    UUID(p["id"])
                     checked(p["side"] in ("left","right") and p["consent"] and isinstance(p["name"],str),"Invalid participant")
                     proto, scores = json.loads(p["protocol"]), json.loads(p["assessments"])
                     checked(proto.get("source") in SOURCES and type(proto.get("easy")) is bool and isinstance(scores,list),"Invalid participant data")

@@ -172,6 +172,8 @@ class CSPLDAClassifier:
                 f"{len(classes)}: {classes}. Cannot fit a discriminative model."
             )
 
+        if not np.isfinite(dataset.epochs).all():
+            raise ValueError("Calibration epochs contain non-finite samples")
         X = _filter_epochs_offline(dataset.epochs, fs)
         self.n_channels_ = int(X.shape[1])
 
@@ -189,6 +191,9 @@ class CSPLDAClassifier:
         # Production model: refit on ALL trials.
         self._pipeline = self._build_pipeline()
         self._pipeline.fit(X, y)
+        fitted_probs = self._pipeline.predict_proba(X)
+        if not np.isfinite(fitted_probs).all() or not np.isfinite(fold_scores).all():
+            raise ValueError("Classifier produced non-finite validation scores or probabilities")
         self._encoder = encoder
 
         result = FitResult(
@@ -262,6 +267,8 @@ class CSPLDAClassifier:
         X = filtered[np.newaxis, :, :]  # [1, n_channels, n_samples]
         proba = self._pipeline.predict_proba(X)[0]
 
+        if not np.isfinite(proba).all():
+            raise ValueError("Classifier produced non-finite probabilities")
         # LDA class order is the sorted integer labels 0..k-1, which the encoder
         # decodes back to the original class names.
         class_names = self._encoder.inverse_transform(self._pipeline.classes_)
