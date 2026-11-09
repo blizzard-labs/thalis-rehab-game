@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import type { ReactNode } from "react";
+import { Play } from "./GameView";
 import type { Point } from "./motion";
 import { reachProgress } from "./motion";
 import { useHeadset } from "./useHeadset";
@@ -10,14 +10,14 @@ export function SensorSession({
   round,
   side,
   end,
-  play,
+  lockedPause,
   participant,
 }: {
   round: PracticeRound;
   side: Side;
   participant?: string;
   end: () => void;
-  play: (observation: () => number | null, status?: string) => ReactNode;
+  lockedPause?: boolean;
 }) {
   const [source, setSource] = useState(round.source);
   const [rest, setRest] = useState<Point | null>(null);
@@ -195,7 +195,8 @@ export function SensorSession({
     .join(" · ");
   return (
     <>
-      {play(observation, status)}
+      <Play round={round} observation={observation} status={status} onEnd={end}
+        stream={cameraNeeded ? camera.stream : null} lockedPause={lockedPause} />
       {source !== "button" && (
         <div className="input-switch button-row">
           {source === "blended" && <>

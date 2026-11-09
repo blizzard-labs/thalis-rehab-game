@@ -3,7 +3,6 @@ import { gameNames, PracticeRound, sourceNames } from "./session";
 import type { Game, PracticeRecord, Side, Source } from "./session";
 import { SensorSession } from "./SensorSession";
 import { DisplayMonitor, type DisplayState } from "./DisplayMonitor";
-import { Play } from "./GameView";
 
 type Participant = {
   id: string;
@@ -170,14 +169,6 @@ export function StaffWorkspace({ onExit }: { onExit: () => void }) {
             participant={participant.id}
             side={participant.side}
             end={end}
-            play={(observation, status) => (
-              <Play
-                round={round}
-                observation={observation}
-                status={status}
-                onEnd={end}
-              />
-            )}
           />
         )}
         {error && <p role="alert">{error}</p>}

@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import "./practice.css";
-import { Play } from "./GameView";
 import { SensorSession } from "./SensorSession";
 import { gameNames, PracticeRound } from "./session";
 import type { Game, Side, Source, PracticeRecord } from "./session";
@@ -201,15 +200,7 @@ export function PairedDisplay() {
             round={round}
             side={snapshot.side}
             end={finish}
-            play={(observe, status) => (
-              <Play
-                round={round}
-                observation={observe}
-                status={status}
-                onEnd={finish}
-                lockedPause={snapshot.state === "paused" || !!error}
-              />
-            )}
+            lockedPause={snapshot.state === "paused" || !!error}
           />
         )}
       </main>

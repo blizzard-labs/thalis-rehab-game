@@ -1,3 +1,5 @@
+import type { Seed } from "./seeds";
+
 // Garden geometry, in SVG user units (viewBox 0 0 480 600). The plant is
 // rooted in the soil mound and grows straight up; everything below derives
 // from `growth` (0..1) so a single number drives the whole illustration.
@@ -10,7 +12,25 @@ const clamp01 = (x: number) => (x < 0 ? 0 : x > 1 ? 1 : x);
 // Eight petals laid out radially around the flower's center.
 const PETALS = Array.from({ length: 8 }, (_, i) => i * 45);
 
-export function Flower({ growth, bloom }: { growth: number; bloom: boolean }) {
+export function FlowerHead({ seed = "Aster" }: { seed?: Seed }) {
+  const poppy = seed === "Poppy", sunflower = seed === "Sunflower";
+  const angles = poppy ? [45, 135, 225, 315] : PETALS;
+  return (
+    <>
+      <g className="petals">
+        {angles.map((deg) => (
+          <ellipse key={deg} cx="0" cy={poppy ? -31 : -46}
+            rx={poppy ? 44 : sunflower ? 15 : 22} ry={poppy ? 42 : 40}
+            fill={poppy ? "#de6b53" : sunflower ? "#eeb839" : "var(--purple)"}
+            transform={`rotate(${deg})`} />
+        ))}
+      </g>
+      <circle r={sunflower ? 34 : 26} fill={sunflower ? "#704331" : poppy ? "#543e49" : "#f4c84a"} />
+    </>
+  );
+}
+
+export function Flower({ growth, bloom, seed }: { growth: number; bloom: boolean; seed?: Seed }) {
   const stemLen = growth * STEM_MAX;
   const stemTop = GROUND_Y - stemLen;
   // Leaves sprout at fixed fractions up the *current* stem, so they ride the
@@ -77,21 +97,7 @@ export function Flower({ growth, bloom }: { growth: number; bloom: boolean }) {
                   transform: `translate(${STEM_BASE_X}px, ${stemTop}px) scale(${headScale})`,
                 }}
               >
-                <g className="petals">
-                  {PETALS.map((deg) => (
-                    <ellipse
-                      key={deg}
-                      cx="0"
-                      cy="-46"
-                      rx="22"
-                      ry="40"
-                      fill="var(--purple)"
-                      transform={`rotate(${deg})`}
-                    />
-                  ))}
-                </g>
-                <circle r="26" fill="#f4c84a" />
-                <circle r="26" fill="#e0ad2e" fillOpacity="0.35" />
+                <FlowerHead seed={seed} />
               </g>
             </g>
           </svg>

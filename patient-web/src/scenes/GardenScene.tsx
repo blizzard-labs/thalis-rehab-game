@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { PlantGrowthModel } from "../garden/PlantGrowthModel";
-import { Flower } from "../garden/Flower";
+import { GardenLandscape } from "../garden/GardenLandscape";
 import type { SessionStats } from "../session/SessionStats";
 import type { ConnectionState } from "../net/scoreClient";
 import { CameraFeed } from "./CameraFeed";
@@ -74,39 +74,7 @@ export function GardenScene({
         </span>
       </div>
 
-      <div className="garden-row">
-        {/* environment fills the whole page (CSS): sky gradient on the scene,
-            a soft sun, and a full-width soil mound. The plant SVG floats on top. */}
-        <div className="garden-sun" aria-hidden="true" />
-        <div className="garden-ground" aria-hidden="true" />
-
-        {/* Live camera sidecar — same shape/style as calibration, floating on
-            the left of the scene, vertically centered against the viewport. */}
-        <div className="garden-camera">
-          <CameraFeed recording />
-        </div>
-
-        <div className="garden-stage">
-          <Flower growth={growth} bloom={bloom} />
-        </div>
-
-        {/* effort meter — large, labelled, never punitive */}
-        <div className="focus-meter">
-          <span className="focus-meter__label">Focus</span>
-          <div
-            className="intent-bar"
-            data-testid="intent-bar"
-            role="progressbar"
-            aria-label="Focus level"
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-valuenow={pct}
-          >
-            <div className="intent-bar-fill" style={{ height: `${pct}%` }} />
-          </div>
-          <span className="focus-meter__value">{pct}</span>
-        </div>
-      </div>
+      <GardenLandscape growth={growth} bloom={bloom} meter={pct} label="Focus" camera={<CameraFeed recording />} />
 
       <div className="garden-footer">
         <button type="button" className="end-button" onClick={onEnd}>

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { duration, Garden, NightSky, Play } from "./GameView";
+import { duration, Garden, NightSky } from "./GameView";
 import {
   downloadRecord,
   gameNames,
@@ -285,14 +285,6 @@ export function PracticeApp() {
             round={round}
             side={side}
             end={() => setPage("summary")}
-            play={(observation, status) => (
-              <Play
-                round={round}
-                observation={observation}
-                status={status}
-                onEnd={() => setPage("summary")}
-              />
-            )}
           />
         )}
         {page === "summary" && round && (

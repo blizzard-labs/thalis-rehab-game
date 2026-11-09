@@ -68,3 +68,20 @@ it("retains the measured latency summary of a legacy checkpoint", () => {
   resumed.recordPaint(190);
   expect(resumed.record.feedback).toEqual({ count: 36, p95Ms: 77 });
 });
+
+it("grows the chosen flower from four actions and keeps the bed across a rest or reload", () => {
+  const round = new PracticeRound("garden", "button", true);
+  round.chooseSeed("Sunflower");
+  round.press();
+  round.chooseSeed("Poppy");
+  round.setPaused(true);
+  round.press();
+  round.setPaused(false);
+  for (let i = 0; i < 3; i++) round.press();
+  expect(round.flowerBed.bed).toEqual(["Sunflower"]);
+  const resumed = PracticeRound.restore(structuredClone(round.record), true);
+  resumed.chooseSeed("Poppy");
+  for (let i = 0; i < 4; i++) resumed.press();
+  expect(resumed.flowerBed.bed).toEqual(["Sunflower", "Poppy"]);
+  expect(resumed.record.rewards).toBe(2);
+});

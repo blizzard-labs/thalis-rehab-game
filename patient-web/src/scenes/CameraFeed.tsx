@@ -23,9 +23,11 @@ const MIN_LUMA = 40; // 0..255 average; below this the frame is too dark
 export function CameraFeed({
   recording = false,
   framing = false,
+  sourceStream,
   onFramingReady,
 }: {
   recording?: boolean;
+  sourceStream?: MediaStream;
   /** Enable the framing-readiness heuristic and report it via onFramingReady. */
   framing?: boolean;
   onFramingReady?: (ready: boolean) => void;
@@ -33,7 +35,8 @@ export function CameraFeed({
   const videoRef = useRef<HTMLVideoElement>(null);
   const expandRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [stream, setStream] = useState<MediaStream | null>(null);
+  const [ownedStream, setStream] = useState<MediaStream | null>(null);
+  const stream = sourceStream ?? ownedStream;
   const [error, setError] = useState<string | null>(null);
   // Latest onFramingReady in a ref so the sampler effect need not depend on an
   // unstable inline callback (which would restart the loop each render).
@@ -44,6 +47,7 @@ export function CameraFeed({
   // `framing` must not touch this effect — re-requesting getUserMedia mid-block
   // would flash/restart the feed.
   useEffect(() => {
+    if (sourceStream) return;
     let release: (() => void) | undefined;
     let cancelled = false;
     acquireCamera().then(lease => {
@@ -52,7 +56,7 @@ export function CameraFeed({
       setStream(lease.stream);
     }).catch(() => { if (!cancelled) setError("Camera unavailable"); });
     return () => { cancelled = true; release?.(); };
-  }, []);
+  }, [sourceStream]);
 
   // Bind the shared stream to both the inline (cover) and hover-expand (contain)
   // videos whenever it (re)appears.
