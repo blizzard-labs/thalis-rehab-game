@@ -7,6 +7,7 @@ export type DisplayState = {
   state: string;
   paired: boolean;
   connected: boolean;
+  patientPaused: boolean;
   url: string | null;
   record: PracticeRecord | null;
 };
@@ -88,7 +89,9 @@ export function DisplayMonitor({
           : display.state === "complete"
             ? "Session complete"
             : display.connected
-              ? "Display connected"
+              ? display.patientPaused
+                ? "Patient resting"
+                : "Display connected"
               : "Waiting for the display to reconnect…"}
       </p>
       {display.url && (
@@ -122,14 +125,15 @@ export function DisplayMonitor({
             Start patient game
           </button>
         )}
-        {display.state === "playing" && (
+        {display.state === "playing" && !display.patientPaused && (
           <button onClick={() => control("pause")}>Pause patient game</button>
         )}
-        {display.state === "paused" && (
+        {(display.state === "paused" ||
+          (display.state === "playing" && display.patientPaused)) && (
           <button onClick={() => control("resume")}>Resume patient game</button>
         )}
         {display.state !== "complete" && (
-          <button onClick={() => control("end")}>
+          <button onClick={() => control(display.state === "ending" ? "finish-saved" : "end")}>
             {display.state === "ending"
               ? "Finish with last saved record"
               : "End display session"}

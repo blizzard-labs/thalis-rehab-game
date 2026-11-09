@@ -106,7 +106,28 @@ test("staff controls a separate patient screen and receives its final trial coun
     await page.getByRole("button", { name: "Start patient game" }).click();
     const water = player.getByRole("button", { name: "Water" });
     for (let i = 0; i < 4; i++) await water.click();
+    await player.getByRole("button", { name: "Pause", exact: true }).click();
+    await expect(
+      page.getByRole("button", { name: "Resume patient game" }),
+    ).toBeVisible();
+    await player.reload();
+    await expect(water).toBeDisabled();
+    await page.getByRole("button", { name: "Resume patient game" }).click();
+    await expect(water).toBeEnabled();
     await page.getByRole("button", { name: "Pause patient game" }).click();
+    await expect(water).toBeDisabled();
+    await page.getByRole("button", { name: "Resume patient game" }).click();
+    await expect(water).toBeEnabled();
+    await patient.setOffline(true);
+    await expect(player.getByRole("alert")).toContainText(
+      "Display disconnected",
+      { timeout: 12000 },
+    );
+    await expect(water).toBeDisabled();
+    await patient.setOffline(false);
+    await expect(
+      page.getByRole("button", { name: "Resume patient game" }),
+    ).toBeVisible();
     await expect(water).toBeDisabled();
     await page.getByRole("button", { name: "Resume patient game" }).click();
     await expect(water).toBeEnabled();

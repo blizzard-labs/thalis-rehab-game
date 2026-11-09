@@ -103,6 +103,24 @@ def validate_record(r):
             and bounded(feedback.get("p95Ms"), 10000),
             "Invalid latency summary",
         )
+        buckets = feedback.get("buckets")
+        if buckets is not None:
+            checked(
+                isinstance(buckets, dict)
+                and len(buckets) <= 10001
+                and all(
+                    isinstance(k, str)
+                    and k.isascii()
+                    and k.isdigit()
+                    and len(k) <= 5
+                    and 0 <= int(k) <= 10000
+                    and type(v) is int
+                    and v > 0
+                    for k, v in buckets.items()
+                )
+                and sum(buckets.values()) == feedback["count"],
+                "Invalid latency distribution",
+            )
     if r.get("calibration"):
         c = r["calibration"]
         checked(
@@ -402,12 +420,14 @@ def register_clinic(app, root=None, display_origin="http://localhost:8766"):
                     "Session identity changed.",
                 )
                 prefix = r["events"][: len(old["events"])]
-                if (
-                    prev["status"] == "complete"
-                    or old["elapsed"] > r["elapsed"]
-                    or prefix != old["events"]
-                ):
+                if prev["status"] == "complete":
                     return old
+                if old["elapsed"] > r["elapsed"] or prefix != old["events"]:
+                    if status == "playing":
+                        return old
+                    # Finalize the most recent acknowledged events even if a retry
+                    # carries an earlier snapshot of this same session.
+                    r = old
             db.execute(
                 """INSERT INTO sessions(id,participant,record,status,updated) VALUES(?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET
                 record=excluded.record,status=excluded.status,updated=excluded.updated""",

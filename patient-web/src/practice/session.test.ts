@@ -41,3 +41,30 @@ it("pauses for the planned rest before finishing the second clinic block", () =>
   r.tick(0.2, null);
   expect(r.scheduleFinished).toBe(true);
 });
+
+it("restores a scheduled rest, the active source, and timing samples after reloading", () => {
+  const r = new PracticeRound("garden", "blended", false, "clinic");
+  r.record.elapsed = 539.9;
+  r.inputSampleMs = 100;
+  r.recordPaint(170);
+  r.switchInput("eeg");
+  r.tick(0.2, 0);
+  const resumed = PracticeRound.restore(structuredClone(r.record), false);
+  expect(resumed.paused).toBe(true);
+  expect(resumed.source).toBe("eeg");
+  resumed.setPaused(false);
+  resumed.tick(0.2, 0);
+  expect(resumed.paused).toBe(false);
+  resumed.inputSampleMs = 200;
+  resumed.recordPaint(280);
+  expect(resumed.record.feedback).toMatchObject({ count: 2, p95Ms: 80 });
+});
+
+it("retains the measured latency summary of a legacy checkpoint", () => {
+  const r = new PracticeRound("stars", "eeg", true);
+  r.record.feedback = { count: 36, p95Ms: 77 };
+  const resumed = PracticeRound.restore(r.record, true);
+  resumed.inputSampleMs = 100;
+  resumed.recordPaint(190);
+  expect(resumed.record.feedback).toEqual({ count: 36, p95Ms: 77 });
+});

@@ -23,7 +23,7 @@ export interface PracticeRecord {
       { validSeconds: number; missingSeconds: number; weightedLevel: number }
     >
   >;
-  feedback?: { count: number; p95Ms: number };
+  feedback?: { count: number; p95Ms: number; buckets?: Record<number, number> };
   schedule?: "short" | "clinic";
   calibration?: {
     method: string;
@@ -47,7 +47,6 @@ export class PracticeRound {
   scanning = 0;
   inputSampleMs: number | null = null;
   private paintedSample: number | null = null;
-  private latencyBuckets = new Map<number, number>();
 
   private held = 0;
   private released = false;
@@ -81,6 +80,39 @@ export class PracticeRound {
     };
   }
 
+  static restore(record: PracticeRecord, easy: boolean) {
+    const round = new PracticeRound(
+      record.game,
+      record.sources[0],
+      easy,
+      record.schedule,
+    );
+    Object.assign(round.record, record);
+    round.source = record.sources[record.sources.length - 1];
+    round.progress = record.game === "garden" ? (record.actions % 4) / 4 : 0;
+    let lastReward = 0;
+    let buttonStart = 0;
+    for (const event of record.events) {
+      if (event.kind === "pause" || event.kind === "resume")
+        round.paused = event.kind === "pause";
+      if (event.kind === "switch" && event.source === "button")
+        buttonStart = event.seconds;
+      if (event.kind === "reward") {
+        round.adjustDifficulty(event.seconds - lastReward);
+        lastReward = event.seconds;
+      }
+    }
+    round.elapsedSinceReward = Math.max(0, record.elapsed - lastReward);
+    round.scanning =
+      round.source === "button" ? Math.max(0, record.elapsed - buttonStart) : 0;
+    round.restTaken = record.schedule === "clinic" && record.elapsed >= 540;
+    round.scheduleFinished =
+      (record.schedule === "clinic" && record.elapsed >= 1080) ||
+      (record.schedule === "short" && record.elapsed >= 300);
+    // A new display must observe fresh rest and effort after sensor setup.
+    return round;
+  }
+
   get target() {
     return (this.record.rewards * 2 + 1) % 3;
   }
@@ -96,7 +128,11 @@ export class PracticeRound {
   }
 
   switchInput(next: "button" | "camera" | "eeg") {
-    if (next === this.source || (next !== "button" && this.source !== "blended")) return;
+    if (
+      next === this.source ||
+      (next !== "button" && this.source !== "blended")
+    )
+      return;
     this.source = next;
     this.record.sources.push(this.source);
     this.resetInput();
@@ -179,16 +215,21 @@ export class PracticeRound {
     this.paintedSample = this.inputSampleMs;
     const delay = Math.round(timeMs - this.inputSampleMs);
     if (delay < 0 || delay > 10000) return;
-    this.latencyBuckets.set(delay, (this.latencyBuckets.get(delay) ?? 0) + 1);
-    const count = (this.record.feedback?.count ?? 0) + 1;
+    const previous = this.record.feedback;
+    // Older checkpoints contain only a percentile. Preserve that measured sample
+    // set when the underlying distribution cannot be reconstructed.
+    if (previous && !previous.buckets) return;
+    const buckets = previous?.buckets ?? {};
+    buckets[delay] = (buckets[delay] ?? 0) + 1;
+    const count = (previous?.count ?? 0) + 1;
     const rank = Math.ceil(count * 0.95);
     let total = 0;
-    for (const bucket of [...this.latencyBuckets.keys()].sort(
-      (a, b) => a - b,
-    )) {
-      total += this.latencyBuckets.get(bucket)!;
+    for (const bucket of Object.keys(buckets)
+      .map(Number)
+      .sort((a, b) => a - b)) {
+      total += buckets[bucket];
       if (total >= rank) {
-        this.record.feedback = { count, p95Ms: bucket };
+        this.record.feedback = { count, p95Ms: bucket, buckets };
         return;
       }
     }
@@ -198,16 +239,16 @@ export class PracticeRound {
     this.record.rewards++;
     this.progress = 0;
     this.log("reward");
-    // Keep slower players' targets comfortable. Never exceed the calibrated range.
+    this.adjustDifficulty(this.elapsedSinceReward);
+    this.elapsedSinceReward = 0;
+  }
+
+  private adjustDifficulty(interval: number) {
     if (!this.easy)
       this.threshold = Math.max(
         0.35,
-        Math.min(
-          0.75,
-          this.threshold + (this.elapsedSinceReward < 8 ? 0.03 : -0.04),
-        ),
+        Math.min(0.75, this.threshold + (interval < 8 ? 0.03 : -0.04)),
       );
-    this.elapsedSinceReward = 0;
   }
 
   private resetInput() {
@@ -218,7 +259,7 @@ export class PracticeRound {
   }
   private log(kind: PracticeRecord["events"][number]["kind"]) {
     this.record.events.push({
-      seconds: Math.round(this.record.elapsed),
+      seconds: this.record.elapsed,
       kind,
       source: this.source,
     });

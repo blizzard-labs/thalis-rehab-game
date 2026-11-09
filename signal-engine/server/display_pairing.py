@@ -24,6 +24,8 @@ class Display:
     state: str = "waiting"
     last_seen: float = 0
     record: dict | None = None
+    revision: int = 0
+    patient_paused: bool = False
 
 
 class DisplayPairing:
@@ -55,6 +57,7 @@ class DisplayPairing:
             "session": d.session_id,
             "state": d.state,
             "paired": bool(d.token),
+            "patientPaused": d.patient_paused,
             "connected": bool(d.last_seen and time.monotonic() - d.last_seen < 5),
             "url": (
                 self.origin + "/#display=" + d.code
@@ -108,10 +111,20 @@ class DisplayPairing:
         command = b.get("command")
         if command == "end":
             # Ask a connected screen to flush the last actions before finalization.
-            if d.state == "ending" or not d.last_seen or time.monotonic() - d.last_seen > 5:
+            if d.state in ("ending", "complete"):
+                return web.json_response(self.status())
+            if not d.last_seen or time.monotonic() - d.last_seen > 5:
                 self.end("interrupted")
-            elif d.state != "complete":
+            else:
                 d.state = "ending"
+        elif command == "finish-saved":
+            if d.state == "complete":
+                return web.json_response(self.status())
+            if d.state != "ending":
+                raise web.HTTPConflict(
+                    text="Request session end before finishing the saved record."
+                )
+            self.end("interrupted")
         elif (
             d.token
             and d.state not in ("ending", "complete")
@@ -120,6 +133,8 @@ class DisplayPairing:
             d.state = "paused" if command == "pause" else "playing"
         else:
             raise web.HTTPBadRequest(text="The display is not ready for that action.")
+        d.revision += 1
+        d.patient_paused = False
         return web.json_response(self.status())
 
     async def claim(self, request):
@@ -162,15 +177,18 @@ class DisplayPairing:
                 or r["sources"][0] != d.source
             ):
                 raise web.HTTPForbidden(text="Session mismatch.")
-            if not d.record or r.get("elapsed", -1) >= d.record["elapsed"]:
-                status = "complete" if b.get("finished") else "playing"
-                d.record = self.save(self.database(), r, d.participant, status)
-                if status == "complete":
-                    d.state = "complete"
+            status = "complete" if b.get("finished") is True else "playing"
+            d.record = self.save(self.database(), r, d.participant, status)
+            if d.state == "playing" and b.get("revision") == d.revision:
+                d.patient_paused = b.get("paused") is True
+            if status == "complete":
+                d.state = "complete"
         return web.json_response(
             {
                 "session": d.session_id,
                 "state": d.state,
+                "revision": d.revision,
+                "patientPaused": d.patient_paused,
                 "game": d.game,
                 "side": d.side,
                 "easy": d.easy,

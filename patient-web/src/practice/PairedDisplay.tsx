@@ -8,6 +8,8 @@ import type { Game, Side, Source, PracticeRecord } from "./session";
 type Snapshot = {
   session: string;
   state: string;
+  revision: number;
+  patientPaused: boolean;
   game: Game;
   side: Side;
   source: Source;
@@ -15,6 +17,8 @@ type Snapshot = {
   schedule: PracticeRecord["schedule"];
   record: PracticeRecord | null;
 };
+
+class DisplayExpired extends Error {}
 
 async function post(path: string, body: unknown, token?: string) {
   const res = await fetch("/api/display/" + path, {
@@ -27,6 +31,7 @@ async function post(path: string, body: unknown, token?: string) {
     cache: "no-store",
     signal: AbortSignal.timeout(4000),
   });
+  if (res.status === 403) throw new DisplayExpired(await res.text());
   if (!res.ok) throw new Error(await res.text());
   return res.json();
 }
@@ -34,7 +39,14 @@ async function post(path: string, body: unknown, token?: string) {
 export function PairedDisplay() {
   const code = location.hash.slice("#display=".length);
   const key = "nr-display-" + code;
-  const [token, setToken] = useState(() => sessionStorage.getItem(key) || "");
+  const [token, setToken] = useState(() => {
+    try {
+      return sessionStorage.getItem(key) || "";
+    } catch {
+      return "";
+    }
+  });
+  const [expired, setExpired] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
@@ -42,7 +54,7 @@ export function PairedDisplay() {
   const live = useRef<PracticeRound | null>(null);
   const ending = useRef(false);
   const [finishing, setFinishing] = useState(false);
-  const latestState = useRef("");
+  const revision = useRef<number | null>(null);
   useEffect(() => {
     if (!token) return;
     let closed = false,
@@ -51,14 +63,23 @@ export function PairedDisplay() {
       try {
         const d: Snapshot = await post(
           "sync",
-          { record: live.current?.record, finished: ending.current },
+          {
+            record: live.current?.record,
+            paused: live.current?.paused,
+            revision: revision.current,
+            finished: ending.current,
+          },
           token,
         );
         if (closed) return;
         setError("");
         setSnapshot(d);
         if (d.state === "complete") {
-          sessionStorage.removeItem(key);
+          try {
+            sessionStorage.removeItem(key);
+          } catch {
+            /* Storage unavailable. */
+          }
           live.current = null;
           setRound(null);
           return;
@@ -67,25 +88,39 @@ export function PairedDisplay() {
           ending.current = true;
           setFinishing(true);
         }
+        const recovering = !live.current && !!d.record;
         if (d.state !== "waiting" && !live.current) {
-          const r = new PracticeRound(d.game, d.source, d.easy, d.schedule);
-          if (d.record) {
-            Object.assign(r.record, d.record);
-            r.source = r.record.sources[r.record.sources.length - 1];
-            r.progress = d.game === "garden" ? (r.record.actions % 4) / 4 : 0;
-          }
+          const r = d.record
+            ? PracticeRound.restore(d.record, d.easy)
+            : new PracticeRound(d.game, d.source, d.easy, d.schedule);
           r.record.id = d.session;
           live.current = r;
           setRound(r);
         }
-        if (d.state !== latestState.current)
-          live.current?.setPaused(d.state === "paused" || d.state === "ending");
-        latestState.current = d.state;
+        if (d.revision !== revision.current) {
+          live.current?.setPaused(
+            d.state === "paused" ||
+              d.state === "ending" ||
+              d.patientPaused ||
+              recovering,
+          );
+        }
+        revision.current = d.revision;
         timer = window.setTimeout(sync, 750);
       } catch (err) {
         if (closed) return;
         live.current?.setPaused(true);
-        latestState.current = "";
+        if (err instanceof DisplayExpired) {
+          try {
+            sessionStorage.removeItem(key);
+          } catch {
+            /* Storage unavailable. */
+          }
+          live.current = null;
+          setRound(null);
+          setExpired(true);
+          return;
+        }
         setError(
           "Display disconnected. Play is paused. " +
             (err instanceof Error ? err.message : ""),
@@ -103,10 +138,15 @@ export function PairedDisplay() {
     setBusy(true);
     try {
       const r = await post("claim", { code });
-      sessionStorage.setItem(key, r.token);
+      try {
+        sessionStorage.setItem(key, r.token);
+      } catch {
+        /* Keep the active tab paired in memory. */
+      }
       setToken(r.token);
       setError("");
     } catch (err) {
+      if (err instanceof DisplayExpired) setExpired(true);
       setError(err instanceof Error ? err.message : "Could not pair display.");
     } finally {
       setBusy(false);
@@ -126,7 +166,14 @@ export function PairedDisplay() {
       </header>
       <main className="practice-main">
         {error && <p role="alert">{error}</p>}
-        {!token ? (
+        {expired ? (
+          <section className="practice-panel">
+            <h1>Display session unavailable</h1>
+            <p>
+              Ask staff for a new invitation. This screen has stopped tracking.
+            </p>
+          </section>
+        ) : !token ? (
           <section className="practice-panel">
             <h1>Join your session</h1>
             <p>Pair this screen with the staff workstation.</p>

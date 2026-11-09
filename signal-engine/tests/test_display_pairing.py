@@ -57,9 +57,11 @@ def test_invitation_one_device_and_scoped_controls(tmp_path):
             }
             await client.post("/api/display/sync", headers=headers, json={"record": r})
             assert (await control("end"))["state"] == "ending"
+            assert (await control("end"))["state"] == "ending"
+            stale = dict(r, elapsed=2, actions=0, events=[])
             final = await (
                 await client.post(
-                    "/api/display/sync", headers=headers, json={"record": r, "finished": True}
+                    "/api/display/sync", headers=headers, json={"record": stale, "finished": True}
                 )
             ).json()
             assert final["state"] == "complete"
