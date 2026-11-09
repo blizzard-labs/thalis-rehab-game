@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Play } from "./GameView";
+import { withinNet } from "../reach/starGeometry";
 import type { Point } from "./motion";
-import { reachProgress } from "./motion";
+import { reachProgress, wristInSky } from "./motion";
 import { useHeadset } from "./useHeadset";
 import { useMotionCamera } from "./useMotionCamera";
 import type { PracticeRound, Side } from "./session";
@@ -92,7 +93,11 @@ export function SensorSession({
           <button className="primary" onClick={capture}>
             {rest ? "Set comfortable reach" : "Set resting position"}
           </button>
-          {source === "blended" && <button onClick={() => switchInput("eeg")}>Continue with EEG only</button>}
+          {source === "blended" && (
+            <button onClick={() => switchInput("eeg")}>
+              Continue with EEG only
+            </button>
+          )}
           <button onClick={() => switchInput("button")}>Use one button</button>
           <button onClick={end}>End session</button>
         </div>
@@ -168,7 +173,11 @@ export function SensorSession({
           {(eeg.phase === "error" || eeg.phase === "choose") && (
             <button onClick={eeg.retry}>Scan again</button>
           )}
-          {source === "blended" && <button onClick={() => switchInput("camera")}>Continue with camera</button>}
+          {source === "blended" && (
+            <button onClick={() => switchInput("camera")}>
+              Continue with camera
+            </button>
+          )}
           <button onClick={() => switchInput("button")}>Use one button</button>
           <button onClick={end}>End session</button>
         </div>
@@ -178,32 +187,57 @@ export function SensorSession({
     const point = camera.latest();
     const movement =
       rest && reach && point ? reachProgress(rest, reach, point) : null;
-    if (source === "camera") return movement;
+    const aim =
+      cameraNeeded && rest && reach && round.record.game === "stars"
+        ? {
+            wrist: point && wristInSky(rest, reach, point),
+            goal: wristInSky(rest, reach, reach),
+          }
+        : null;
+    const onTarget =
+      !aim || (aim.wrist !== null && withinNet(aim.wrist, aim.goal));
+    if (source === "camera") return { level: movement, aim, onTarget };
     const neural = eeg.latest();
     round.inputSampleMs =
       neural !== null && (source !== "blended" || movement !== null)
         ? eeg.sampleMs()
         : null;
-    if (source === "blended")
-      return neural === null || movement === null
-        ? null
-        : 0.6 * neural + 0.4 * movement;
-    return neural;
+    const level =
+      source === "blended"
+        ? neural === null || movement === null
+          ? null
+          : 0.6 * neural + 0.4 * movement
+        : neural;
+    return { level, aim, onTarget };
   };
   const status = [cameraNeeded && camera.status, eegNeeded && eeg.message]
     .filter(Boolean)
     .join(" · ");
   return (
-    <>
-      <Play round={round} observation={observation} status={status} onEnd={end}
-        stream={cameraNeeded ? camera.stream : null} lockedPause={lockedPause} />
+    <Play
+      round={round}
+      side={side}
+      observation={observation}
+      status={status}
+      onEnd={end}
+      stream={cameraNeeded ? camera.stream : null}
+      lockedPause={lockedPause}
+    >
       {source !== "button" && (
         <div className="input-switch button-row">
-          {source === "blended" && <>
-            <button onClick={() => switchInput("camera")}>Continue with camera</button>
-            <button onClick={() => switchInput("eeg")}>Continue with EEG only</button>
-          </>}
-          <button onClick={() => switchInput("button")}>Continue with one button</button>
+          {source === "blended" && (
+            <>
+              <button onClick={() => switchInput("camera")}>
+                Continue with camera
+              </button>
+              <button onClick={() => switchInput("eeg")}>
+                Continue with EEG only
+              </button>
+            </>
+          )}
+          <button onClick={() => switchInput("button")}>
+            Continue with one button
+          </button>
           {eegNeeded && eeg.phase === "error" && (
             <button
               onClick={() => {
@@ -217,6 +251,6 @@ export function SensorSession({
           )}
         </div>
       )}
-    </>
+    </Play>
   );
 }

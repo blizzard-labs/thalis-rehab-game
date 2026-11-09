@@ -85,3 +85,13 @@ it("grows the chosen flower from four actions and keeps the bed across a rest or
   expect(resumed.flowerBed.bed).toEqual(["Sunflower", "Poppy"]);
   expect(resumed.record.rewards).toBe(2);
 });
+
+it("tracks off-target camera effort without awarding a star until the hoop overlaps", () => {
+  const round = new PracticeRound("stars", "blended", true);
+  round.tick(0.2, 0, false);
+  for (let i = 0; i < 5; i++) round.tick(0.2, 0.8, false);
+  expect(round.record.rewards).toBe(0);
+  for (let i = 0; i < 2; i++) round.tick(0.2, 0.8, true);
+  expect(round.record.rewards).toBe(1);
+  expect(round.record.measurements.blended!.validSeconds).toBeCloseTo(1.6);
+});

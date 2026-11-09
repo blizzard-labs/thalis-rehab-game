@@ -71,11 +71,10 @@ test("blended Garden Grow records both inputs and recovers from signal loss", as
     await page.evaluate(() => {
       Object.assign(window, { armAngle: 0.5 });
     });
-    await expect(page.locator("[data-testid=flower]")).toHaveAttribute(
-      "data-growth",
-      "0.40",
-      { timeout: 12000 },
-    );
+    // A credited reach pours water and the original plant model grows toward it.
+    await expect(page.locator(".water-drops")).toBeAttached({ timeout: 12000 });
+    await expect.poll(async () => Number(await page.getByTestId("flower").getAttribute("data-growth")))
+      .toBeGreaterThan(0.32);
     fixture.kill();
     await expect(
       page.getByText(/EEG signal lost|EEG disconnected/),

@@ -10,6 +10,14 @@ test("guest grows a flower, rests, saves locally and clears the shared browser",
   await page.getByRole("button", { name: "Start game" }).click();
   for (let i = 0; i < 4; i++) await page.keyboard.press("Space");
   await expect(page.getByText(/1 bloom/)).toBeVisible();
+  await expect(page.getByTestId("flower")).toHaveClass(/flower--bloom/);
+  await page.getByRole("button", { name: "Sunflower" }).click();
+  for (let i = 0; i < 4; i++)
+    await page.getByRole("button", { name: "Pour onto the plant" }).click();
+  await expect(
+    page.getByRole("img", { name: "Sunflower", exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText("2 blooms")).toBeVisible();
   await page.getByRole("button", { name: "Pause" }).click();
   await expect(page.getByRole("button", { name: "Water" })).toBeDisabled();
   await page.getByRole("button", { name: "End session" }).click();
@@ -30,18 +38,66 @@ test("guest grows a flower, rests, saves locally and clears the shared browser",
   ).toEqual([]);
 });
 
-test("a phone player selects and catches a star by touch", async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 });
+test.describe("touch play", () => {
+  test.use({ hasTouch: true });
+  test("a phone player selects and catches a star by touch", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/");
+    await page.getByRole("button", { name: /Star Catcher/ }).click();
+    await page.getByRole("button", { name: "Start game" }).click();
+    await page.getByTestId("reach-goal").tap();
+    await expect(
+      page.getByRole("img", { name: "The Kite, 1 of 6 stars" }),
+    ).toBeVisible();
+    await expect(page.getByText(/1 star/)).toBeVisible();
+    await page.getByRole("button", { name: "End session" }).click();
+    await expect(
+      page.getByRole("heading", { name: "Session complete" }),
+    ).toBeVisible();
+  });
+});
+
+test("a switch player aims the net, misses, then catches the same star", async ({
+  page,
+}) => {
   await page.goto("/");
   await page.getByRole("button", { name: /Star Catcher/ }).click();
   await page.getByRole("button", { name: "Start game" }).click();
-  await expect(page.locator(".slot-1")).toHaveAttribute("data-scan", "true");
-  await page.getByRole("button", { name: "Catch" }).click();
-  await expect(page.getByText(/1 star/)).toBeVisible();
-  await page.getByRole("button", { name: "End session" }).click();
-  await expect(
-    page.getByRole("heading", { name: "Session complete" }),
-  ).toBeVisible();
+  await page.keyboard.press("Space");
+  await expect(page.getByText(/Just missed/)).toBeVisible();
+  await expect(page.getByText("0 stars")).toBeVisible();
+  await page.keyboard.press("ArrowRight");
+  await expect(page.getByTestId("net")).toHaveAttribute("data-reach", "1.00");
+  await page.keyboard.press("Space");
+  await expect(page.getByText("1 star", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Pause" }).click();
+  await page.getByTestId("reach-goal").click();
+  await expect(page.getByText("1 star", { exact: true })).toBeVisible();
+});
+
+test("dragging moves the wrist into the hoop before releasing a catch", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: /Star Catcher/ }).click();
+  await page.getByRole("button", { name: "Start game" }).click();
+  const star = await page.getByTestId("reach-goal").boundingBox();
+  if (!star) throw new Error("Golden star is missing");
+  const x = star.x + star.width / 2,
+    y = star.y + star.height / 2;
+  await page.mouse.move(x - star.width * 2, y);
+  await page.mouse.down();
+  await page.mouse.move(x, y, { steps: 6 });
+  await expect
+    .poll(async () =>
+      Number(await page.getByTestId("net").getAttribute("data-reach")),
+    )
+    .toBeGreaterThan(0.9);
+  await expect(page.getByText("0 stars")).toBeVisible();
+  await page.mouse.up();
+  await expect(page.getByText("1 star", { exact: true })).toBeVisible();
 });
 
 test("camera denial can continue the same session using a switch", async ({

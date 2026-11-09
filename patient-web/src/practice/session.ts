@@ -54,7 +54,9 @@ export class PracticeRound {
     if (!this.record.garden) {
       // Recreate the visible bed when resuming a checkpoint from before seed selection.
       const count = Math.min(6, this.record.rewards);
-      const bed = Array.from({ length: count }, (_, i) => seedAt(this.record.rewards - count + i));
+      const bed = Array.from({ length: count }, (_, i) =>
+        seedAt(this.record.rewards - count + i),
+      );
       this.record.garden = { next: seedAt(this.record.rewards), bed };
     }
     return this.record.garden;
@@ -134,6 +136,17 @@ export class PracticeRound {
   get target() {
     return (this.record.rewards * 2 + 1) % 3;
   }
+  get celebrating() {
+    return this.record.rewards > 0 && this.elapsedSinceReward < 0.85;
+  }
+  get effortReach() {
+    return Math.min(1, this.level / this.threshold);
+  }
+  moveScan(direction: number) {
+    if (this.source !== "button" || this.paused) return;
+    this.scanning =
+      ((this.scanSlot + direction + 3) % 3) * (this.easy ? 2.5 : 1.5);
+  }
   get scanSlot() {
     return Math.floor(this.scanning / (this.easy ? 2.5 : 1.5)) % 3;
   }
@@ -157,7 +170,7 @@ export class PracticeRound {
     this.log("switch");
   }
 
-  press() {
+  press(onTarget = this.scanSlot === this.target) {
     if (this.paused || this.source !== "button") return;
     this.record.actions++;
     this.log("action");
@@ -165,12 +178,12 @@ export class PracticeRound {
       if (this.progress === 0) this.plant.reset();
       this.progress = Math.min(1, this.progress + 0.25);
       if (this.progress >= 1) this.reward();
-    } else if (this.scanSlot === this.target) {
+    } else if (onTarget) {
       this.reward();
     }
   }
 
-  tick(dt: number, observation: number | null) {
+  tick(dt: number, observation: number | null, onTarget = true) {
     if (this.paused || this.scheduleFinished) return;
     dt = Math.min(0.25, Math.max(0, dt));
     this.record.elapsed += dt;
@@ -193,7 +206,10 @@ export class PracticeRound {
     if (this.record.game === "garden") {
       const flowering = this.record.rewards > 0 && this.progress === 0;
       const effort = this.source === "button" ? 0 : this.level * 0.14;
-      this.plant.update(flowering ? 1 : 0.12 + this.progress * 0.88 + effort, dt);
+      this.plant.update(
+        flowering ? 1 : 0.12 + this.progress * 0.88 + effort,
+        dt,
+      );
     }
     if (this.source === "button") {
       this.scanning += dt;
@@ -214,7 +230,7 @@ export class PracticeRound {
     measurement.validSeconds += dt;
     measurement.weightedLevel += this.level * dt;
     if (this.level < this.threshold * 0.65) this.released = true;
-    if (this.level < this.threshold || !this.released) {
+    if (this.level < this.threshold || !this.released || !onTarget) {
       this.held = 0;
       return;
     }
@@ -224,7 +240,8 @@ export class PracticeRound {
     this.log("action");
     this.released = false;
     this.held = 0;
-    if (this.record.game === "garden" && this.progress === 0) this.plant.reset();
+    if (this.record.game === "garden" && this.progress === 0)
+      this.plant.reset();
     this.progress =
       this.record.game === "garden" ? Math.min(1, this.progress + 0.25) : 1;
     if (this.progress >= 1) this.reward();

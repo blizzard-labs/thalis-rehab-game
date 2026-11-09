@@ -137,8 +137,8 @@ function GameSetup({
       <h1>{gameNames[game]}</h1>
       <p>
         {game === "garden"
-          ? "Water your plant and watch each flower open."
-          : "Catch the star as the selection moves across the sky."}
+          ? "Choose seeds and grow a flower bed that attracts pollinators."
+          : "Guide your net to golden stars to draw constellations."}
       </p>
       <fieldset>
         <legend>Input</legend>

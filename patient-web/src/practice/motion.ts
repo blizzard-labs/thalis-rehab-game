@@ -1,3 +1,4 @@
+import { shoulder } from "../reach/starGeometry";
 import type { Side } from "./session";
 export type Point = { x: number; y: number };
 type Landmark = Point & { z: number; visibility?: number };
@@ -37,4 +38,14 @@ export function reachProgress(
       ((current.x - rest.x) * dx + (current.y - rest.y) * dy) / length,
     ),
   );
+}
+
+/** Map displacement from this player's resting wrist to the original arm rig.
+ * A comfortable reach spans 190 SVG units. Mirror x like the selfie preview. */
+export function wristInSky(rest: Point, reach: Point, current: Point): Point {
+  const scale = 190 / Math.hypot(reach.x - rest.x, reach.y - rest.y);
+  return {
+    x: shoulder.x - (current.x - rest.x) * scale,
+    y: shoulder.y + (current.y - rest.y) * scale,
+  };
 }

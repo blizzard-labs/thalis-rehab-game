@@ -176,10 +176,6 @@
   color: #fbeac1;
   font-size: clamp(34px, 6vw, 74px);
 }
-.sky-slot[data-scan="true"] {
-  border-color: #f3c971;
-  background: #c9b78920;
-}
 .slot-0 {
   left: 22%;
   top: 62%;
@@ -236,30 +232,11 @@
     40px Georgia,
     serif;
 }
-.button-row,
-.play-title {
+.button-row {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 12px;
-}
-.play-title {
-  justify-content: space-between;
-}
-.play-title span {
-  font-variant-numeric: tabular-nums;
-}
-.play-stage {
-  height: clamp(215px, 44vh, 440px);
-  border-radius: 12px;
-  overflow: hidden;
-  margin: 16px 0;
-}
-.play-controls p {
-  margin: 3px 0 8px;
-}
-.play-controls .button-row {
-  margin-top: 16px;
 }
 .session-list {
   list-style: none;

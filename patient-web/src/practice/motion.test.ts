@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { wristOffset, reachProgress } from "./motion";
+import { wristOffset, reachProgress, wristInSky } from "./motion";
 it("normalizes the selected wrist against the shoulder and hip", () => {
   const pose = Array.from({ length: 33 }, () => ({
     x: 0,
@@ -19,4 +19,11 @@ it("supports small personalized movements and rejects indistinguishable poses", 
     reach = { x: 0.9, y: 0.9 };
   expect(reachProgress(rest, reach, { x: 0.95, y: 0.95 })).toBeCloseTo(0.5);
   expect(reachProgress(rest, rest, reach)).toBeNull();
+});
+
+it("moves the displayed wrist toward the player's mirrored calibrated star", () => {
+  const rest = { x: 0.1, y: 0.4 },
+    reach = { x: -0.1, y: 0.4 };
+  expect(wristInSky(rest, reach, rest)).toEqual({ x: 300, y: 330 });
+  expect(wristInSky(rest, reach, reach)).toEqual({ x: 490, y: 330 });
 });
