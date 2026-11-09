@@ -75,6 +75,7 @@ function startLan() {
 
   // Decoupled session lifecycle: open() mints the pairing code only; begin()
   // arms the dev simulator (sim source only); end() disarms + closes pairing.
+  ipcMain.handle("session:get-source", () => process.env.EEG_SOURCE === "live" ? "live" : "sim");
   ipcMain.handle("session:open", (_e, session: SessionInfo) => lan!.startSession(session));
   ipcMain.handle("session:begin", (_e, source: SessionInfo["source"]) => {
     const cmd = sessionControlCommand(source, "start");

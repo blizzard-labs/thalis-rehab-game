@@ -1,57 +1,399 @@
-.practice-app {--forest:#234e40;--line:#c9d2c4;--paper:#f8f8f0; background:var(--paper);color:#24392f;min-height:100svh;display:flex;flex-direction:column;font: 17px/1.5 "DM Sans", system-ui, sans-serif}
-.practice-nav,.practice-main,.practice-foot {width:min(1080px, calc(100% - 48px));margin:0 auto}
-.practice-nav {padding:22px 0;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line);min-height:83px}
-.practice-main {flex:1;padding:clamp(30px,6vh,74px) 0}
-.practice-app h1,.practice-app h2,.brand {font-family:"Baskerville",Georgia,serif;font-weight:500;letter-spacing:-.045em}
-.brand {font-size:30px;display:flex;align-items:center;gap:10px}
-.brand-mark {font:32px/1 Georgia;color:#4f795b}
-.practice-app h1 {font-size:clamp(42px,6vw,72px);line-height:1.05;margin:0 0 14px}
-.practice-app h2 {font-size:clamp(30px,3.8vw,42px);line-height:1.12;margin:0}
-.practice-app .intro {margin:0 0 32px;color:#526256}
-.practice-app button {color:var(--forest);font:inherit;font-weight:600;min-height:46px;border:1px solid #8caa94;border-radius:8px;padding:8px 18px;background:#fcfdf6;cursor:pointer}
-.practice-app button:hover {background:#e9efe4}
-.practice-app button:focus-visible,.practice-app input:focus-visible {outline:3px solid #1c6687;outline-offset:4px}
-.practice-app button:disabled {opacity:.65;cursor:default}
-.practice-app .primary {background:var(--forest);color:white}
-.practice-app .primary:hover {background:#38624d}
-.game-cards {display:grid;grid-template-columns:1fr 1fr;gap:24px}
-.practice-app .game-card {border-radius:14px;overflow:hidden;text-align:left;padding:0;border:1px solid var(--line);background:#fffef7}
-.card-copy {position:relative;padding:21px 25px 24px}
-.card-copy p {font-weight:400;margin:7px 26px 0 0}
-.card-copy>span {position:absolute;right:24px;top:24px;font-size:24px}
-.card-art {height:clamp(180px,25vw,292px)}
-.plant-scene,.night-sky {position:relative;overflow:hidden;height:100%;isolation:isolate}
-.plant-scene {background:linear-gradient(165deg,#dbe8d1,#f7eccc);--purple:#b56380}
-.plant-scene .garden-art {position:absolute;bottom:3%;height:87%;left:50%;transform:translateX(-50%);filter:none}
-.plant-scene .garden-sun {width:26%;right:7%;top:-5%}
-.plant-bed {position:absolute;bottom:-46%;width:150%;left:-25%;height:75%;border-radius:50%;background:#8ca579;border-top:14px solid #afbc8c}
-.night-sky {background-color:#202f4b;background-image:radial-gradient(ellipse at 70% 100%,#415671,transparent 70%),radial-gradient(1.2px 1.2px at 22px 30px,#fcf0cd 98%,transparent);background-size:auto,89px 67px}
-.sky-slot {position:absolute;display:grid;place-items:center;transform:translate(-50%,-50%);width:20%;aspect-ratio:1;border:3px solid transparent;border-radius:50%;color:#fbeac1;font-size:clamp(34px,6vw,74px)}
-.sky-slot[data-scan=true] {border-color:#f3c971;background:#c9b78920}
-.slot-0 {left:22%;top:62%}.slot-1 {left:49%;top:31%}.slot-2 {left:78%;top:55%}
-.practice-panel {max-width:780px;margin:auto}
-.practice-panel>button:first-child:not(.primary) {margin-bottom:25px}
-.practice-panel>p {color:#4a5d51}
-.practice-panel fieldset {border:1px solid var(--line);border-radius:9px;margin:18px 0;padding:10px 16px 14px}
-.practice-panel legend {font-weight:700;padding:0 6px}
-.practice-panel label {display:inline-flex;align-items:center;min-height:42px;padding-right:20px;gap:6px}
-.practice-panel input {accent-color:var(--forest)}
-.practice-stats {display:flex;flex-wrap:wrap;gap:36px;border-block:1px solid var(--line);padding:24px 0;margin:24px 0}
-.practice-stats dd {margin:4px 0;font:40px Georgia,serif}
-.button-row,.play-title {display:flex;align-items:center;flex-wrap:wrap;gap:12px}
-.play-title {justify-content:space-between}.play-title span {font-variant-numeric:tabular-nums}
-.play-stage {height:clamp(215px,44vh,440px);border-radius:12px;overflow:hidden;margin:16px 0}
-.play-controls p {margin:3px 0 8px}.play-controls .button-row {margin-top:16px}
-.session-list {list-style:none;padding:0}.session-list li {border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:14px 0;gap:12px}
-.practice-foot {border-top:1px solid var(--line);padding:17px 0;color:#526256;font-size:14px}
-@media(max-width:650px){.game-cards{grid-template-columns:1fr;gap:16px}.card-art{height:160px}.practice-nav,.practice-main,.practice-foot{width:calc(100% - 32px)}.practice-nav{padding:12px 0}.brand{font-size:25px}.card-copy{padding:16px}.practice-app .intro{margin-bottom:20px}}
-@media(prefers-reduced-motion:reduce){.practice-app *, .practice-app *::before,.practice-app *::after{animation:none!important;transition:none!important}}
-.practice-preview {display:block;width:min(100%,480px);aspect-ratio:4/3;object-fit:contain;background:#263b32;border-radius:12px;transform:scaleX(-1)}
-.input-switch {max-width:780px;margin:16px auto}
-.practice-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
-.staff-panel h1{margin-top:22px}.staff-panel h2{margin-top:20px}.staff-panel details{margin:18px 0;border-top:1px solid var(--line);padding-top:12px}.staff-panel summary{cursor:pointer;min-height:44px;font-weight:600}
-.staff-panel input:not([type=checkbox]),.practice-panel select{min-height:44px;border-radius:6px;border:1px solid #99ab9b;background:white;color:var(--forest);padding:6px;font:inherit;max-width:100%}
-.staff-panel a{color:#265d53;font-weight:600}.staff-panel label{flex-wrap:wrap}.staff-panel form{margin-bottom:16px}.staff-panel [role=alert]{color:#903c30}
-.sr-only {position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
-.display-invite{display:flex;align-items:center;gap:18px;flex-wrap:wrap;margin:20px 0}
-.display-invite img{width:160px;height:160px}.display-invite a{color:var(--forest);font-weight:700}
+.practice-app {
+  --forest: #234e40;
+  --line: #c9d2c4;
+  --paper: #f8f8f0;
+  background: var(--paper);
+  color: #24392f;
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  font:
+    17px/1.5 "DM Sans",
+    system-ui,
+    sans-serif;
+}
+.practice-nav,
+.practice-main,
+.practice-foot {
+  width: min(1080px, calc(100% - 48px));
+  margin: 0 auto;
+}
+.practice-nav {
+  padding: 22px 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--line);
+  min-height: 83px;
+}
+.practice-main {
+  flex: 1;
+  padding: clamp(30px, 6vh, 74px) 0;
+}
+.practice-app h1,
+.practice-app h2,
+.brand {
+  font-family: "Baskerville", Georgia, serif;
+  font-weight: 500;
+  letter-spacing: -0.045em;
+}
+.brand {
+  font-size: 30px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.brand-mark {
+  font: 32px/1 Georgia;
+  color: #4f795b;
+}
+.practice-app h1 {
+  font-size: clamp(42px, 6vw, 72px);
+  line-height: 1.05;
+  margin: 0 0 14px;
+}
+.practice-app h2 {
+  font-size: clamp(30px, 3.8vw, 42px);
+  line-height: 1.12;
+  margin: 0;
+}
+.practice-app .intro {
+  margin: 0 0 32px;
+  color: #526256;
+}
+.practice-app button {
+  color: var(--forest);
+  font: inherit;
+  font-weight: 600;
+  min-height: 46px;
+  border: 1px solid #8caa94;
+  border-radius: 8px;
+  padding: 8px 18px;
+  background: #fcfdf6;
+  cursor: pointer;
+}
+.practice-app button:hover {
+  background: #e9efe4;
+}
+.practice-app button:focus-visible,
+.practice-app input:focus-visible {
+  outline: 3px solid #1c6687;
+  outline-offset: 4px;
+}
+.practice-app button:disabled {
+  opacity: 0.65;
+  cursor: default;
+}
+.practice-app .primary {
+  background: var(--forest);
+  color: white;
+}
+.practice-app .primary:hover {
+  background: #38624d;
+}
+.game-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+.practice-app .game-card {
+  border-radius: 14px;
+  overflow: hidden;
+  text-align: left;
+  padding: 0;
+  border: 1px solid var(--line);
+  background: #fffef7;
+}
+.card-copy {
+  position: relative;
+  padding: 21px 25px 24px;
+}
+.card-copy p {
+  font-weight: 400;
+  margin: 7px 26px 0 0;
+}
+.card-copy > span {
+  position: absolute;
+  right: 24px;
+  top: 24px;
+  font-size: 24px;
+}
+.card-art {
+  height: clamp(180px, 25vw, 292px);
+}
+.plant-scene,
+.night-sky {
+  position: relative;
+  overflow: hidden;
+  height: 100%;
+  isolation: isolate;
+}
+.plant-scene {
+  background: linear-gradient(165deg, #dbe8d1, #f7eccc);
+  --purple: #b56380;
+}
+.plant-scene .garden-art {
+  position: absolute;
+  bottom: 3%;
+  height: 87%;
+  left: 50%;
+  transform: translateX(-50%);
+  filter: none;
+}
+.plant-scene .garden-sun {
+  width: 26%;
+  right: 7%;
+  top: -5%;
+}
+.plant-bed {
+  position: absolute;
+  bottom: -46%;
+  width: 150%;
+  left: -25%;
+  height: 75%;
+  border-radius: 50%;
+  background: #8ca579;
+  border-top: 14px solid #afbc8c;
+}
+.night-sky {
+  background-color: #202f4b;
+  background-image:
+    radial-gradient(ellipse at 70% 100%, #415671, transparent 70%),
+    radial-gradient(1.2px 1.2px at 22px 30px, #fcf0cd 98%, transparent);
+  background-size:
+    auto,
+    89px 67px;
+}
+.sky-slot {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  transform: translate(-50%, -50%);
+  width: 20%;
+  aspect-ratio: 1;
+  border: 3px solid transparent;
+  border-radius: 50%;
+  color: #fbeac1;
+  font-size: clamp(34px, 6vw, 74px);
+}
+.sky-slot[data-scan="true"] {
+  border-color: #f3c971;
+  background: #c9b78920;
+}
+.slot-0 {
+  left: 22%;
+  top: 62%;
+}
+.slot-1 {
+  left: 49%;
+  top: 31%;
+}
+.slot-2 {
+  left: 78%;
+  top: 55%;
+}
+.practice-panel {
+  max-width: 780px;
+  margin: auto;
+}
+.practice-panel > button:first-child:not(.primary) {
+  margin-bottom: 25px;
+}
+.practice-panel > p {
+  color: #4a5d51;
+}
+.practice-panel fieldset {
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  margin: 18px 0;
+  padding: 10px 16px 14px;
+}
+.practice-panel legend {
+  font-weight: 700;
+  padding: 0 6px;
+}
+.practice-panel label {
+  display: inline-flex;
+  align-items: center;
+  min-height: 42px;
+  padding-right: 20px;
+  gap: 6px;
+}
+.practice-panel input {
+  accent-color: var(--forest);
+}
+.practice-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 36px;
+  border-block: 1px solid var(--line);
+  padding: 24px 0;
+  margin: 24px 0;
+}
+.practice-stats dd {
+  margin: 4px 0;
+  font:
+    40px Georgia,
+    serif;
+}
+.button-row,
+.play-title {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.play-title {
+  justify-content: space-between;
+}
+.play-title span {
+  font-variant-numeric: tabular-nums;
+}
+.play-stage {
+  height: clamp(215px, 44vh, 440px);
+  border-radius: 12px;
+  overflow: hidden;
+  margin: 16px 0;
+}
+.play-controls p {
+  margin: 3px 0 8px;
+}
+.play-controls .button-row {
+  margin-top: 16px;
+}
+.session-list {
+  list-style: none;
+  padding: 0;
+}
+.session-list li {
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 0;
+  gap: 12px;
+}
+.practice-foot {
+  border-top: 1px solid var(--line);
+  padding: 17px 0;
+  color: #526256;
+  font-size: 14px;
+}
+@media (max-width: 650px) {
+  .game-cards {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  .card-art {
+    height: 160px;
+  }
+  .practice-nav,
+  .practice-main,
+  .practice-foot {
+    width: calc(100% - 32px);
+  }
+  .practice-nav {
+    padding: 12px 0;
+  }
+  .brand {
+    font-size: 25px;
+  }
+  .card-copy {
+    padding: 16px;
+  }
+  .practice-app .intro {
+    margin-bottom: 20px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .practice-app *,
+  .practice-app *::before,
+  .practice-app *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+.practice-preview {
+  display: block;
+  width: min(100%, 480px);
+  aspect-ratio: 4/3;
+  object-fit: contain;
+  background: #263b32;
+  border-radius: 12px;
+  transform: scaleX(-1);
+}
+.input-switch {
+  max-width: 780px;
+  margin: 16px auto;
+}
+.practice-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.staff-panel h1 {
+  margin-top: 22px;
+}
+.staff-panel h2 {
+  margin-top: 20px;
+}
+.staff-panel details {
+  margin: 18px 0;
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+}
+.staff-panel summary {
+  cursor: pointer;
+  min-height: 44px;
+  font-weight: 600;
+}
+.staff-panel input:not([type="checkbox"]),
+.practice-panel select {
+  min-height: 44px;
+  border-radius: 6px;
+  border: 1px solid #99ab9b;
+  background: white;
+  color: var(--forest);
+  padding: 6px;
+  font: inherit;
+  max-width: 100%;
+}
+.staff-panel a {
+  color: #265d53;
+  font-weight: 600;
+}
+.staff-panel label {
+  flex-wrap: wrap;
+}
+.staff-panel form {
+  margin-bottom: 16px;
+}
+.staff-panel [role="alert"] {
+  color: #903c30;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.display-invite {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+  margin: 20px 0;
+}
+.display-invite img {
+  width: 160px;
+  height: 160px;
+}
+.display-invite a {
+  color: var(--forest);
+  font-weight: 700;
+}

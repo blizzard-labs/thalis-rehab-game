@@ -101,6 +101,7 @@ function ClinicApp() {
   return (
     <>
       {scene}
+      {paired?.source === "sim" && <span className="simulation-label">Simulated EEG</span>}
       {link.paused && <div role="status" className="rest-notice">Rest break · Your clinician will resume the game.</div>}
       {view !== "welcome" && !link.ended && (
         <button type="button" className="app-quit-btn" data-testid="quit-btn" onClick={quit}>

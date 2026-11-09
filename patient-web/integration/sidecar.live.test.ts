@@ -64,6 +64,7 @@ d("patient-web live sidecar (mock EEG)", () => {
 
   it("mock MI grows the garden over ~15 s of live frames", async () => {
     const ws = new WebSocket(`ws://localhost:${PORT}`);
+    ws.once("open", () => ws.send(JSON.stringify({cmd:"start_session"})));
     const scores: number[] = [];
     const plant = new PlantGrowthModel();
     let maxGrowth = 0;
@@ -90,6 +91,7 @@ d("patient-web live sidecar (mock EEG)", () => {
 
   it("patient and console parsers agree frame-for-frame (shared contract)", async () => {
     const ws = new WebSocket(`ws://localhost:${PORT}`);
+    ws.once("open", () => ws.send(JSON.stringify({cmd:"start_session"})));
     const mine: number[] = [];
     const theirs: number[] = [];
     await new Promise<void>((resolve, reject) => {

@@ -36,7 +36,7 @@ export function App({ patientStore, scoreStore, qualityStore, visionHealthStore,
       <div className="app-bar">
         <span className="app-title">NeuroReach Console</span>
         <span className="spacer" style={{ flex: 1 }} />
-        <span className="app-badge">● Offline-OK</span>
+        <span className="app-badge">Demo roster · Signal {connectionState}</span>
       </div>
 
       {view.name === "roster" && (

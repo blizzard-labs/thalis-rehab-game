@@ -1,4 +1,5 @@
 """Single-use invitation and per-display session control for a supervised station."""
+
 from dataclasses import dataclass
 import json
 import secrets
@@ -15,6 +16,7 @@ class Display:
     side: str
     easy: bool
     source: str
+    schedule: str
     session_id: str
     code: str
     expires: float
@@ -49,22 +51,40 @@ class DisplayPairing:
         d = self.current
         if not d:
             return None
-        return {"session":d.session_id,"state":d.state,"paired":bool(d.token),
-                "connected":bool(d.last_seen and time.monotonic()-d.last_seen<5),
-                "url":self.origin+"/#display="+d.code if not d.token and d.state!="complete" else None,
-                "record":d.record}
+        return {
+            "session": d.session_id,
+            "state": d.state,
+            "paired": bool(d.token),
+            "connected": bool(d.last_seen and time.monotonic() - d.last_seen < 5),
+            "url": (
+                self.origin + "/#display=" + d.code
+                if not d.token and d.state != "complete"
+                else None
+            ),
+            "record": d.record,
+        }
 
     async def create(self, request):
         db = self.staff(request)
         b = await request.json()
         d = self.current
-        if d and d.state != "complete" and (d.token or time.monotonic()<d.expires):
+        if d and d.state != "complete" and (d.token or time.monotonic() < d.expires):
             raise web.HTTPConflict(text="End the other display session on this station first.")
-        p = db.execute("SELECT * FROM participants WHERE id=?",(b.get("participant"),)).fetchone()
-        if not p or b.get("game") not in ("garden","stars"): raise web.HTTPBadRequest(text="Invalid participant or game.")
+        p = db.execute("SELECT * FROM participants WHERE id=?", (b.get("participant"),)).fetchone()
+        if not p or b.get("game") not in ("garden", "stars"):
+            raise web.HTTPBadRequest(text="Invalid participant or game.")
         protocol = json.loads(p["protocol"])
-        self.current = Display(p["id"], b["game"], p["side"], protocol["easy"],protocol["source"],
-                               str(uuid4()),secrets.token_urlsafe(24),time.monotonic()+600)
+        self.current = Display(
+            p["id"],
+            b["game"],
+            p["side"],
+            protocol["easy"],
+            protocol["source"],
+            protocol.get("schedule", "short"),
+            str(uuid4()),
+            secrets.token_urlsafe(24),
+            time.monotonic() + 600,
+        )
         return web.json_response(self.status())
 
     async def monitor(self, request):
@@ -74,24 +94,30 @@ class DisplayPairing:
     def end(self, status):
         d = self.current
         if d.record:
-            self.save(self.database(),d.record,d.participant,status)
+            self.save(self.database(), d.record, d.participant, status)
         d.state = "complete"
 
     async def control(self, request):
         self.staff(request)
         d = self.current
-        if not d: raise web.HTTPNotFound()
+        if not d:
+            raise web.HTTPNotFound()
         b = await request.json()
-        if b.get("session") != d.session_id: raise web.HTTPConflict(text="Display session changed.")
+        if b.get("session") != d.session_id:
+            raise web.HTTPConflict(text="Display session changed.")
         command = b.get("command")
         if command == "end":
             # Ask a connected screen to flush the last actions before finalization.
-            if d.state == "ending" or not d.last_seen or time.monotonic()-d.last_seen>5:
+            if d.state == "ending" or not d.last_seen or time.monotonic() - d.last_seen > 5:
                 self.end("interrupted")
             elif d.state != "complete":
                 d.state = "ending"
-        elif d.token and d.state not in ("ending","complete") and command in ("start","pause","resume"):
-            d.state = "paused" if command=="pause" else "playing"
+        elif (
+            d.token
+            and d.state not in ("ending", "complete")
+            and command in ("start", "pause", "resume")
+        ):
+            d.state = "paused" if command == "pause" else "playing"
         else:
             raise web.HTTPBadRequest(text="The display is not ready for that action.")
         return web.json_response(self.status())
@@ -99,28 +125,57 @@ class DisplayPairing:
     async def claim(self, request):
         b = await request.json()
         d = self.current
-        if not d or d.token or d.state=="complete" or time.monotonic()>d.expires or not secrets.compare_digest(d.code,str(b.get("code",""))):
+        if (
+            not d
+            or d.token
+            or d.state == "complete"
+            or time.monotonic() > d.expires
+            or not secrets.compare_digest(d.code, str(b.get("code", "")))
+        ):
             raise web.HTTPForbidden(text="This invitation has expired or was already used.")
         d.token = secrets.token_urlsafe(32)
         d.last_seen = time.monotonic()
-        response = web.json_response({"token":d.token})
-        response.set_cookie("nr_display",d.token,path="/api/display/eeg",httponly=True,
-                            secure=request.secure,samesite="Strict")
+        response = web.json_response({"token": d.token})
+        response.set_cookie(
+            "nr_display",
+            d.token,
+            path="/api/display/eeg",
+            httponly=True,
+            secure=request.secure,
+            samesite="Strict",
+        )
         return response
 
     async def sync(self, request):
-        token = request.headers.get("Authorization","").removeprefix("Bearer ")
+        token = request.headers.get("Authorization", "").removeprefix("Bearer ")
         d = self.authorize(token)
         b = await request.json()
         d.last_seen = time.monotonic()
         r = b.get("record")
         if r and d.state != "complete":
-            if r.get("id") != d.session_id or r.get("game") != d.game or r.get("sources",[None])[0] != d.source:
+            if (
+                not isinstance(r, dict)
+                or r.get("id") != d.session_id
+                or r.get("game") != d.game
+                or not isinstance(r.get("sources"), list)
+                or not r["sources"]
+                or r["sources"][0] != d.source
+            ):
                 raise web.HTTPForbidden(text="Session mismatch.")
-            if not d.record or r.get("elapsed",-1) >= d.record["elapsed"]:
+            if not d.record or r.get("elapsed", -1) >= d.record["elapsed"]:
                 status = "complete" if b.get("finished") else "playing"
-                self.save(self.database(),r,d.participant,status)
-                d.record = r
-                if status=="complete": d.state="complete"
-        return web.json_response({"session":d.session_id,"state":d.state,"game":d.game,"side":d.side,
-                                  "easy":d.easy,"source":d.source,"record":d.record})
+                d.record = self.save(self.database(), r, d.participant, status)
+                if status == "complete":
+                    d.state = "complete"
+        return web.json_response(
+            {
+                "session": d.session_id,
+                "state": d.state,
+                "game": d.game,
+                "side": d.side,
+                "easy": d.easy,
+                "schedule": d.schedule,
+                "source": d.source,
+                "record": d.record,
+            }
+        )

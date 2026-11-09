@@ -1,0 +1,5 @@
+MediaPipe Tasks Vision and the BlazePose GHUM pose model are from Google.
+The model and runtime are distributed under the Apache License, Version 2.0.
+License text: MediaPipe-Apache-2.0.txt
+Model card: https://storage.googleapis.com/mediapipe-assets/Model%20Card%20BlazePose%20GHUM%203D.pdf
+Package: https://github.com/google-ai-edge/mediapipe

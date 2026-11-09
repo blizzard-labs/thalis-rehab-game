@@ -6,13 +6,13 @@ import { ElectrodeMap } from "./ElectrodeMap";
 type Props = {
   qualityStore: EegQualityStore;
   patient: Patient;
+  source?: "sim" | "live";
   onNext: () => void;
   onBack: () => void;
 };
 
 // Step 1 — Signal check (C2). Electrode contact + live MI trace.
-// EEG source is always the simulated stream.
-export function SignalCheckStep({ qualityStore, patient, onNext, onBack }: Props) {
+export function SignalCheckStep({ qualityStore, patient, source = "sim", onNext, onBack }: Props) {
   const { latest } = useEegQualityStore(qualityStore);
   const channels = latest?.channels ?? [];
   const problems = channels.filter((c) => c.quality !== "good");
@@ -23,6 +23,7 @@ export function SignalCheckStep({ qualityStore, patient, onNext, onBack }: Props
 
       <div className="ws-sub">Affected side: {patient.affectedSide} · mode {patient.mode}</div>
 
+      <p>{source === "sim" ? "Synthetic EEG demonstration" : "Live Unicorn EEG"}</p>
       <div className="grid-2">
         <div className="panel">
           <div className="panel-title">Electrode contact</div>

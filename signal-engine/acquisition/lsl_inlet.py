@@ -403,4 +403,5 @@ class EEGInlet:
                 self._tc_value = self._inlet.time_correction(timeout=self.pull_timeout)
                 self._tc_last_refresh = now
             except Exception:
-                logger.exception("time_correction() failed; keeping previous value")
+                self._tc_last_refresh = now
+                logger.warning("LSL clock correction unavailable; keeping previous value")

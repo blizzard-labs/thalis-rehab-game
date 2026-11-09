@@ -22,15 +22,32 @@ jobs:
       - run: npm --prefix clinician-console run build:renderer
       - run: npm --prefix clinician-console test
       - working-directory: patient-web
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install --with-deps chromium firefox webkit
       - working-directory: patient-web
         env:
           NEUROREACH_BROWSER: chromium
         run: npm run test:e2e
+      - working-directory: patient-web
+        env:
+          NEUROREACH_BROWSER: firefox
+        run: npm run test:e2e -- practice.spec.ts -g "guest grows|phone player|camera denial"
+      - working-directory: patient-web
+        env:
+          NEUROREACH_BROWSER: webkit
+        run: npm run test:e2e -- practice.spec.ts -g "guest grows|phone player|camera denial"
       - uses: actions/upload-artifact@v4
         with:
           name: neuroreach-web
           path: patient-web/dist
+  signal-tests:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - run: python -m pip install -r signal-engine/requirements.txt pytest
+      - run: python -m pytest -q signal-engine/tests
   windows-companion:
     runs-on: windows-latest
     needs: web
@@ -44,7 +61,11 @@ jobs:
         with:
           python-version: '3.10'
       - run: python -m pip install -r signal-engine/requirements-companion.txt pyinstaller==6.16.0 pytest
-      - run: python -m pytest -q signal-engine/tests/test_clinic_records.py signal-engine/tests/test_local_companion.py
+      - run: python -m pytest -q signal-engine/tests/test_clinic_records.py signal-engine/tests/test_local_companion.py signal-engine/tests/test_display_pairing.py signal-engine/tests/test_personal_model.py
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm --prefix patient-web ci
       - run: python -m PyInstaller --clean --noconfirm packaging/companion.spec
       - shell: pwsh
         run: |
@@ -70,6 +91,12 @@ jobs:
             Get-Content "$env:RUNNER_TEMP/companion-err.log"
             Get-Content "$env:RUNNER_TEMP/companion-out.log"
           }
+      - working-directory: patient-web
+        shell: pwsh
+        run: |
+          $env:NEUROREACH_TEST_PYTHON = (Get-Command python).Source
+          $env:NEUROREACH_COMPANION_EXE = (Resolve-Path ../dist/NeuroReach/NeuroReach.exe).Path
+          npm run test:e2e -- headset.spec.ts
       - shell: pwsh
         run: '& "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" packaging/windows.iss'
       - shell: pwsh

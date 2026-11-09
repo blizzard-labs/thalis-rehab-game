@@ -3,6 +3,7 @@ import type { SessionInfo } from "../main/lan/pairing";
 
 type NeuroreachBridge = {
   open(s: SessionInfo): Promise<{ code: string; url: string }>;
+  getSource?(): Promise<"sim" | "live">;
   begin(source: SessionInfo["source"]): Promise<void>;
   end(): Promise<void>;
   setMode(mode: "band_power_only" | "csp_lda_blend"): Promise<void>;
@@ -32,8 +33,11 @@ export function useSession() {
 
   useEffect(() => {
     if (!nr) return;
-    nr.onPatientConnected(() => setConnected(true));
-    nr.onPatientDisconnected(() => setConnected(false));
+    let current = true;
+    nr.getSource?.().then(value => { if (current) setSource(value); });
+    nr.onPatientConnected(() => { if (current) setConnected(true); });
+    nr.onPatientDisconnected(() => { if (current) setConnected(false); });
+    return () => { current = false; };
   }, [nr]);
 
   const open = useCallback(async (base: Omit<SessionInfo, "source">) => {

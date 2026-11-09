@@ -4,6 +4,7 @@ import { isClinicianCheckpoint, type CheckpointMessage } from "./checkpoint";
 
 export type PairedSession = {
   patientFirstName: string;
+  source?: "sim" | "live";
   affectedSide: "left" | "right";
   mode: string;
 };

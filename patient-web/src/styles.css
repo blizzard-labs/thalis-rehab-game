@@ -396,3 +396,4 @@ body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, sans-serif; co
 @keyframes waiting-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .waiting__spin { animation: none; } }
 .rest-notice {position:fixed;inset:0;display:grid;place-items:center;background:#f8f8f0ed;color:#254935;font-size:clamp(22px,4vw,40px);z-index:15;text-align:center;padding:24px}
+.simulation-label {position:fixed;top:12px;left:12px;z-index:12;background:#fff9d9;color:#5f4215;font-size:14px;font-weight:600;padding:6px 10px;border-radius:6px}

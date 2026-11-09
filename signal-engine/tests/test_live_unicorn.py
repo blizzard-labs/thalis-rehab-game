@@ -9,23 +9,10 @@ acquisition and measure end-to-end latency of the live scoring path:
 
 MVP latency target: p95 of the acquisition-to-feature path < 250 ms.
 
-WHY NOT EEGInlet
-----------------
-The real bridge (verified with lsl_diagnostic.py) advertises:
-
-    Name: 'UN-2024.06.42'  Type: 'Data'  Channels: 17  (NO <channels> XML labels)
-
-EEGInlet resolves by type=="EEG" and slices channels BY LABEL parsed from XML.
-This stream has neither, so EEGInlet finds nothing. The Unicorn data layout is
-instead FIXED and POSITIONAL (confirmed against archive/unicorneeg/stream.py):
-
-    0..7  EEG  [Fz, C3, Cz, C4, Pz, PO7, Oz, PO8]
-    8..13 IMU  [AccX, AccY, AccZ, Gyro1, Gyro2, Gyro3]
-    14..16     [Battery, Counter, Validation]
-
-So we resolve by NAME, pull raw, and slice positionally here. Raw EEG carries a
-large electrode DC offset (values ~ -3.8e5 µV); the 1-40 Hz causal bandpass
-removes it, which is why plausibility is asserted AFTER filtering.
+These hardware diagnostics use a positional inlet to inspect raw samples and
+timestamps. The shipping companion separately discovers and validates the same
+17-channel stream through EEGInlet. Its normal runtime is tested with a real
+local LSL outlet carrying synthetic samples.
 
 OPT-IN
 ------
@@ -111,7 +98,7 @@ def dev():
     try:
         d = _LiveUnicorn(STREAM_NAME)
     except RuntimeError as exc:
-        pytest.skip(str(exc))
+        pytest.fail(f"Live hardware requested but the Unicorn stream is unavailable: {exc}")
     yield d
     d.close()
 
@@ -155,7 +142,7 @@ def test_eeg_data_is_live(dev: _LiveUnicorn):
     off-head the channels are floating-electrode noise/drift (mV-scale), so we
     only assert the data is real and moving — NOT a clinical µV amplitude. The
     real amplitude bound (10-100 µV on scalp) is validated on-head; see
-    test_signal_quality_on_head_TODO.
+    test_signal_quality_on_head.
     """
     chain = CausalFilterChain(fs=FS, low=1.0, high=40.0, notch_freq=60.0)
     dev.drain()
@@ -288,7 +275,7 @@ def test_pipeline_end_to_end_on_live_data(dev: _LiveUnicorn):
     STRUCTURE check only: filter -> CAR -> ERD -> laterality executes against
     real samples and returns finite numbers with the expected keys. Magnitude
     is NOT asserted (off-head it's noise; on-head it needs a motor-imagery
-    protocol -> test_signal_quality_on_head_TODO).
+    protocol -> test_signal_quality_on_head).
     """
     chain = CausalFilterChain(fs=FS, low=1.0, high=40.0, notch_freq=60.0)
     calc = ERDCalculator(channel_labels=["C3", "C4"], fs=FS, window_sec=1.0)
@@ -322,19 +309,22 @@ def test_pipeline_end_to_end_on_live_data(dev: _LiveUnicorn):
 # 4. Deferred: real signal-quality + ERD-magnitude validation (needs cap worn)
 
 
-@pytest.mark.skip(reason="run on-head with a motor-imagery protocol; see docstring")
-def test_signal_quality_on_head_TODO():
-    """ON-HEAD validation — un-skip and run while wearing the cap.
-
-    Protocol (self-paced motor imagery):
-      1. Fit cap, confirm impedance / signal in Unicorn Suite first.
-      2. 30 s eyes-open rest -> calibrate baseline (this is the real baseline).
-      3. 5 x [10 s rest -> 10 s imagine LEFT-hand squeeze]; repeat for RIGHT.
-
-    Assert (on-head expectations):
-      * resting filtered EEG median std in ~5-100 µV (real scalp amplitude),
-      * LEFT-hand MI -> C3 mu ERD ~20-40% (contralateral desync),
-      * RIGHT-hand MI -> C4 mu ERD ~20-40%; laterality_index flips sign,
-      * un-imagined contralateral channel stays near 0.
-    """
-    pytest.skip("placeholder — implement against on-head MI protocol")
+@pytest.mark.skipif(os.environ.get("THALIS_ON_HEAD") != "1",
+                    reason="Requires a fitted cap, an operator, and THALIS_ON_HEAD=1")
+def test_signal_quality_on_head(dev: _LiveUnicorn):
+    """Operator-attended signal check using the same clean resting gate as the app."""
+    from acquisition.practice_eeg import quality
+    dev.drain()
+    print("Keep the fitted headset still during the 10-second resting check.", flush=True)
+    raw = _collect(dev, 10)
+    assert raw.shape[1] >= 9 * FS, "Too few live samples"
+    clean_seconds = 0
+    contacts = {}
+    for start in range(0, raw.shape[1]-FS+1, FS):
+        window = raw[:, start:start+FS]
+        clean, poor = quality(window[EEG_SLICE], window[IMU_SLICE], EEG_LABELS)
+        clean_seconds += int(clean)
+        for label in poor:
+            contacts[label] = contacts.get(label, 0)+1
+    print(f"Clean seconds: {clean_seconds}. Poor contact windows: {contacts}")
+    assert clean_seconds >= 8, "Refit the headset and repeat before imagery calibration"

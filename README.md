@@ -15,7 +15,7 @@ NeuroReach is an open-source wellness and engagement prototype for seated upper-
 
 ## Play on localhost
 
-From the repository root, run `npm --prefix patient-web ci` once, then `npm start` and open **http://127.0.0.1:5173**. Choose Garden Grow or Star Catcher and use a button, touch, keyboard, or an adaptive switch. Pause or end a round at any time. Saving a summary is optional and local to the browser. Choose **Camera** to set a resting position and a comfortable reach for either arm. The browser processes frames in a local worker. A return to rest separates successive actions. You can switch to one-button input during setup or play. QR links from the clinician console still open the paired workflow.
+Use Node.js 22.12 or later. From the repository root, run `npm --prefix patient-web ci` once, then `npm start` and open **http://127.0.0.1:5173**. Choose Garden Grow or Star Catcher and use a button, touch, keyboard, or an adaptive switch. Pause or end a round at any time. Saving a summary is optional and local to the browser. Choose **Camera** to set a resting position and a comfortable reach for either arm. The browser processes frames in a local worker. A return to rest separates successive actions. You can switch to one-button input during setup or play. QR links from the clinician console still open the paired workflow.
 
 ### Local EEG companion
 
@@ -32,7 +32,7 @@ conda run -n eeg python -m pip install -r signal-engine/requirements-companion.t
 
 ### Supervised sessions
 
-Open **Staff workspace** on localhost with the companion running. Set the station password, add a participant label with consent, choose an arm and session settings, and start either game. The station checkpoints progress, records pauses, and produces CSV and PDF reports. Locking the workspace protects record access; an OS account with encrypted storage protects the files on disk. The roster supports assessments, deletion, and exporting or restoring a station backup. Restore requires an empty roster. Browser guest history is independent.
+Open **Staff workspace** on localhost with the companion running. Set the station password, add a participant label with consent, choose an arm and session settings, and start either game. The station checkpoints progress, records pauses, and produces CSV and PDF reports. Select a five-minute round or two nine-minute blocks separated by a rest. Staff can save participant feedback with a completed session. Locking the workspace protects record access; an OS account with encrypted storage protects the files on disk. The roster supports assessments, deletion, and exporting or restoring a station backup. Restore requires an empty roster. Browser guest history is independent.
 
 The default SQLite database is `~/.neuroreach/clinic.sqlite3`. Set `NEUROREACH_DATA_DIR` to use another local directory. Back up the database or export a backup from the workspace before moving stations.
 
@@ -63,7 +63,9 @@ conda run -n eeg python -m pytest signal-engine/tests
 npm --prefix patient-web run test:e2e
 ```
 
-The browser tests use installed Chrome by default. Set `NEUROREACH_BROWSER=chromium` for Playwright's installed Chromium. The optional EEG browser test takes about 80 seconds and needs the running companion plus `NEUROREACH_TEST_PYTHON` pointing to the EEG environment's Python executable. The positive camera test accepts `NEUROREACH_POSE_FIXTURE`, the path to [MediaPipe's test image](https://storage.googleapis.com/mediapipe-assets/pose.jpg). Both use test signals or images. Physical on-head validation uses `THALIS_LIVE_UNICORN=1` with the existing `signal-engine/tests/test_live_unicorn.py` hardware checks.
+The browser tests use installed Chrome by default. Set `NEUROREACH_BROWSER=chromium` for Playwright's installed Chromium. The optional EEG browser test launches an isolated companion, takes about 80 seconds, and needs `NEUROREACH_TEST_PYTHON` pointing to the EEG environment's Python executable. The positive camera test accepts `NEUROREACH_POSE_FIXTURE`, the path to [MediaPipe's test image](https://storage.googleapis.com/mediapipe-assets/pose.jpg). Both use test signals or images. Physical on-head validation uses `THALIS_LIVE_UNICORN=1` with the existing `signal-engine/tests/test_live_unicorn.py` hardware checks.
+
+See [localhost verification](docs/localhost-validation.md) for the acceptance scenarios, latency definition and physical pilot checks.
 
 The production web build in `patient-web/dist` can be served at the root of an HTTPS site. The service worker caches versioned app, model, and runtime assets after the first load. Guest sessions work offline; EEG and staff features use a running local companion. Publish a complete build atomically and keep the previous version for rollback. The included GitHub Actions workflow builds and tests the web archive and packages a Windows prototype installer. The installer does not bundle g.tec drivers. Deployments for general distribution still require code signing and on-head validation.
 

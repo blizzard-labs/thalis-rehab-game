@@ -63,6 +63,7 @@ export function SessionFlow(props: Props) {
       {step === "signal" && (
         <SignalCheckStep
           qualityStore={props.qualityStore}
+          source={s.source}
           patient={patient}
           onNext={() => go("pair")}
           onBack={onExit}

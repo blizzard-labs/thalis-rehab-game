@@ -115,6 +115,9 @@ d("LAN spine (real mock-EEG sidecar → LanServer → paired WSS client)", () =>
       rejectUnauthorized: false,
       origin: server.origin(),
     });
+    // Use the clinician control socket to arm the simulation, as the desktop app does.
+    const control = new WebSocket(`ws://127.0.0.1:${SIDECAR_PORT}`);
+    control.once("open", () => control.send(JSON.stringify({cmd:"start_session"})));
     const scores: number[] = [];
     let leakedQuality = false;
     let paired = false;
@@ -132,6 +135,7 @@ d("LAN spine (real mock-EEG sidecar → LanServer → paired WSS client)", () =>
     });
     ws.close();
 
+    control.close();
     expect(paired).toBe(true);
     expect(scores.length).toBeGreaterThan(100); // ~20 Hz over ~12 s
     expect(leakedQuality).toBe(false); // eeg_quality must never reach the patient

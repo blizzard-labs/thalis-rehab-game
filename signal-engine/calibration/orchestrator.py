@@ -169,6 +169,7 @@ class CalibrationOrchestrator:
                 if abort_event.is_set():
                     break
                 logger.info("Discarding trial %d with missing or contaminated samples", trial_n)
+                self._precise_sleep(self._rng.uniform(self.iti_min_s, self.iti_max_s), abort_event)
                 continue
 
             epochs.append(epoch)
@@ -294,6 +295,8 @@ class CalibrationOrchestrator:
             buf = np.empty((n_channels, 0), dtype=np.float64)
 
         if self.reject_bad_windows:
+            if not parts:
+                raise RuntimeError("Lost the EEG stream during cued calibration. Reconnect and retry.")
             from preprocessing.artifact import AmplitudeGate, MovementGate
             if (gap or buf.shape[1] < 0.98 * n_target or not np.isfinite(buf).all()
                     or np.any(np.ptp(buf, axis=1) < 1)

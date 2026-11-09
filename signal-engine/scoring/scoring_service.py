@@ -71,7 +71,7 @@ class ScoringService:
 
         self._thread: threading.Thread | None = None
         self._stop = threading.Event()
-        self._last_score_time = 0.0
+        self._next_score_time = time.monotonic()
 
         # Latest per-channel contact-quality snapshot for the console C2 setup
         # screen. Single writer (the loop), many readers; the dict is replaced
@@ -103,7 +103,7 @@ class ScoringService:
         if self._thread is not None and self._thread.is_alive():
             raise RuntimeError("ScoringService already running")
         self._stop.clear()
-        self._last_score_time = 0.0
+        self._next_score_time = time.monotonic()
         self._thread = threading.Thread(
             target=self._run, name="ScoringService", daemon=True
         )
@@ -156,9 +156,13 @@ class ScoringService:
                 artifact_clean = is_clean and is_head_still
 
                 now = time.monotonic()
-                if (now - self._last_score_time) < (1.0 / self.update_rate_hz):
+                if now < self._next_score_time:
                     continue
-                self._last_score_time = now
+                # Anchor to successive score deadlines. Rebasing to each packet's
+                # arrival can skip every other tick when packets arrive just early.
+                period = 1.0 / self.update_rate_hz
+                ticks = int((now - self._next_score_time) / period) + 1
+                self._next_score_time += ticks * period
 
                 result = self.engine.compute(
                     self.ring_buffer, artifact_clean, kinematic=self._read_kinematic()

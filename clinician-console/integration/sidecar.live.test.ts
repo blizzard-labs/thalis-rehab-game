@@ -95,6 +95,7 @@ d("live sidecar (mock EEG)", () => {
 
   it("streams well-formed, non-flat intent scores from mock EEG", async () => {
     const ws = new WebSocket(`ws://localhost:${PORT}`);
+    ws.once("open", () => ws.send(JSON.stringify({cmd:"start_session"})));
     const frames: ScoreFrame[] = [];
     await new Promise<void>((resolve, reject) => {
       const timer = setTimeout(() => {
