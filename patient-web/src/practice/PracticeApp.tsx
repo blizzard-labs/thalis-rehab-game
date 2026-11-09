@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Flower } from "../garden/Flower";
 import { downloadRecord, gameNames, historyStore, PracticeRound, sourceNames } from "./session";
 import type { Game, PracticeRecord, Side, Source } from "./session";
+import { SensorSession } from "./SensorSession";
 import "./practice.css";
 
 function duration(seconds: number) {
@@ -117,19 +118,26 @@ function Play({ round, onEnd, observation = () => null, status }: {
 function GameSetup({ game, onBack, onStart }: { game: Game; onBack: () => void;
   onStart: (source: Source, easy: boolean, side: Side) => void }) {
   const [easy, setEasy] = useState(true);
+  const [source, setSource] = useState<Source>("button");
+  const [side, setSide] = useState<Side>("right");
   return <section className="practice-panel"><button onClick={onBack}>← Games</button>
     <h1>{gameNames[game]}</h1><p>{game === "garden" ? "Water your plant and watch each flower open." : "Catch the star as the selection moves across the sky."}</p>
-    <fieldset><legend>Input</legend><label><input type="radio" defaultChecked name="input"/> One button</label></fieldset>
-    <p>Use touch, a mouse, or a switch. On a keyboard, press Space or Enter on the game button.</p>
+    <fieldset><legend>Input</legend>{(["button","camera"] as const).map(input =>
+      <label key={input}><input type="radio" name="input" checked={source === input} onChange={() => setSource(input)} /> {sourceNames[input]}</label>)}</fieldset>
+    {source === "button" ? <p>Use touch, a mouse, or a switch. On a keyboard, press Space or Enter on the game button.</p>
+      : <><p>Your webcam tracks your reach on this device. Video is never saved.</p>
+        <fieldset><legend>Which arm?</legend>{(["left","right"] as const).map(s =>
+          <label key={s}><input type="radio" name="side" checked={side === s} onChange={() => setSide(s)} /> {s === "left" ? "Left" : "Right"}</label>)}</fieldset></>}
     <fieldset><legend>Pace</legend>{["Gentle", "Standard"].map((label,i) =>
       <label key={label}><input type="radio" name="pace" checked={easy === (i === 0)} onChange={() => setEasy(i === 0)} /> {label}</label>)}</fieldset>
-    <button className="primary" onClick={() => onStart("button", easy, "right")}>Start game</button>
+    <button className="primary" onClick={() => onStart(source, easy, side)}>Start game</button>
   </section>;
 }
 
 export function PracticeApp() {
   const [page, setPage] = useState<"home" | "history" | "setup" | "play" | "summary">("home");
   const [game, setGame] = useState<Game>("garden");
+  const [side, setSide] = useState<Side>("right");
   const [round, setRound] = useState<PracticeRound | null>(null);
   const back = () => { setRound(null); setPage("home"); };
   return <div className="practice-app"><header className="practice-nav">
@@ -143,8 +151,9 @@ export function PracticeApp() {
           <div className="card-copy"><h2>{gameNames[id]}</h2><p>{id === "garden" ? "Grow a flower, one action at a time." : "Find a star and bring it home."}</p><span aria-hidden="true">↗</span></div>
         </button>)}</div></>}
     {page === "history" && <History onBack={back} />}
-    {page === "setup" && <GameSetup game={game} onBack={back} onStart={(source, easy) => { setRound(new PracticeRound(game, source, easy)); setPage("play"); }} />}
-    {page === "play" && round && <Play round={round} onEnd={() => setPage("summary")} />}
+    {page === "setup" && <GameSetup game={game} onBack={back} onStart={(source, easy, arm) => { setSide(arm); setRound(new PracticeRound(game, source, easy)); setPage("play"); }} />}
+    {page === "play" && round && <SensorSession round={round} side={side} end={() => setPage("summary")}
+      play={(observation, status) => <Play round={round} observation={observation} status={status} onEnd={() => setPage("summary")} />} />}
     {page === "summary" && round && <Summary record={round.record} onBack={back} />}
   </main><footer className="practice-foot">NeuroReach · Wellness &amp; engagement</footer></div>;
 }
