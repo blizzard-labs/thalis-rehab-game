@@ -87,6 +87,7 @@ class IntentScoreEngine:
 
         # Fusion session mode (spec §8.2–8.4). Camera absent -> Mode A (EEG only).
         self.session_mode: str = "A"
+        self.classifier_input: RingBuffer | None = None
 
     _MODE_WEIGHTS = {"A": (1.0, 0.0), "B": (0.6, 0.4), "C": (0.25, 0.75)}
 
@@ -117,7 +118,7 @@ class IntentScoreEngine:
             )
 
         erd_score = self._compute_erd_score(ring_buffer)
-        classifier_score = self._compute_classifier_score(ring_buffer)
+        classifier_score = self._compute_classifier_score(self.classifier_input or ring_buffer)
 
         if self.classifier_reliable and classifier_score is not None:
             raw_score = 0.4 * erd_score + 0.6 * classifier_score

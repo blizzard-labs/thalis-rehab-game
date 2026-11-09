@@ -51,7 +51,10 @@ def _pull_for(inlet: EEGInlet, seconds: float):
 
 
 def build_scoring_service():
-    inlet = EEGInlet(timeout=5.0, pull_timeout=1.0)
+    source = os.environ.get("EEG_SOURCE", "sim").lower()
+    inlet = EEGInlet(timeout=5.0, pull_timeout=1.0,
+                     stream_type="Data" if source == "live" else "EEG",
+                     stream_name=os.environ.get("UNICORN_STREAM_NAME") if source == "live" else None)
     eeg_labels = inlet.eeg_labels
 
     print("Calibrating ERD baseline on 2s of rest...")

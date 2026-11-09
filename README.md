@@ -25,6 +25,14 @@ and no patient health information ever leaves the clinic PC.
 
 From the repository root, run `npm --prefix patient-web ci` once, then `npm start` and open **http://127.0.0.1:5173**. Choose Garden Grow or Star Catcher and use a button, touch, keyboard, or an adaptive switch. Pause or end a round at any time. Saving a summary is optional and local to the browser. Choose **Camera** to set a resting position and a comfortable reach for either arm. The browser processes frames in a local worker. A return to rest separates successive actions. You can switch to one-button input during setup or play. QR links from the clinician console still open the paired workflow.
 
+### Local EEG companion
+
+Start the g.tec Unicorn Suite LSL bridge with your headset streaming. In a second terminal run `npm run companion` with the `eeg` Conda environment installed. The companion binds to **127.0.0.1:8766**. You can also run `npm run build` and open **http://127.0.0.1:8766** to use the built app without Vite. On the game setup screen choose **EEG headset** or **Camera + EEG**, choose the arm and device, and follow the resting instructions. No headset is required to start either server.
+
+The companion recognizes 17-channel, 250 Hz Unicorn streams whose names start with `UN-`. It requires 60 clean seconds of rest and excludes motion artifacts, invalid contact, and sample gaps. Optional cued training uses ten rest and ten imagined-hand trials. A model that clears the held-out quality threshold can be saved locally by choosing the calibration checkbox on a personal computer. Otherwise play uses rest-calibrated band power. Blended mode needs fresh input from both sources; a user can explicitly switch to button input. No raw EEG or video is written to session history.
+
+For an existing Python 3.10 EEG environment, the version pins are in `signal-engine/requirements.txt`. The Unicorn driver/streaming software and native liblsl runtime must be available on the acquisition computer.
+
 The bundled model is Google's [MediaPipe Pose Landmarker Lite, float16, version 1](https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task), SHA-256 `59929e1d1ee95287735ddd833b19cf4ac46d29bc7afddbbf6753c459690d574a`. The build copies the pinned MediaPipe WebAssembly runtime locally.
 
 

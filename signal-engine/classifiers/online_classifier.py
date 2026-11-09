@@ -28,12 +28,13 @@ _WARN_INTERVAL_S = 60.0
 class OnlineClassifier:
     """Thin real-time decode layer over a fitted CSPLDAClassifier."""
 
-    def __init__(self, classifier: CSPLDAClassifier):
+    def __init__(self, classifier: CSPLDAClassifier, target_class: str = _DEFAULT_TARGET):
         if not getattr(classifier, "is_fitted", False):
             raise ModelNotFittedError(
                 "OnlineClassifier requires a fitted/loaded CSPLDAClassifier."
             )
         self.classifier = classifier
+        self.target_class = target_class
         self._last_unreliable_warn: float = 0.0
 
     @property
@@ -66,9 +67,10 @@ class OnlineClassifier:
         self,
         epoch: np.ndarray,
         channel_labels: list[str],
-        target_class: str = _DEFAULT_TARGET,
+        target_class: str | None = None,
     ) -> float:
         """Probability of ``target_class`` as a 0–100 float (EEG_Score)."""
+        target_class = target_class or self.target_class
         proba = self.predict_proba(epoch, channel_labels)
         if target_class not in proba:
             raise ValueError(

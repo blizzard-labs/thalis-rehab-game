@@ -122,10 +122,12 @@ function GameSetup({ game, onBack, onStart }: { game: Game; onBack: () => void;
   const [side, setSide] = useState<Side>("right");
   return <section className="practice-panel"><button onClick={onBack}>← Games</button>
     <h1>{gameNames[game]}</h1><p>{game === "garden" ? "Water your plant and watch each flower open." : "Catch the star as the selection moves across the sky."}</p>
-    <fieldset><legend>Input</legend>{(["button","camera"] as const).map(input =>
+    <fieldset><legend>Input</legend>{(["button","camera","eeg","blended"] as const).map(input =>
       <label key={input}><input type="radio" name="input" checked={source === input} onChange={() => setSource(input)} /> {sourceNames[input]}</label>)}</fieldset>
     {source === "button" ? <p>Use touch, a mouse, or a switch. On a keyboard, press Space or Enter on the game button.</p>
-      : <><p>Your webcam tracks your reach on this device. Video is never saved.</p>
+      : <><p>{source === "eeg" ? "Imagine moving the selected hand. EEG play does not require a camera." : source === "blended"
+        ? "Your headset and camera both contribute to play. Set your comfortable reach before EEG calibration."
+        : "Your webcam tracks your reach on this device. Video is never saved."}</p>
         <fieldset><legend>Which arm?</legend>{(["left","right"] as const).map(s =>
           <label key={s}><input type="radio" name="side" checked={side === s} onChange={() => setSide(s)} /> {s === "left" ? "Left" : "Right"}</label>)}</fieldset></>}
     <fieldset><legend>Pace</legend>{["Gentle", "Standard"].map((label,i) =>

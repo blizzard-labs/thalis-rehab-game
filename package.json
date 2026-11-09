@@ -4,6 +4,7 @@
   "scripts": {
     "start": "npm --prefix patient-web run dev -- --host 127.0.0.1 --port 5173 --strictPort",
     "build": "npm --prefix patient-web run build",
-    "test": "npm --prefix patient-web test"
+    "test": "npm --prefix patient-web test",
+    "companion": "conda run --no-capture-output -n eeg python signal-engine/local_companion.py"
   }
 }

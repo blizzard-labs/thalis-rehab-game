@@ -135,6 +135,7 @@ class EEGInlet:
         pull_timeout: float = 1.0,
         stream_type: str = "EEG",
         stream_name: Optional[str] = None,
+        stream_info=None,
     ):
         """Resolve and open the LSL stream.
 
@@ -161,7 +162,7 @@ class EEGInlet:
             prop, value = "name", stream_name
         else:
             prop, value = "type", stream_type
-        streams = resolve_byprop(prop, value, timeout=timeout)
+        streams = [stream_info] if stream_info is not None else resolve_byprop(prop, value, timeout=timeout)
         if not streams:
             raise StreamNotFoundError(
                 f"No LSL stream with {prop}={value!r} found within {timeout}s"
@@ -243,6 +244,21 @@ class EEGInlet:
                 len(self._imu_idx),
             )
 
+        unit_scale = {"": 1, "uv": 1, "microvolt": 1, "microvolts": 1,
+                      "mv": 1e3, "millivolts": 1e3, "v": 1e6, "volts": 1e6}
+        units = [u.strip().lower().replace("μ", "u").replace("µ", "u") for u in self._eeg_units]
+        if any(u not in unit_scale for u in units):
+            self._inlet.close_stream()
+            raise ValueError("Unrecognized EEG voltage unit")
+        self._uv_scale = np.array([unit_scale[u] for u in units])[:, None]
+        compact_labels = [_compact(label) for label in self._labels]
+        positional = not any(compact_labels) and self._n_channels == 17
+        self._counter_index = compact_labels.index("COUNTER") if "COUNTER" in compact_labels else (15 if positional else None)
+        self._valid_index = compact_labels.index("VALIDATIONINDICATOR") if "VALIDATIONINDICATOR" in compact_labels else (16 if positional else None)
+        self._previous_counter = None
+        self.last_sample_timestamp = None
+        self.last_chunk_gap = False
+
         # Time correction: refreshed at most every _TIME_CORRECTION_REFRESH_S.
         self._tc_lock = threading.Lock()
         self._tc_value: float = 0.0
@@ -292,12 +308,26 @@ class EEGInlet:
             return empty_eeg, empty_imu
 
         eff_timeout = self.pull_timeout if timeout is None else timeout
-        samples, _ = self._inlet.pull_chunk(timeout=eff_timeout, max_samples=max_samples)
+        samples, stamps = self._inlet.pull_chunk(timeout=eff_timeout, max_samples=max_samples)
         if not samples:
             return empty_eeg, empty_imu
 
         arr = np.asarray(samples, dtype=np.float64)  # [n_samples, n_channels]
-        eeg = arr[:, self._eeg_idx].T.copy()
+        previous = self.last_sample_timestamp
+        deltas = np.diff(([previous] if previous is not None else []) + list(stamps))
+        # A bridge may stamp transport chunks at uneven wall-clock intervals.
+        # The device sample counter detects dropped samples despite that jitter.
+        if self._counter_index is None:
+            self.last_chunk_gap = bool(np.any(deltas <= 0) or np.any(deltas > 3 / self._sample_rate))
+        else:
+            counters = arr[:, self._counter_index]
+            sequence = np.r_[self._previous_counter, counters] if self._previous_counter is not None else counters
+            self.last_chunk_gap = bool(np.any(np.diff(sequence) % 65536 != 1) or np.any(deltas > .25))
+            self._previous_counter = counters[-1]
+        if self._valid_index is not None and np.any(arr[:, self._valid_index] != 1):
+            self.last_chunk_gap = True
+        self.last_sample_timestamp = stamps[-1]
+        eeg = arr[:, self._eeg_idx].T.copy() * self._uv_scale
         imu = arr[:, self._imu_idx].T.copy()
         return eeg, imu
 
@@ -359,7 +389,8 @@ class EEGInlet:
         # samples is list[list[float]], shape [n_samples, n_channels].
         arr = np.asarray(samples, dtype=np.float64)
         # Subset and transpose to [n_selected, n_samples].
-        return arr[:, indices].T.copy()
+        data = arr[:, indices].T.copy()
+        return data * self._uv_scale if indices is self._eeg_idx else data
 
     def _refresh_time_correction(self, force: bool = False) -> None:
         now = time.monotonic()

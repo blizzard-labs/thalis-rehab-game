@@ -108,6 +108,7 @@ class CalibrationOrchestrator:
         fs: int = 250,
         min_trials_per_class: int = _MIN_TRIALS_PER_CLASS,
         seed: Optional[int] = None,
+        reject_bad_windows: bool = False,
     ):
         self.n_trials_per_class = int(n_trials_per_class)
         self.classes = list(classes) if classes is not None else ["imagine_right_hand", "rest"]
@@ -119,6 +120,7 @@ class CalibrationOrchestrator:
         self.fs = int(fs)
         self.min_trials_per_class = int(min_trials_per_class)
         self._rng = random.Random(seed)
+        self.reject_bad_windows = reject_bad_windows
 
         if self.iti_max_s < self.iti_min_s:
             raise ValueError("iti_max_s must be >= iti_min_s")
@@ -164,8 +166,10 @@ class CalibrationOrchestrator:
             )
             if epoch is None:
                 # Aborted mid-window: discard partial trial and stop.
-                logger.info("Trial %d aborted mid-MI-window; discarding partial.", trial_n)
-                break
+                if abort_event.is_set():
+                    break
+                logger.info("Discarding trial %d with missing or contaminated samples", trial_n)
+                continue
 
             epochs.append(epoch)
             labels.append(trial_class)
@@ -237,7 +241,11 @@ class CalibrationOrchestrator:
 
         # Discard anything buffered so the epoch tracks live data during the
         # window, then mark the onset against the LSL clock.
-        self._drain(eeg_inlet)
+        if self.reject_bad_windows:
+            while eeg_inlet.get_chunk(max_samples=10000, timeout=0)[0].shape[1]:
+                pass
+        else:
+            self._drain(eeg_inlet)
         onset_ts = send_marker(marker_outlet, "mi_window_onset", meta)
 
         epoch = self._collect_mi_window(eeg_inlet, mi_end, n_channels, abort_event)
@@ -261,16 +269,21 @@ class CalibrationOrchestrator:
         its last column, or zeros if nothing arrived.
         """
         parts: List[np.ndarray] = []
+        motion: List[np.ndarray] = []
+        gap = False
         while True:
             if abort_event.is_set():
                 return None
             remaining = deadline - time.perf_counter()
             if remaining <= 0:
                 break
-            chunk = eeg_inlet.get_eeg_chunk(
-                max_samples=self.fs,
-                timeout=min(remaining, 0.1),
-            )
+            if self.reject_bad_windows:
+                chunk, imu = eeg_inlet.get_chunk(max_samples=self.fs, timeout=min(remaining, 0.1))
+                if chunk.shape[1]:
+                    motion.append(imu)
+                    gap |= eeg_inlet.last_chunk_gap
+            else:
+                chunk = eeg_inlet.get_eeg_chunk(max_samples=self.fs, timeout=min(remaining, 0.1))
             if chunk.shape[1] > 0:
                 parts.append(chunk)
 
@@ -280,6 +293,17 @@ class CalibrationOrchestrator:
         else:
             buf = np.empty((n_channels, 0), dtype=np.float64)
 
+        if self.reject_bad_windows:
+            from preprocessing.artifact import AmplitudeGate, MovementGate
+            if (gap or buf.shape[1] < 0.98 * n_target or not np.isfinite(buf).all()
+                    or np.any(np.ptp(buf, axis=1) < 1)
+                    or not AmplitudeGate().is_clean(buf)
+                    or not MovementGate().is_head_still(np.concatenate(motion, axis=1))):
+                return None
+            # Align a nearly complete, continuous trial to its nominal cue window.
+            if buf.shape[1] < n_target:
+                from scipy.signal import resample
+                return resample(buf, n_target, axis=1)
         if buf.shape[1] >= n_target:
             return buf[:, :n_target].copy()
 
