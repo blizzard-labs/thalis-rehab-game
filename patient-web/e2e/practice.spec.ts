@@ -47,11 +47,24 @@ test.describe("touch play", () => {
     await page.goto("/");
     await page.getByRole("button", { name: /Star Catcher/ }).click();
     await page.getByRole("button", { name: "Start game" }).click();
-    await page.getByTestId("reach-goal").tap();
-    await expect(
-      page.getByRole("img", { name: "The Kite, 1 of 6 stars" }),
-    ).toBeVisible();
-    await expect(page.getByText(/1 star/)).toBeVisible();
+    const goal = page.getByTestId("reach-goal");
+    const positions = new Set<string>();
+    for (let caught = 0; caught < 7; caught++) {
+      const position = (await goal.getAttribute("transform"))!;
+      positions.add(position);
+      await goal.tap();
+      await expect(
+        page.getByRole("img", {
+          name:
+            caught < 6
+              ? `The Kite, ${caught + 1} of 6 stars`
+              : "The Sailboat, 1 of 6 stars",
+        }),
+      ).toBeVisible();
+      await expect(goal).not.toHaveAttribute("transform", position);
+    }
+    expect(positions.size).toBe(7);
+    await expect(page.getByText("7 stars", { exact: true })).toBeVisible();
     await page.getByRole("button", { name: "End session" }).click();
     await expect(
       page.getByRole("heading", { name: "Session complete" }),
@@ -87,7 +100,8 @@ test("dragging moves the wrist into the hoop before releasing a catch", async ({
   if (!star) throw new Error("Golden star is missing");
   const x = star.x + star.width / 2,
     y = star.y + star.height / 2;
-  await page.mouse.move(x - star.width * 2, y);
+  const stage = (await page.getByTestId("reach-scene").boundingBox())!;
+  await page.mouse.move(stage.x + stage.width / 2, stage.y + stage.height / 2);
   await page.mouse.down();
   await page.mouse.move(x, y, { steps: 6 });
   await expect

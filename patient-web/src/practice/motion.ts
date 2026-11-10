@@ -1,4 +1,4 @@
-import { shoulder } from "../reach/starGeometry";
+import { shoulder, withinNet } from "../reach/starGeometry";
 import type { Side } from "./session";
 export type Point = { x: number; y: number };
 type Landmark = Point & { z: number; visibility?: number };
@@ -47,5 +47,54 @@ export function wristInSky(rest: Point, reach: Point, current: Point): Point {
   return {
     x: shoulder.x - (current.x - rest.x) * scale,
     y: shoulder.y + (current.y - rest.y) * scale,
+  };
+}
+
+export function distinctDirection(rest: Point, first: Point, next: Point) {
+  const ax = first.x - rest.x,
+    ay = first.y - rest.y;
+  const bx = next.x - rest.x,
+    by = next.y - rest.y;
+  return (
+    ax * bx + ay * by <=
+    Math.cos(Math.PI / 4) * Math.hypot(ax, ay) * Math.hypot(bx, by)
+  );
+}
+
+// Each target lies between rest and a position the player actually demonstrated.
+// Leave more than a hoop diameter between consecutive short and long targets.
+const distances = [1, 0.41, 0.94, 0.37, 0.98, 0.43, 0.96, 0.39];
+export function cameraStarTrial(
+  rest: Point,
+  directions: Point[],
+  wrist: Point | null,
+  shot: number,
+) {
+  // Out-and-back order gives each direction both a long and a short reach.
+  const lane = directions.length === 1 ? 0 : [0, 1, 1, 0][shot % 4];
+  const endpoint = directions[lane];
+  const depth = distances[shot % distances.length];
+  const target = {
+    x: rest.x + (endpoint.x - rest.x) * depth,
+    y: rest.y + (endpoint.y - rest.y) * depth,
+  };
+  const goal = wristInSky(rest, endpoint, target);
+  const screenWrist = wrist && wristInSky(rest, endpoint, wrist);
+  // Lateral motion is still movement. A hand held in the previous direction
+  // should not count as resting just because the new target is perpendicular.
+  const displacement = wrist && Math.hypot(wrist.x - rest.x, wrist.y - rest.y);
+  const fullReach = Math.hypot(endpoint.x - rest.x, endpoint.y - rest.y);
+  const shortestReach = Math.min(
+    ...directions.map((p) => Math.hypot(p.x - rest.x, p.y - rest.y)),
+  );
+  return {
+    // Score relative to this star. Small calibrated reaches keep their full input range.
+    level:
+      displacement === null
+        ? null
+        : Math.min(1, displacement / (fullReach * depth)),
+    aim: { wrist: screenWrist, goal },
+    onTarget: screenWrist !== null && withinNet(screenWrist, goal),
+    atRest: displacement !== null && displacement < shortestReach * 0.25,
   };
 }

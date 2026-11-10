@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Play } from "./GameView";
-import { withinNet } from "../reach/starGeometry";
 import type { Point } from "./motion";
-import { reachProgress, wristInSky } from "./motion";
+import { cameraStarTrial, distinctDirection, reachProgress } from "./motion";
 import { useHeadset } from "./useHeadset";
 import { useMotionCamera } from "./useMotionCamera";
 import type { PracticeRound, Side } from "./session";
@@ -22,7 +21,9 @@ export function SensorSession({
 }) {
   const [source, setSource] = useState(round.source);
   const [rest, setRest] = useState<Point | null>(null);
-  const [reach, setReach] = useState<Point | null>(null);
+  const [directions, setDirections] = useState<Point[]>([]);
+  const [firstDirection, setFirstDirection] = useState<Point | null>(null);
+  const reach = directions[0];
   const [hint, setHint] = useState("");
   const cameraNeeded = source === "camera" || source === "blended";
   const eegNeeded = source === "eeg" || source === "blended";
@@ -43,7 +44,7 @@ export function SensorSession({
   useEffect(() => {
     if (preview.current) preview.current.srcObject = camera.stream;
   }, [camera.stream]);
-  function capture() {
+  function capture(addAnother = false) {
     const point = camera.latest();
     if (!point) {
       setHint("Wait until your arm is in view, then try again.");
@@ -60,7 +61,17 @@ export function SensorSession({
       );
       return;
     }
-    setReach(point);
+    if (addAnother) {
+      setFirstDirection(point);
+    } else if (firstDirection) {
+      if (!distinctDirection(rest, firstDirection, point)) {
+        setHint("Try a different direction, or play with your first one.");
+        return;
+      }
+      setDirections([firstDirection, point]);
+    } else {
+      setDirections([point]);
+    }
     setHint("");
   }
   function switchInput(next: "button" | "camera" | "eeg") {
@@ -85,14 +96,31 @@ export function SensorSession({
         />
         <p role="status">{camera.status}</p>
         <p>
-          {rest
-            ? "Move your hand to a comfortable reach and hold it there."
-            : "Let your arm rest in its starting position."}
+          {firstDirection
+            ? "Move from rest in a second comfortable direction and hold."
+            : rest
+              ? "Move your hand to a comfortable reach and hold it there."
+              : "Let your arm rest in its starting position."}
         </p>
         <div className="button-row">
-          <button className="primary" onClick={capture}>
-            {rest ? "Set comfortable reach" : "Set resting position"}
+          <button className="primary" onClick={() => capture()}>
+            {firstDirection
+              ? "Set second direction"
+              : rest
+                ? "Set comfortable reach"
+                : "Set resting position"}
           </button>
+          {rest &&
+            round.record.game === "stars" &&
+            (firstDirection ? (
+              <button onClick={() => setDirections([firstDirection])}>
+                Play with first direction
+              </button>
+            ) : (
+              <button onClick={() => capture(true)}>
+                Save reach and add a second direction
+              </button>
+            ))}
           {source === "blended" && (
             <button onClick={() => switchInput("eeg")}>
               Continue with EEG only
@@ -185,18 +213,19 @@ export function SensorSession({
     );
   const observation = () => {
     const point = camera.latest();
-    const movement =
-      rest && reach && point ? reachProgress(rest, reach, point) : null;
-    const aim =
+    const trial =
       cameraNeeded && rest && reach && round.record.game === "stars"
-        ? {
-            wrist: point && wristInSky(rest, reach, point),
-            goal: wristInSky(rest, reach, reach),
-          }
+        ? cameraStarTrial(rest, directions, point, round.starIndex)
         : null;
-    const onTarget =
-      !aim || (aim.wrist !== null && withinNet(aim.wrist, aim.goal));
-    if (source === "camera") return { level: movement, aim, onTarget };
+    const movement = trial
+      ? trial.level
+      : rest && reach && point
+        ? reachProgress(rest, reach, point)
+        : null;
+    const aim = trial?.aim ?? null;
+    const onTarget = trial?.onTarget ?? true;
+    const atRest = trial?.atRest ?? true;
+    if (source === "camera") return { level: movement, aim, onTarget, atRest };
     const neural = eeg.latest();
     round.inputSampleMs =
       neural !== null && (source !== "blended" || movement !== null)
@@ -208,7 +237,7 @@ export function SensorSession({
           ? null
           : 0.6 * neural + 0.4 * movement
         : neural;
-    return { level, aim, onTarget };
+    return { level, aim, onTarget, atRest };
   };
   const status = [cameraNeeded && camera.status, eegNeeded && eeg.message]
     .filter(Boolean)

@@ -1,5 +1,6 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { scanningWrist, starGoals, withinNet } from "../reach/starGeometry";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { scanningWrist, withinNet } from "../reach/starGeometry";
+import { constellationAt } from "./constellations";
 import { StarPlay, StarChart, type CameraAim } from "./StarPlay";
 import type { ReactNode } from "react";
 import type { Side } from "./session";
@@ -18,10 +19,7 @@ export function NightSky({ target }: { target: number }) {
   return (
     <div className="night-sky" aria-label={`Star at position ${target + 1}`}>
       {[0, 1, 2].map((slot) => (
-        <div
-          key={slot}
-          className={`sky-slot slot-${slot}`}
-        >
+        <div key={slot} className={`sky-slot slot-${slot}`}>
           <span>{slot === target ? "★" : "✧"}</span>
         </div>
       ))}
@@ -47,6 +45,8 @@ function gameCue(round: PracticeRound) {
       return "Imagine moving your selected hand, then relax.";
     if (round.source === "blended")
       return "Imagine moving your hand as you reach, then relax.";
+    if (round.record.game === "stars")
+      return "Guide the net to the star and hold, then return to rest.";
     return "Reach to your comfortable position, then return to rest.";
   }
   if (round.record.game === "garden") {
@@ -80,6 +80,7 @@ export function Play({
     level: number | null;
     aim: CameraAim | null;
     onTarget: boolean;
+    atRest: boolean;
   };
   status?: string;
   lockedPause?: boolean;
@@ -103,7 +104,9 @@ export function Play({
         round.tick(
           (now - last) / 1000,
           observation.level,
-          observation.onTarget,
+          observation.onTarget &&
+            (round.record.game !== "stars" || !round.celebrating),
+          observation.atRest,
         );
       }
       last = now;
@@ -135,8 +138,12 @@ export function Play({
   const garden = round.record.game === "garden";
   const reduced =
     window.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true;
-  const scan = scanningWrist(round.scanning, round.easy, side, reduced);
-  const aligned = withinNet(scan, starGoals(side)[round.target]);
+  const layout = useMemo(
+    () => constellationAt(round.record.id, round.starIndex, side),
+    [round.record.id, round.starIndex, side],
+  );
+  const scan = scanningWrist(round.scanning, round.easy, layout.stops, reduced);
+  const aligned = withinNet(scan, layout.goal);
   const redrawRound = () => redraw((n) => n + 1);
   const press = () => {
     if (!garden && round.celebrating) return;
@@ -178,6 +185,7 @@ export function Play({
               ? aim.current
               : null
           }
+          layout={layout}
           scan={scan}
           redraw={redrawRound}
         />
@@ -186,7 +194,10 @@ export function Play({
         {garden ? (
           <SeedTray round={round} select={redrawRound} />
         ) : (
-          <StarChart rewards={rewards} />
+          <StarChart
+            layout={layout}
+            lit={layout.index + Number(round.celebrating)}
+          />
         )}
         {status && <p role="status">{status}</p>}
         {!garden && manual && (

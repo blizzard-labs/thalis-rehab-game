@@ -1,3 +1,4 @@
+import { scanTargetSlot } from "./constellations";
 import { PlantGrowthModel } from "../garden/PlantGrowthModel";
 import { seedAt, type Seed } from "../garden/seeds";
 
@@ -133,8 +134,8 @@ export class PracticeRound {
     return round;
   }
 
-  get target() {
-    return (this.record.rewards * 2 + 1) % 3;
+  get starIndex() {
+    return this.record.rewards - (this.celebrating ? 1 : 0);
   }
   get celebrating() {
     return this.record.rewards > 0 && this.elapsedSinceReward < 0.85;
@@ -170,7 +171,7 @@ export class PracticeRound {
     this.log("switch");
   }
 
-  press(onTarget = this.scanSlot === this.target) {
+  press(onTarget = this.scanSlot === scanTargetSlot(this.record.rewards)) {
     if (this.paused || this.source !== "button") return;
     this.record.actions++;
     this.log("action");
@@ -183,7 +184,7 @@ export class PracticeRound {
     }
   }
 
-  tick(dt: number, observation: number | null, onTarget = true) {
+  tick(dt: number, observation: number | null, onTarget = true, atRest = true) {
     if (this.paused || this.scheduleFinished) return;
     dt = Math.min(0.25, Math.max(0, dt));
     this.record.elapsed += dt;
@@ -229,7 +230,7 @@ export class PracticeRound {
     this.level = Math.max(0, Math.min(1, observation));
     measurement.validSeconds += dt;
     measurement.weightedLevel += this.level * dt;
-    if (this.level < this.threshold * 0.65) this.released = true;
+    if (atRest && this.level < this.threshold * 0.65) this.released = true;
     if (this.level < this.threshold || !this.released || !onTarget) {
       this.held = 0;
       return;
