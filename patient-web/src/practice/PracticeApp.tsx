@@ -105,6 +105,7 @@ function Summary({
           <dd>{record.rewards}</dd>
         </div>
       </dl>
+      {record.garden?.goal && <p>Bloom goal · {record.rewards} of {record.garden.goal}{record.rewards >= record.garden.goal ? " · Reached" : ""}</p>}
       <div className="button-row">
         <button className="primary" onClick={onBack}>
           Back to games

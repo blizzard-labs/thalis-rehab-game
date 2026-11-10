@@ -128,26 +128,58 @@
 .live-game .cal-camera {
   width: clamp(78px, 16vw, 225px);
 }
-.flower-border {
+.flower-meadow,
+.pollinators {
   position: absolute;
-  inset: auto 1.5% 2%;
-  z-index: 2;
-  height: 27%;
-  display: flex;
-  align-items: end;
+  inset: 0;
   pointer-events: none;
 }
-.flower-border svg {
-  width: 12%;
-  max-width: 110px;
-  height: 100%;
-  filter: drop-shadow(0 3px 4px #66442d30);
+.flower-meadow {
+  z-index: 1;
 }
-.flower-border svg:nth-child(even) {
-  height: 76%;
+.meadow-patterns {
+  position: absolute;
 }
-.flower-border svg:nth-child(4) {
-  margin-left: auto;
+.meadow-flower {
+  position: absolute;
+  transform: translateX(-50%);
+}
+.meadow-flower--new {
+  transform-origin: 50% 100%;
+  animation: open-meadow-flower .55s ease-out;
+}
+@keyframes open-meadow-flower {
+  from { transform: translateX(-50%) scale(.5); opacity: .4; }
+  to { transform: translateX(-50%) scale(1); opacity: 1; }
+}
+.pollinators {
+  z-index: 3;
+}
+.foraging-bee {
+  position: absolute;
+  width: clamp(26px, 3.6vw, 48px);
+  transform: translateX(-50%);
+  transition:
+    left 1.2s ease-in-out,
+    bottom 1.2s cubic-bezier(0.3, 0.85, 0.5, 1);
+}
+.bee-flight {
+  animation: bee-forage 4s ease-in-out infinite alternate;
+}
+.bee-flight svg {
+  display: block;
+  width: 100%;
+}
+@keyframes bee-forage {
+  0% {
+    transform: translate(-15%, 2px) rotate(-7deg);
+  }
+  45% {
+    transform: translate(4%, -8px) rotate(4deg);
+  }
+  100% {
+    transform: translate(23%, 1px) rotate(-3deg);
+  }
 }
 .practice-app .watering-can {
   position: absolute;
@@ -207,22 +239,6 @@
   to {
     opacity: 0;
     transform: translate(-14px, 45px);
-  }
-}
-.garden-bee {
-  position: absolute;
-  z-index: 3;
-  top: 12%;
-  left: calc(50% + 4%);
-  width: clamp(34px, 4.5vw, 62px);
-  animation: bee-visit 3.5s ease-in-out infinite alternate;
-}
-@keyframes bee-visit {
-  from {
-    transform: translate(10px, -4px) rotate(-7deg);
-  }
-  to {
-    transform: translate(-10px, 8px) rotate(7deg);
   }
 }
 .seed-tray {
@@ -457,4 +473,50 @@
     100% 100%,
     0 100%
   );
+}
+.game-totals {
+  display: grid;
+  justify-items: end;
+  gap: 4px;
+}
+.bloom-goal {
+  position: relative;
+  color: #30483a;
+  font-size: 14px;
+}
+.bloom-goal summary {
+  cursor: pointer;
+  padding: 4px 2px;
+}
+.bloom-goal summary:focus-visible {
+  outline: 3px solid #1c6687;
+  outline-offset: 2px;
+}
+.bloom-goal form {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  width: min(220px, 78vw);
+  background: #fffef7;
+  border: 1px solid #8aa28a;
+  border-radius: 10px;
+  padding: 12px;
+  box-shadow: 0 5px 16px #29443524;
+}
+.bloom-goal label {
+  display: grid;
+  gap: 4px;
+  font-weight: 650;
+}
+.bloom-goal input {
+  font: inherit;
+  padding: 6px;
+  width: 100%;
+}
+.bloom-goal .button-row {
+  margin-top: 8px;
+  gap: 5px;
+}
+.live-game[data-paused="true"] .foraging-bee {
+  transition-duration: 0s;
 }

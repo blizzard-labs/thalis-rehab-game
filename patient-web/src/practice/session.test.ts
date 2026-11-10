@@ -171,3 +171,24 @@ it("accepts EEG release and camera departure in either order between blended cat
     expect(round.record.rewards).toBe(2);
   }
 });
+
+it("keeps every chosen bloom beyond six and resumes planting in an older partial bed", () => {
+  const round = new PracticeRound("garden", "button", true);
+  for (let i = 0; i < 14; i++) {
+    round.chooseSeed(i % 2 ? "Sunflower" : "Poppy");
+    for (let water = 0; water < 4; water++) round.press();
+  }
+  expect(round.flowerBed.bed).toEqual(
+    Array.from({ length: 14 }, (_, i) => (i % 2 ? "Sunflower" : "Poppy")),
+  );
+  const older = structuredClone(round.record);
+  older.garden!.bed = older.garden!.bed.slice(-6);
+  const resumed = PracticeRound.restore(older, true);
+  resumed.chooseSeed("Aster");
+  for (let water = 0; water < 4; water++) resumed.press();
+  expect(resumed.record.rewards).toBe(15);
+  expect(resumed.flowerBed.bed).toEqual([
+    ...round.flowerBed.bed.slice(-6),
+    "Aster",
+  ]);
+});

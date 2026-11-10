@@ -1,5 +1,6 @@
-import type { ReactNode } from "react";
+import { memo, useMemo, type ReactNode } from "react";
 import { GardenLandscape } from "../garden/GardenLandscape";
+import { FlowerMeadow, meadowPlot } from "../garden/FlowerMeadow";
 import { FlowerHead } from "../garden/Flower";
 import { seeds } from "../garden/seeds";
 import type { PracticeRound } from "./session";
@@ -43,9 +44,9 @@ function WateringCan() {
   );
 }
 
-function Pollinator() {
+function Bee() {
   return (
-    <svg className="garden-bee" viewBox="0 0 74 58" aria-hidden="true">
+    <svg viewBox="0 0 74 58" aria-hidden="true">
       <g stroke="#604522" strokeWidth="2">
         <ellipse
           cx="34"
@@ -74,6 +75,53 @@ function Pollinator() {
     </svg>
   );
 }
+
+export function beeCount(blooms: number) {
+  return blooms === 0 ? 0 : Math.min(6, 1 + Math.floor(blooms / 5));
+}
+
+const Pollinators = memo(function Pollinators({
+  blooms,
+  visiting,
+}: {
+  blooms: number;
+  visiting: boolean;
+}) {
+  const count = beeCount(blooms);
+  if (!count) return null;
+  return (
+    <div
+      className="pollinators"
+      role="img"
+      aria-label={`${count} ${count === 1 ? "bee" : "bees"} visiting your flowers`}
+    >
+      {Array.from({ length: count }, (_, i) => {
+        const flower = meadowPlot((blooms - 1 - 3 * i + blooms) % blooms);
+        const x = visiting ? flower.x : [54, 23, 75, 34, 62, 15][i];
+        const bottom = visiting
+          ? flower.bottom + flower.height * 0.75
+          : [77, 39, 49, 58, 32, 64][i];
+        return (
+          <div
+            key={i}
+            className="foraging-bee"
+            style={{ left: `${x}%`, bottom: `${bottom}%` }}
+          >
+            <div
+              className="bee-flight"
+              style={{
+                animationDelay: `${-i * 1.1}s`,
+                animationDuration: `${3.6 + i * 0.38}s`,
+              }}
+            >
+              <Bee />
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+});
 
 function Butterfly() {
   return (
@@ -109,13 +157,20 @@ export function GardenPlay({
   round,
   camera,
   water,
+  called,
 }: {
   round: PracticeRound;
   camera?: ReactNode;
   water: () => void;
+  called: boolean;
 }) {
   const { bed, next } = round.flowerBed;
-  const blooming = bed.length > 0 && round.progress === 0;
+  const total = round.record.rewards;
+  const blooming = total > 0 && round.progress === 0;
+  const butterfly = useMemo(
+    () => new Set(bed).size === seeds.length,
+    [bed, total],
+  );
   const seed = blooming ? bed[bed.length - 1] : next;
   const manual = round.source === "button";
   const meter = Math.round(
@@ -132,32 +187,9 @@ export function GardenPlay({
     >
       <div className="garden-hill garden-hill--far" aria-hidden="true" />
       <div className="garden-hill garden-hill--near" aria-hidden="true" />
-      <div className="flower-border" role="group" aria-label="Your flower bed">
-        {bed.map((flower, i) => (
-          <svg
-            key={round.record.rewards - bed.length + i}
-            viewBox="0 0 90 130"
-            role="img"
-            aria-label={flower}
-          >
-            <path
-              d="M45 130 Q53 86 45 52"
-              fill="none"
-              stroke="#376640"
-              strokeWidth="5"
-            />
-            <path
-              d="M48 103 Q24 100 20 82 Q40 80 48 103 M48 89 Q65 88 74 72 Q53 72 48 89"
-              fill="#578649"
-            />
-            <g transform="translate(45 47) scale(.39)">
-              <FlowerHead seed={flower} />
-            </g>
-          </svg>
-        ))}
-      </div>
-      {blooming && <Pollinator />}
-      {new Set(bed).size === seeds.length && <Butterfly />}
+      <FlowerMeadow bed={bed} total={total} />
+      <Pollinators blooms={total} visiting={called || round.celebrating} />
+      {butterfly && <Butterfly />}
       {manual && (
         <button
           type="button"

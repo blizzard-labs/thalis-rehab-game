@@ -37,7 +37,7 @@ export interface PracticeRecord {
   >;
   feedback?: { count: number; p95Ms: number; buckets?: Record<number, number> };
   schedule?: "short" | "clinic";
-  garden?: { next: Seed; bed: Seed[] };
+  garden?: { next: Seed; bed: Seed[]; goal?: number };
   calibration?: {
     method: string;
     accuracy: number | null;
@@ -61,12 +61,9 @@ export class PracticeRound {
   readonly plant = new PlantGrowthModel();
   get flowerBed() {
     if (!this.record.garden) {
-      // Recreate the visible bed when resuming a checkpoint from before seed selection.
-      const count = Math.min(6, this.record.rewards);
-      const bed = Array.from({ length: count }, (_, i) =>
-        seedAt(this.record.rewards - count + i),
-      );
-      this.record.garden = { next: seedAt(this.record.rewards), bed };
+      // Older records may only know the total. The meadow draws those
+      // earlier blooms without attributing a seed choice to the player.
+      this.record.garden = { next: seedAt(this.record.rewards), bed: [] };
     }
     return this.record.garden;
   }
@@ -302,7 +299,7 @@ export class PracticeRound {
   private reward() {
     if (this.record.game === "garden") {
       const garden = this.flowerBed;
-      garden.bed = [...garden.bed, garden.next].slice(-6);
+      garden.bed.push(garden.next);
       garden.next = seedAt(this.record.rewards + 1);
     }
     this.record.rewards++;

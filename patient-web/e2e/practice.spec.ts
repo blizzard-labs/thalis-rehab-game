@@ -164,3 +164,35 @@ test("bundled pose worker processes a real image frame with no person", async ({
   );
   expect(result).toMatchObject({ kind: "sample", point: null });
 });
+
+test("a player fills the meadow past six flowers, meets a personal goal and calls the bees", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+  await page.getByRole("button", { name: /Garden Grow/ }).click();
+  await page.getByRole("button", { name: "Start game" }).click();
+  await page.getByText("Set bloom goal", { exact: true }).click();
+  await page.getByLabel("My bloom goal").fill("8");
+  await page.getByRole("button", { name: "Set goal", exact: true }).click();
+  const water = page.getByRole("button", { name: "Water", exact: true });
+  await water.focus();
+  for (let i = 0; i < 40; i++) await page.keyboard.press("Space");
+  await expect(page.getByText("10 blooms", { exact: true })).toBeVisible();
+  await expect(page.getByText("Goal reached · 8")).toBeVisible();
+  await expect(
+    page
+      .getByRole("group", { name: "Flower meadow with 10 blooms" })
+      .getByRole("img"),
+  ).toHaveCount(10);
+  await expect(
+    page.getByRole("img", { name: "3 bees visiting your flowers" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Call bees" }).click();
+  await expect(
+    page.getByRole("button", { name: "Bees visiting" }),
+  ).toBeDisabled();
+  await expect(page.getByText("10 blooms", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "End session" }).click();
+  await expect(page.getByText("Bloom goal · 10 of 8 · Reached")).toBeVisible();
+});

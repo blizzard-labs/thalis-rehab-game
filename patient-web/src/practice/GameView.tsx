@@ -4,7 +4,8 @@ import { constellationAt } from "./constellations";
 import { StarPlay, StarChart, type CameraAim } from "./StarPlay";
 import type { ReactNode } from "react";
 import type { CameraStarFrame, Side } from "./session";
-import { GardenPlay, SeedTray } from "./GardenPlay";
+import { BloomGoal } from "./BloomGoal";
+import { beeCount, GardenPlay, SeedTray } from "./GardenPlay";
 import { CameraFeed } from "../scenes/CameraFeed";
 import "./gameplay.css";
 import { Flower } from "../garden/Flower";
@@ -71,9 +72,11 @@ function gameCue(round: PracticeRound) {
   if (round.record.game === "garden") {
     if (round.record.rewards === 0 || round.progress > 0)
       return "Water your seed and watch it grow.";
-    return new Set(round.flowerBed.bed).size === 3
-      ? "Three kinds of flowers brought a butterfly to your garden!"
-      : "A bee found your flower! Water to start the next one.";
+    if (round.flowerBed.goal === round.record.rewards)
+      return "You reached your bloom goal! Keep planting if you like.";
+    if (round.record.rewards % 5 === 0 && round.record.rewards <= 25)
+      return "Another bee has found your meadow!";
+    return "Your flower joined the meadow. Water to grow another.";
   }
   const event = round.record.events[round.record.events.length - 1];
   if (event?.kind === "action" && round.record.elapsed - event.seconds < 0.85)
@@ -106,6 +109,7 @@ export function Play({
   stream?: MediaStream | null;
 }) {
   const [, redraw] = useState(0);
+  const [beeCall, setBeeCall] = useState<number | null>(null);
   const finish = useRef(onEnd);
   finish.current = onEnd;
   const observe = useRef(observation);
@@ -169,6 +173,10 @@ export function Play({
     redrawRound();
   };
   const rewards = round.record.rewards;
+  const called =
+    beeCall !== null &&
+    round.record.elapsed >= beeCall &&
+    round.record.elapsed - beeCall < 3;
   const noun = garden ? "bloom" : "star";
   const count = `${rewards} ${noun}${rewards === 1 ? "" : "s"}`;
   const camera = stream && <CameraFeed recording sourceStream={stream} />;
@@ -184,15 +192,23 @@ export function Play({
             {sourceNames[round.source]} · {duration(round.record.elapsed)}
           </span>
         </div>
-        <strong className="game-score" aria-live="polite">
-          {count}
-        </strong>
+        <div className="game-totals">
+          <strong className="game-score" aria-live="polite">
+            {count}
+          </strong>
+          {garden && <BloomGoal round={round} redraw={redrawRound} />}
+        </div>
       </header>
       <p className="game-cue" role="status">
         {gameCue(round)}
       </p>
       {garden ? (
-        <GardenPlay round={round} water={press} camera={camera} />
+        <GardenPlay
+          round={round}
+          water={press}
+          camera={camera}
+          called={called}
+        />
       ) : (
         <StarPlay
           round={round}
@@ -244,6 +260,18 @@ export function Play({
               onClick={press}
             >
               {garden ? "Water" : "Catch"}
+            </button>
+          )}
+          {garden && rewards > 0 && (
+            <button
+              disabled={round.paused || called}
+              onClick={() => setBeeCall(round.record.elapsed)}
+            >
+              {called
+                ? "Bees visiting"
+                : beeCount(rewards) === 1
+                  ? "Call bee"
+                  : "Call bees"}
             </button>
           )}
           <button
