@@ -16,13 +16,16 @@ type Props = {
   visit?: Visit;
   visits?: Visit[];
   authorize?: () => Promise<void>;
+  loadVisits?: () => Promise<Visit[]>;
 };
 export function ReportButton(props: Props) {
   const [open, setOpen] = useState(false),
     [error, setError] = useState("");
+  const [loaded, setLoaded] = useState<Visit[]>();
   async function view() {
     try {
       await props.authorize?.();
+      if (props.loadVisits) setLoaded(await props.loadVisits());
       setError("");
       setOpen(true);
     } catch {
@@ -37,7 +40,16 @@ export function ReportButton(props: Props) {
         {props.visit ? "Session report" : "Progress report"}
       </button>
       {error && <span role="alert">{error}</span>}
-      {open && <ReportReader {...props} close={() => setOpen(false)} />}
+      {open && (
+        <ReportReader
+          {...props}
+          visits={loaded ?? props.visits}
+          close={() => {
+            setOpen(false);
+            setLoaded(undefined);
+          }}
+        />
+      )}
     </>
   );
 }

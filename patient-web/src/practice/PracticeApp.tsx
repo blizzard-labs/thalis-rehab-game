@@ -51,6 +51,7 @@ function History({
       active = false;
     };
   }, [guest]);
+  const visits = records?.map((record) => ({ record, status: "complete" }));
   async function clear() {
     if (!guest) return;
     try {
@@ -76,7 +77,7 @@ function History({
       {records && records.length > 0 && (
         <ReportButton
           reader={{ name: "Guest practice" }}
-          visits={records.map((record) => ({ record, status: "complete" }))}
+          visits={visits}
           authorize={
             guest
               ? async () => {
@@ -99,10 +100,7 @@ function History({
               <ReportButton
                 reader={{ name: "Guest practice" }}
                 visit={{ record: r, status: "complete" }}
-                visits={records.map((record) => ({
-                  record,
-                  status: "complete",
-                }))}
+                visits={visits}
                 authorize={
                   guest
                     ? async () => {
@@ -201,6 +199,15 @@ function Summary({
         <ReportButton
           reader={{ name: "Guest practice" }}
           visit={{ record, status: "complete" }}
+          loadVisits={
+            guest
+              ? async () =>
+                  (await guestRecords(guest)).map((savedRecord) => ({
+                    record: savedRecord,
+                    status: "complete",
+                  }))
+              : undefined
+          }
           authorize={
             guest
               ? async () => {

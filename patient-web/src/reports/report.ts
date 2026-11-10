@@ -471,6 +471,7 @@ export function sessionReport(
   const earlier = history.filter(
     (v) => v.record.game === r.game && startTime(v) <= startTime(visit),
   );
+  if (!earlier.some((v) => v.record.id === r.id)) earlier.push(visit);
   if (
     earlier.some(
       (v) =>
@@ -636,6 +637,9 @@ export function progressReport(
     const label = [
       gameNames[r.game],
       mode(r),
+      ...(r.game === "river" && r.rowing
+        ? [r.rowing === "paired" ? "two-arm rowing" : "one-arm rowing"]
+        : []),
       r.arm ? r.arm + " arm" : "arm unspecified",
       r.gentle === undefined
         ? "pace unspecified"
