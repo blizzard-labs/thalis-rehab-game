@@ -49,6 +49,9 @@ jobs:
       - run: python -m pip install -r signal-engine/requirements.txt pytest
       - run: python -m pytest -q signal-engine/tests
   windows-companion:
+    permissions:
+      actions: read
+      contents: read
     runs-on: windows-latest
     needs: web
     steps:
@@ -97,15 +100,45 @@ jobs:
           $env:NEUROREACH_TEST_PYTHON = (Get-Command python).Source
           $env:NEUROREACH_COMPANION_EXE = (Resolve-Path ../dist/NeuroReach/NeuroReach.exe).Path
           npm run test:e2e -- headset.spec.ts
-      - shell: pwsh
-        run: '& "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" packaging/windows.iss'
-      - shell: pwsh
+      - name: Build versioned installer
+        shell: pwsh
+        run: '& "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" "/DPrototypeVersion=0.1.$env:GITHUB_RUN_NUMBER" packaging/windows.iss'
+      - name: Find the last available main-branch installer
+        id: previous
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          $install = Start-Process dist/NeuroReach-Setup.exe -ArgumentList "/VERYSILENT","/NORESTART" -Wait -PassThru
-          if ($install.ExitCode -ne 0) { throw "Installer failed" }
-          $app = Join-Path $env:LOCALAPPDATA "Programs\NeuroReach"
-          if (-not (Test-Path "$app\NeuroReach.exe")) { throw "Installed executable missing" }
-          Start-Process "$app\unins000.exe" -ArgumentList "/VERYSILENT","/NORESTART" -Wait
+          $runs = gh run list --repo $env:GITHUB_REPOSITORY --workflow verify.yml --branch main --event push --status success --limit 20 --json databaseId,headSha | ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0) { throw "Could not look up previous verified builds" }
+          foreach ($run in $runs) {
+            if ($run.databaseId -ge [long]$env:GITHUB_RUN_ID -or $run.headSha -eq $env:GITHUB_SHA) { continue }
+            $url = "repos/$env:GITHUB_REPOSITORY/actions/runs/$($run.databaseId)/artifacts?name=neuroreach-windows-prototype"
+            $artifacts = gh api $url | ConvertFrom-Json
+            if ($LASTEXITCODE -ne 0) { throw "Could not inspect installer artifacts" }
+            if ($artifacts.artifacts | Where-Object { -not $_.expired }) {
+              "run=$($run.databaseId)" >> $env:GITHUB_OUTPUT
+              Write-Host "Using main build $($run.headSha) from run $($run.databaseId)"
+              break
+            }
+          }
+      - uses: actions/download-artifact@v4
+        if: steps.previous.outputs.run != ''
+        with:
+          name: neuroreach-windows-prototype
+          run-id: ${{ steps.previous.outputs.run }}
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/previous
+      - name: Exercise the installed station and recover its saved visit
+        shell: pwsh
+        run: |
+          $previous = Join-Path $env:RUNNER_TEMP "previous/NeuroReach-Setup.exe"
+          if (Test-Path $previous) {
+            python packaging/verify-windows-upgrade.py dist/NeuroReach-Setup.exe --previous $previous
+          } else {
+            Write-Host "::notice::No previous installer is available. Checking fresh install and reinstall."
+            python packaging/verify-windows-upgrade.py dist/NeuroReach-Setup.exe
+          }
       - uses: actions/upload-artifact@v4
         with:
           name: neuroreach-windows-prototype

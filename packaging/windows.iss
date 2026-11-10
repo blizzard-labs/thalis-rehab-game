@@ -1,7 +1,10 @@
+#ifndef PrototypeVersion
+#define PrototypeVersion "0.1"
+#endif
 [Setup]
 AppId={{15FDAE4C-EA77-4A64-81D1-84F95432BECB}
 AppName=NeuroReach
-AppVersion=0.1
+AppVersion={#PrototypeVersion}
 DefaultDirName={localappdata}\Programs\NeuroReach
 PrivilegesRequired=lowest
 ArchitecturesAllowed=x64compatible
