@@ -1,11 +1,10 @@
-import { ReportButton } from "../reports/ReportReader";
+import { StationHeader } from "./ClinicalPanels";
+import { PatientOverview } from "./PatientOverview";
 import { useEffect, useRef, useState } from "react";
-import { gameNames, sourceNames } from "./session";
 import type { Game, Side } from "./session";
 import { DisplayMonitor } from "./DisplayMonitor";
 import {
   api,
-  checkReportAccess,
   errorText,
   playerToken,
   StationError,
@@ -25,7 +24,8 @@ export function StaffWorkspace({ onExit }: { onExit: () => void }) {
   const [consent, setConsent] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  const [remove, setRemove] = useState(false);
+  const [search, setSearch] = useState("");
+  const [admin, setAdmin] = useState<"patient" | "backup">("patient");
   const working = useRef(false);
   const [localToken, setLocalToken] = useState("");
   const [display, setDisplay] = useState<DisplayState | null>(null);
@@ -39,9 +39,19 @@ export function StaffWorkspace({ onExit }: { onExit: () => void }) {
     const session = await api<Auth>("state");
     setAuth(session);
     if (session.authenticated) {
-      setPeople(await api<Participant[]>("participants"));
+      const roster = await api<Participant[]>("participants");
+      setPeople(roster);
+      setSelected((id) =>
+        roster.some((p) => p.id === id) ? id : (roster[0]?.id ?? ""),
+      );
       const active = await api<DisplayState | null>("display");
       if (active && active.state !== "complete") {
+        if (!active.participant || !active.target) {
+          setError(
+            "Restart the local NeuroReach companion before opening this session.",
+          );
+          return;
+        }
         setSelected(active.participant);
         setLocalToken(playerToken(active.session));
         setDisplay(active);
@@ -78,7 +88,6 @@ export function StaffWorkspace({ onExit }: { onExit: () => void }) {
   }, []);
   useEffect(() => {
     let current = true;
-    setRemove(false);
     setVisits([]);
     setLoadedParticipant("");
     if (selected && !display)
@@ -100,6 +109,15 @@ export function StaffWorkspace({ onExit }: { onExit: () => void }) {
     if (!participant) return;
     await act(async () => {
       try {
+        // A dev player can update while the previously launched Python process is still running.
+        const health = await fetch("/api/health", {
+          cache: "no-store",
+          signal: AbortSignal.timeout(5000),
+        });
+        if (!health.ok || (await health.json()).staffRuns !== 2)
+          throw new Error(
+            "Restart the local NeuroReach companion to load supervised session controls, then retry.",
+          );
         if (target === "workstation") {
           const result = await api<{ display: DisplayState; token: string }>(
             "display",
@@ -133,7 +151,7 @@ export function StaffWorkspace({ onExit }: { onExit: () => void }) {
         participant={participant}
         localToken={localToken}
         onToken={(token) => {
-          playerToken(display.session, token);
+          playerToken(display.session, token || null);
           setLocalToken(token);
         }}
         onClose={() => {
@@ -141,6 +159,9 @@ export function StaffWorkspace({ onExit }: { onExit: () => void }) {
           setDisplay(null);
         }}
         onLock={() => {
+          setSelected("");
+          setLocalToken("");
+          setError("");
           setDisplay(null);
           setPeople([]);
           setVisits([]);
@@ -149,101 +170,241 @@ export function StaffWorkspace({ onExit }: { onExit: () => void }) {
       />
     );
 
+  async function leave(lockOnly: boolean) {
+    await act(async () => {
+      if (auth?.authenticated) await api("logout", "POST");
+      setPeople([]);
+      setVisits([]);
+      setSelected("");
+      setSearch("");
+      setAdmin("patient");
+      if (lockOnly) await load();
+      else onExit();
+    });
+  }
+  if (!auth?.authenticated)
+    return (
+      <section className="cl-shell">
+        <StationHeader>
+          <button onClick={() => leave(false)}>Back to games</button>
+        </StationHeader>
+        <div className="cl-access">
+          <div className="cl-access-rule" />
+          <p className="cl-overline">Local workstation</p>
+          <h1>Staff workspace</h1>
+          {error && <p role="alert">{error}</p>}
+          {!auth ? (
+            <button onClick={() => act(load)}>
+              Connect to local companion
+            </button>
+          ) : (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                void act(async () => {
+                  await api(auth.configured ? "login" : "setup", "POST", {
+                    password,
+                  });
+                  setPassword("");
+                  await load();
+                });
+              }}
+            >
+              <p>
+                {auth.configured
+                  ? "Unlock patient records and supervised session controls."
+                  : "Create a staff password for the patient records on this computer."}
+              </p>
+              <label>
+                Staff password
+                <input
+                  required
+                  minLength={10}
+                  type="password"
+                  autoComplete={
+                    auth.configured ? "current-password" : "new-password"
+                  }
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+              </label>
+              <button className="cl-primary" disabled={busy}>
+                {auth.configured ? "Unlock" : "Set password"}
+              </button>
+            </form>
+          )}
+        </div>
+      </section>
+    );
+
+  const filtered = people.filter((p) =>
+    p.name.toLowerCase().includes(search.trim().toLowerCase()),
+  );
   return (
-    <section className="practice-panel staff-panel">
-      <div className="button-row">
-        <button
-          disabled={busy}
-          onClick={() =>
-            act(async () => {
-              if (auth?.authenticated) await api("logout", "POST");
-              onExit();
-            })
-          }
-        >
-          ← Games
+    <section className="cl-shell">
+      <StationHeader>
+        <button disabled={busy} onClick={() => leave(false)}>
+          Back to games
         </button>
-        {auth?.authenticated && (
-          <button
-            onClick={() =>
-              act(async () => {
-                await api("logout", "POST");
-                setSelected("");
-                setPeople([]);
-                setVisits([]);
-                await load();
-              })
-            }
-          >
-            Lock workstation
-          </button>
-        )}
-      </div>
-      <h1>Staff workspace</h1>
-      {error && <p role="alert">{error}</p>}
-      {!auth && (
-        <button onClick={() => act(load)}>Connect to local companion</button>
-      )}
-      {auth && !auth.authenticated && (
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            void act(async () => {
-              await api(auth.configured ? "login" : "setup", "POST", {
-                password,
-              });
-              setPassword("");
-              await load();
-            });
-          }}
-        >
-          <p>
-            {auth.configured
-              ? "Unlock this station to view its records."
-              : "Create a staff password for this station. Use an OS account with encrypted storage."}
-          </p>
-          <label>
-            Staff password{" "}
+        <button disabled={busy} onClick={() => leave(true)}>
+          Lock workstation
+        </button>
+      </StationHeader>
+      <div className="cl-body">
+        <aside className="cl-rail" aria-label="Patient roster">
+          <div className="cl-rail-title">
+            <h2>Patient roster</h2>
+            <span>{people.length}</span>
+          </div>
+          <label className="cl-search">
+            <span className="sr-only">Search patients</span>
             <input
-              required
-              minLength={10}
-              type="password"
-              autoComplete={
-                auth.configured ? "current-password" : "new-password"
-              }
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              type="search"
+              placeholder="Search patients"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
             />
           </label>
-          <button disabled={busy} className="primary">
-            {auth.configured ? "Unlock" : "Set password"}
-          </button>
-        </form>
-      )}
-      {auth?.authenticated && (
-        <>
-          <fieldset>
-            <legend>Roster</legend>
-            <label>
-              Participant{" "}
-              <select
-                aria-label="Participant"
+          <div className="cl-roster">
+            {filtered.map((p) => (
+              <button
+                key={p.id}
                 disabled={busy}
-                value={selected}
-                onChange={(e) => setSelected(e.target.value)}
+                aria-pressed={p.id === selected && admin === "patient"}
+                onClick={() => {
+                  setError("");
+                  setAdmin("patient");
+                  setSelected(p.id);
+                }}
               >
-                <option value="">Choose a participant</option>
-                {people.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </fieldset>
-          {!participant && (
+                <i aria-hidden="true">
+                  {p.name
+                    .trim()
+                    .split(/\s+/)
+                    .slice(0, 2)
+                    .map((s) => s[0])
+                    .join("")
+                    .toUpperCase()}
+                </i>
+                <span>
+                  {p.name}
+                  <small>{p.side} practice arm</small>
+                </span>
+              </button>
+            ))}
+          </div>
+          {search && !filtered.length && <p>No matching patients.</p>}
+          <button
+            className="cl-new"
+            disabled={busy}
+            onClick={() => {
+              setAdmin("patient");
+              setSelected("");
+              setError("");
+            }}
+          >
+            + New participant
+          </button>
+          <button
+            className="cl-station-data"
+            disabled={busy}
+            onClick={() => {
+              setAdmin("backup");
+              setError("");
+            }}
+          >
+            Station backup
+          </button>
+        </aside>
+        <div className="cl-content">
+          {error && (
+            <p className="cl-alert" role="alert">
+              {error}
+            </p>
+          )}
+          {admin === "backup" ? (
             <>
+              <p className="cl-overline">Station data</p>
+              <h1>Backup and restore</h1>
+              <section className="cl-card">
+                <p>
+                  Backups include identifiable participant records. Keep the
+                  downloaded file in protected storage.
+                </p>
+                <a href="/api/staff/backup" download>
+                  Download station backup
+                </a>
+                <label>
+                  Restore to an empty roster
+                  <input
+                    type="file"
+                    accept=".json"
+                    disabled={!!people.length || busy}
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f)
+                        void act(async () => {
+                          await api(
+                            "backup",
+                            "POST",
+                            JSON.parse(await f.text()),
+                          );
+                          setAdmin("patient");
+                          await load();
+                        });
+                    }}
+                  />
+                </label>
+              </section>
+            </>
+          ) : participant ? (
+            <PatientOverview
+              key={participant.id}
+              person={participant}
+              visits={visits}
+              loaded={loadedParticipant === selected}
+              busy={busy}
+              game={game}
+              setGame={setGame}
+              launch={launch}
+              protocol={(protocol) =>
+                act(async () => {
+                  await api("participants/" + selected, "PUT", { protocol });
+                  await load();
+                })
+              }
+              assessment={(fma, arat) =>
+                act(async () => {
+                  await api("participants/" + selected, "PUT", {
+                    assessment: { fma, arat },
+                  });
+                  await load();
+                })
+              }
+              note={(v, n) =>
+                act(async () => {
+                  await api("sessions/" + v.id + "/feedback", "PUT", {
+                    note: n,
+                  });
+                  setVisits((list) =>
+                    list.map((x) => (x.id === v.id ? { ...x, note: n } : x)),
+                  );
+                })
+              }
+              remove={() =>
+                act(async () => {
+                  await api("participants/" + selected, "DELETE");
+                  setSelected("");
+                  await load();
+                })
+              }
+            />
+          ) : (
+            <>
+              <p className="cl-overline">Patient registration</p>
+              <h1>New participant</h1>
               <form
+                className="cl-card cl-registration"
                 onSubmit={(e) => {
                   e.preventDefault();
                   void act(async () => {
@@ -259,315 +420,47 @@ export function StaffWorkspace({ onExit }: { onExit: () => void }) {
                     setPeople(next);
                     setName("");
                     setConsent(false);
+                    setSearch("");
                   });
                 }}
               >
-                <fieldset>
-                  <legend>New participant</legend>
-                  <label>
-                    Participant label{" "}
-                    <input
-                      required
-                      maxLength={80}
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                    />
-                  </label>
-                  <label>
-                    Practice arm{" "}
-                    <select
-                      value={side}
-                      onChange={(e) => setSide(e.target.value as Side)}
-                    >
-                      <option value="right">Right</option>
-                      <option value="left">Left</option>
-                    </select>
-                  </label>
-                  <label>
-                    <input
-                      type="checkbox"
-                      required
-                      checked={consent}
-                      onChange={(e) => setConsent(e.target.checked)}
-                    />{" "}
-                    Participant agreed to save sessions on this station
-                  </label>
-                  <button className="primary" disabled={busy}>
-                    Add participant
-                  </button>
-                </fieldset>
-              </form>
-              <details>
-                <summary>Backup and restore</summary>
-                <p>
-                  Backups include identifiable participant records. Keep the
-                  downloaded file in protected storage.
-                </p>
-                <a href="/api/staff/backup" download>
-                  Download station backup
-                </a>
                 <label>
-                  Restore to an empty roster{" "}
+                  Participant label
                   <input
-                    type="file"
-                    accept=".json"
-                    disabled={people.length > 0 || busy}
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file)
-                        void act(async () => {
-                          await api(
-                            "backup",
-                            "POST",
-                            JSON.parse(await file.text()),
-                          );
-                          await load();
-                        });
-                    }}
+                    required
+                    maxLength={80}
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
                   />
                 </label>
-              </details>
-            </>
-          )}
-          {participant && (
-            <>
-              <h2>{participant.name}</h2>
-              <p>
-                {participant.side} arm · Consent recorded{" "}
-                {new Date(participant.consent).toLocaleDateString()}
-              </p>
-              <fieldset>
-                <legend>Session settings</legend>
                 <label>
-                  Game{" "}
+                  Practice arm
                   <select
-                    aria-label="Game"
-                    disabled={busy}
-                    value={game}
-                    onChange={(e) => setGame(e.target.value as Game)}
+                    aria-label="Practice arm"
+                    value={side}
+                    onChange={(e) => setSide(e.target.value as Side)}
                   >
-                    {Object.entries(gameNames).map(([v, l]) => (
-                      <option key={v} value={v}>
-                        {l}
-                      </option>
-                    ))}
+                    <option value="left">Left</option>
+                    <option value="right">Right</option>
                   </select>
                 </label>
-                <label>
-                  Input{" "}
-                  <select
-                    aria-label="Input"
-                    value={participant.protocol.source}
-                    disabled={busy}
-                    onChange={(e) => {
-                      const source = e.target.value;
-                      void act(async () => {
-                        await api("participants/" + selected, "PUT", {
-                          protocol: { ...participant.protocol, source },
-                        });
-                        await load();
-                      });
-                    }}
-                  >
-                    {Object.entries(sourceNames).map(([v, l]) => (
-                      <option key={v} value={v}>
-                        {l}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label>
+                <label className="cl-check">
                   <input
                     type="checkbox"
-                    checked={participant.protocol.easy}
-                    disabled={busy}
-                    onChange={(e) => {
-                      const easy = e.target.checked;
-                      void act(async () => {
-                        await api("participants/" + selected, "PUT", {
-                          protocol: { ...participant.protocol, easy },
-                        });
-                        await load();
-                      });
-                    }}
-                  />{" "}
-                  Gentle pace
+                    required
+                    checked={consent}
+                    onChange={(e) => setConsent(e.target.checked)}
+                  />
+                  Participant agreed to save sessions on this station
                 </label>
-                <label>
-                  Session length{" "}
-                  <select
-                    aria-label="Session length"
-                    value={participant.protocol.schedule ?? "short"}
-                    disabled={busy}
-                    onChange={(e) => {
-                      const schedule = e.target.value;
-                      void act(async () => {
-                        await api("participants/" + selected, "PUT", {
-                          protocol: { ...participant.protocol, schedule },
-                        });
-                        await load();
-                      });
-                    }}
-                  >
-                    <option value="short">5 minutes</option>
-                    <option value="clinic">
-                      Two 9-minute blocks with a rest
-                    </option>
-                  </select>
-                </label>
-                <button
-                  className="primary"
-                  disabled={busy}
-                  onClick={() => launch("workstation")}
-                >
-                  Start supervised session
+                <button className="cl-primary" disabled={busy}>
+                  Add participant
                 </button>
-                <button disabled={busy} onClick={() => launch("display")}>
-                  Pair a patient display
-                </button>
-              </fieldset>
-              <h3>Session history</h3>
-              {loadedParticipant === selected && (
-                <ReportButton
-                  key={selected}
-                  reader={{
-                    name: participant.name,
-                    id: participant.id,
-                    assessments: participant.assessments,
-                  }}
-                  visits={visits}
-                  authorize={checkReportAccess}
-                />
-              )}
-              {!visits.length && <p>No sessions recorded yet.</p>}
-              <ul className="session-list">
-                {visits.map((v) => (
-                  <li key={v.id}>
-                    <div>
-                      <strong>{gameNames[v.record.game]}</strong>
-                      <br />
-                      {new Date(v.record.started).toLocaleString()} ·{" "}
-                      {v.status === "playing" ? "Unfinished" : v.status} ·{" "}
-                      {Math.round(v.record.elapsed)} s · {v.record.actions}{" "}
-                      actions
-                      <details>
-                        <summary>Session feedback</summary>
-                        <form
-                          onSubmit={(e) => {
-                            e.preventDefault();
-                            const note = String(
-                              new FormData(e.currentTarget).get("note") ?? "",
-                            );
-                            void act(async () => {
-                              await api(
-                                "sessions/" + v.id + "/feedback",
-                                "PUT",
-                                { note },
-                              );
-                              setVisits((rows) =>
-                                rows.map((row) =>
-                                  row.id === v.id ? { ...row, note } : row,
-                                ),
-                              );
-                            });
-                          }}
-                        >
-                          <label>
-                            Participant or staff observations{" "}
-                            <textarea
-                              name="note"
-                              defaultValue={v.note}
-                              maxLength={4000}
-                            />
-                          </label>
-                          <button disabled={busy}>Save feedback</button>
-                        </form>
-                      </details>
-                    </div>
-                    <span className="button-row">
-                      <ReportButton
-                        reader={{
-                          name: participant.name,
-                          id: participant.id,
-                          assessments: participant.assessments,
-                        }}
-                        visit={v}
-                        visits={visits}
-                        authorize={checkReportAccess}
-                      />
-                      <a href={"/api/staff/reports/" + v.id + ".csv"} download>
-                        Event CSV
-                      </a>
-                    </span>
-                  </li>
-                ))}
-              </ul>
-              <details>
-                <summary>Clinician-entered assessments</summary>
-                <ul>
-                  {participant.assessments.map((a, i) => (
-                    <li key={i}>
-                      {a.date} · FMA-UE {a.fma} · ARAT {a.arat}
-                    </li>
-                  ))}
-                </ul>
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    const fields = new FormData(e.currentTarget);
-                    void act(async () => {
-                      await api("participants/" + selected, "PUT", {
-                        assessment: {
-                          fma: Number(fields.get("fma")),
-                          arat: Number(fields.get("arat")),
-                        },
-                      });
-                      await load();
-                    });
-                  }}
-                >
-                  <label>
-                    FMA-UE{" "}
-                    <input required name="fma" type="number" min="0" max="66" />
-                  </label>
-                  <label>
-                    ARAT{" "}
-                    <input
-                      required
-                      name="arat"
-                      type="number"
-                      min="0"
-                      max="57"
-                    />
-                  </label>
-                  <button disabled={busy}>Save assessment</button>
-                </form>
-              </details>
-              <details>
-                <summary>Remove participant</summary>
-                <p>
-                  This deletes this participant and all of their sessions from
-                  the station.
-                </p>
-                <button
-                  disabled={busy}
-                  onClick={() =>
-                    remove
-                      ? act(async () => {
-                          await api("participants/" + selected, "DELETE");
-                          setSelected("");
-                          await load();
-                        })
-                      : setRemove(true)
-                  }
-                >
-                  {remove ? "Confirm deletion" : "Delete participant"}
-                </button>
-              </details>
+              </form>
             </>
           )}
-        </>
-      )}
+        </div>
+      </div>
     </section>
   );
 }

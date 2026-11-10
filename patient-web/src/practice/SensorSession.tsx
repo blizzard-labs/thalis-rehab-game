@@ -15,12 +15,14 @@ export function SensorSession({
   lockedPause,
   modelProfile,
   displayInput = false,
+  forceButton,
   monitor,
 }: {
   round: PracticeRound;
   side: Side;
   modelProfile?: ModelProfile;
   displayInput?: boolean;
+  forceButton?: boolean;
   monitor?: MutableRefObject<LiveInput | null>;
   end: () => void;
   lockedPause?: boolean;
@@ -57,8 +59,17 @@ export function SensorSession({
     side,
     pairedOars,
   );
+  const setup =
+    (cameraNeeded && (!calibration || (pairedOars && !otherReach))) ||
+    (eegNeeded && !played);
   useEffect(() => {
-    if (!monitor) return;
+    if (forceButton && round.source !== "button") {
+      round.switchInput("button");
+      setSource(round.source);
+    }
+  }, [forceButton, round]);
+  useEffect(() => {
+    if (!monitor || !setup) return;
     monitor.current = {
       phase: "setup",
       camera: cameraNeeded ? camera.status : "",
@@ -70,7 +81,15 @@ export function SensorSession({
     return () => {
       monitor.current = null;
     };
-  }, [monitor, source, cameraNeeded, eegNeeded, camera.status, eeg.message]);
+  }, [
+    monitor,
+    setup,
+    source,
+    cameraNeeded,
+    eegNeeded,
+    camera.status,
+    eeg.message,
+  ]);
   function switchInput(next: "button" | "camera" | "eeg") {
     round.switchInput(next);
     setSource(round.source);
@@ -146,6 +165,7 @@ export function SensorSession({
             <label>
               Headset{" "}
               <select
+                aria-label="Headset"
                 value={chosen || eeg.devices[0]?.id}
                 onChange={(e) => setChosen(e.target.value)}
               >

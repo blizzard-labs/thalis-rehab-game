@@ -153,7 +153,7 @@ def create_app(port=8766, display_origin=None):
         return web.FileResponse(DIST / "index.html")
 
     async def health(request):
-        return web.json_response({"app": "NeuroReach", "version": 1, "clockMs": time.time() * 1000})
+        return web.json_response({"app": "NeuroReach", "version": 1, "staffRuns": 2, "clockMs": time.time() * 1000})
 
     app.router.add_get("/api/health", health)
     pairing = register_clinic(app, display_origin=display_origin or f"http://localhost:{port}")

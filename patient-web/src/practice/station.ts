@@ -43,12 +43,15 @@ export type DisplayState = {
   schedule: PracticeRecord["schedule"];
   revision: number;
   expired: boolean;
+  manualRequested: boolean;
+  canFinishSaved: boolean;
   paired: boolean;
   connected: boolean;
   patientPaused: boolean;
   url: string | null;
   record: PracticeRecord | null;
   telemetry: LiveInput | null;
+  trace: { age: number; camera: number | null; eeg: number | null }[];
 };
 export class StationError extends Error {
   constructor(

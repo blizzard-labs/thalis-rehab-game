@@ -148,13 +148,26 @@ test("staff controls a separate patient screen and receives its final trial coun
     await expect(water).toBeDisabled();
     await page.getByRole("button", { name: "Resume patient game" }).click();
     await expect(water).toBeEnabled();
-    await expect(page.getByText(/4 actions · 1 rewards/)).toBeVisible();
+    await expect(
+      page
+        .locator(".cl-metrics div")
+        .filter({ has: page.getByText("Actions", { exact: true }) })
+        .locator("dd > span"),
+    ).toHaveText("4");
+    await expect(
+      page
+        .locator(".cl-metrics div")
+        .filter({ has: page.getByText("blooms", { exact: true }) })
+        .locator("dd > span"),
+    ).toHaveText("1");
     await page.getByRole("button", { name: "End display session" }).click();
     await expect(
       player.getByRole("heading", { name: "Session complete" }),
     ).toBeVisible();
     await page.getByRole("button", { name: "Return to roster" }).click();
-    await expect(page.getByText(/complete · .*4 actions/)).toBeVisible();
+    await expect(
+      page.getByRole("row").filter({ hasText: "4 actions" }),
+    ).toContainText("complete");
     expect(
       (await player.request.get(host + "/api/staff/participants")).status(),
     ).toBe(401);

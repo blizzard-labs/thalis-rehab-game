@@ -1,6 +1,7 @@
 """Single-use invitation and per-display session control for a supervised station."""
 
-from dataclasses import dataclass
+from collections import deque
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 import json
 import secrets
@@ -45,6 +46,9 @@ class Display:
     started: str | None = None
     outcome: str | None = None
     telemetry: dict | None = None
+    manual_requested: bool = False
+    ending_at: float = 0
+    trace: deque = field(default_factory=lambda: deque(maxlen=100))
 
 
 class DisplayPairing:
@@ -65,11 +69,13 @@ class DisplayPairing:
     def connected(d):
         return bool(d.last_seen and time.monotonic() - d.last_seen < 5)
 
-    @staticmethod
-    def issue_player(d, response_body, secure):
+    def issue_player(self, d, secure, include_display=False):
         d.token = secrets.token_urlsafe(32)
         d.last_seen = time.monotonic()
-        response = web.json_response({**response_body, "token": d.token})
+        body = {"token": d.token}
+        if include_display:
+            body["display"] = self.status()
+        response = web.json_response(body)
         response.set_cookie("nr_display", d.token, path="/api/display/eeg", httponly=True,
                             secure=secure, samesite="Strict")
         return response
@@ -94,8 +100,12 @@ class DisplayPairing:
             "game": d.game, "side": d.side, "easy": d.easy,
             "source": d.source, "schedule": d.schedule, "started": d.started,
             "outcome": d.outcome, "revision": d.revision,
+            "manualRequested": d.manual_requested,
+            "canFinishSaved": d.state == "ending" and (not self.connected(d) or time.monotonic() - d.ending_at > 8),
             "expired": not d.token and time.monotonic() >= d.expires,
             "telemetry": d.telemetry if self.connected(d) else None,
+            "trace": [{"age": round(time.monotonic() - t, 2), "camera": camera, "eeg": eeg}
+                      for t, camera, eeg in d.trace if time.monotonic() - t <= 60],
             "paired": bool(d.token),
             "patientPaused": d.patient_paused,
             "connected": self.connected(d),
@@ -139,7 +149,7 @@ class DisplayPairing:
         if target == "workstation":
             d = self.current
             self.start(d)
-            return self.issue_player(d, {"display": self.status()}, request.secure)
+            return self.issue_player(d, request.secure, include_display=True)
         return web.json_response(self.status())
 
     def start(self, d):
@@ -162,7 +172,7 @@ class DisplayPairing:
             raise web.HTTPConflict(text="The patient game is open in another window.")
         d.state = "paused"
         d.revision += 1
-        return self.issue_player(d, {}, request.secure)
+        return self.issue_player(d, request.secure)
 
     async def monitor(self, request):
         self.staff(request)
@@ -177,10 +187,10 @@ class DisplayPairing:
 
     async def control(self, request):
         self.staff(request)
+        b = await request.json()
         d = self.current
         if not d:
             raise web.HTTPNotFound()
-        b = await request.json()
         if b.get("session") != d.session_id:
             raise web.HTTPConflict(text="Display session changed.")
         command = b.get("command")
@@ -194,6 +204,7 @@ class DisplayPairing:
                 self.end("interrupted")
             else:
                 d.state = "ending"
+                d.ending_at = time.monotonic()
         elif command == "finish-saved":
             if d.state == "complete":
                 return web.json_response(self.status())
@@ -201,7 +212,17 @@ class DisplayPairing:
                 raise web.HTTPConflict(
                     text="Request session end before finishing the saved record."
                 )
+            if self.connected(d) and time.monotonic() - d.ending_at <= 8:
+                raise web.HTTPConflict(text="Waiting for the final patient checkpoint.")
             self.end("interrupted")
+        elif command == "renew" and d.state == "waiting" and not d.token:
+            d.code = secrets.token_urlsafe(24)
+            d.expires = time.monotonic() + 600
+            return web.json_response(self.status())
+        elif command == "use-button" and d.state in ("playing", "paused") and d.source != "button":
+            d.manual_requested = True
+            d.revision += 1
+            return web.json_response(self.status())
         elif command == "start" and d.state == "waiting" and d.token and self.connected(d):
             self.start(d)
             return web.json_response(self.status())
@@ -226,13 +247,12 @@ class DisplayPairing:
             or not secrets.compare_digest(d.code, str(b.get("code", "")))
         ):
             raise web.HTTPForbidden(text="This invitation has expired or was already used.")
-        return self.issue_player(d, {}, request.secure)
+        return self.issue_player(d, request.secure)
 
     async def sync(self, request):
         token = request.headers.get("Authorization", "").removeprefix("Bearer ")
-        d = self.authorize(token)
         b = await request.json()
-        d.last_seen = time.monotonic()
+        d = self.authorize(token)
         r = b.get("record")
         if r and d.state == "waiting":
             raise web.HTTPConflict(text="Staff must start the session first.")
@@ -256,14 +276,21 @@ class DisplayPairing:
                 for key in ("input", "cameraLevel", "eegLevel"):
                     level = monitor.get(key)
                     d.telemetry[key] = level if type(level) in (int, float) and 0 <= level <= 1 else None
+                if d.source != "button" and d.state == "playing" and not d.patient_paused and monitor["phase"] == "play":
+                    at = time.monotonic()
+                    if not d.trace or at - d.trace[-1][0] >= 0.4:
+                        d.trace.append((at, d.telemetry["cameraLevel"], d.telemetry["eegLevel"]))
             if status == "complete":
                 d.state = d.outcome = "complete"
+        d.last_seen = time.monotonic()
         return web.json_response(
             {
                 "session": d.session_id,
                 "state": d.state,
                 "revision": d.revision,
                 "started": d.started,
+                "manualRequested": d.manual_requested,
+                "outcome": d.outcome,
                 "patientPaused": d.patient_paused,
                 "game": d.game,
                 "side": d.side,

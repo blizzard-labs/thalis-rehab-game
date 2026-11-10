@@ -99,7 +99,7 @@ jobs:
         run: |
           $env:NEUROREACH_TEST_PYTHON = (Get-Command python).Source
           $env:NEUROREACH_COMPANION_EXE = (Resolve-Path ../dist/NeuroReach/NeuroReach.exe).Path
-          npm run test:e2e -- headset.spec.ts
+          npm run test:e2e -- headset.spec.ts staff.spec.ts staff-launch.spec.ts --workers=2
       - name: Build versioned installer
         shell: pwsh
         run: '& "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" "/DPrototypeVersion=0.1.$env:GITHUB_RUN_NUMBER" packaging/windows.iss'

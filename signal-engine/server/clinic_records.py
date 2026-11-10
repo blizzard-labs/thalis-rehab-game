@@ -392,6 +392,8 @@ def register_clinic(app, root=None, display_origin="http://localhost:8766"):
             raise web.HTTPNotFound(text="Participant not found.")
         if request.method == "DELETE":
             if pairing.current and pairing.current.participant == pid:
+                if pairing.current.state != "complete":
+                    raise web.HTTPConflict(text="End the active session before removing this participant.")
                 pairing.current = None
             with db:
                 db.execute("DELETE FROM participants WHERE id=?", (pid,))
@@ -429,7 +431,7 @@ def register_clinic(app, root=None, display_origin="http://localhost:8766"):
         rows = [
             dict(row)
             for row in db.execute(
-                "SELECT * FROM sessions WHERE participant=? ORDER BY updated DESC", (pid,)
+                "SELECT * FROM sessions WHERE participant=? ORDER BY julianday(json_extract(record, '$.started')) DESC, rowid DESC", (pid,)
             )
         ]
         for row in rows:

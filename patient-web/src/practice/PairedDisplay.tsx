@@ -11,6 +11,8 @@ type Snapshot = {
   state: string;
   revision: number;
   patientPaused: boolean;
+  manualRequested?: boolean;
+  outcome?: string;
   game: Game;
   side: Side;
   source: Source;
@@ -39,7 +41,13 @@ async function post(path: string, body: unknown, token?: string) {
 
 export function PairedDisplay({
   local,
-}: { local?: { session: string; token: string } } = {}) {
+  onExpired,
+}: {
+  local?: { session: string; token: string };
+  onExpired?: () => void;
+} = {}) {
+  const expire = useRef(onExpired);
+  expire.current = onExpired;
   const telemetry = useRef<LiveInput | null>(null);
 
   const code = location.hash.slice("#display=".length);
@@ -131,6 +139,7 @@ export function PairedDisplay({
           live.current = null;
           setRound(null);
           setExpired(true);
+          expire.current?.();
           return;
         }
         setError(
@@ -140,8 +149,32 @@ export function PairedDisplay({
         timer = window.setTimeout(sync, 1500);
       }
     }
+    const checkpoint = () => {
+      const round = live.current;
+      if (!round || closed) return;
+      round.setPaused(true);
+      const body = JSON.stringify({
+        record: round.record,
+        paused: true,
+        revision: revision.current,
+        finished: ending.current,
+      });
+      void fetch("/api/display/sync", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer " + token,
+        },
+        body,
+        keepalive: new Blob([body]).size < 60000,
+        cache: "no-store",
+      }).catch(() => {});
+    };
+    window.addEventListener("pagehide", checkpoint);
     void sync();
     return () => {
+      window.removeEventListener("pagehide", checkpoint);
+      if (local && !ending.current) checkpoint();
       closed = true;
       clearTimeout(timer);
     };
@@ -197,7 +230,13 @@ export function PairedDisplay({
           </section>
         ) : done ? (
           <section className="practice-panel">
-            <h1>Session complete</h1>
+            <h1>
+              {snapshot?.outcome === "cancelled"
+                ? "Invitation cancelled"
+                : snapshot?.outcome === "interrupted"
+                  ? "Session interrupted"
+                  : "Session complete"}
+            </h1>
             <p>You can close this window.</p>
           </section>
         ) : finishing ? (
@@ -215,6 +254,7 @@ export function PairedDisplay({
             round={round}
             side={snapshot.side}
             modelProfile={snapshot.session}
+            forceButton={snapshot.manualRequested}
             displayInput
             monitor={telemetry}
             end={finish}
