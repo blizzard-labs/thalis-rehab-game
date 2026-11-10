@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Play } from "./GameView";
-import type { Point } from "./motion";
-import { cameraStarTrial, distinctDirection, reachProgress } from "./motion";
+import { ReachSetup, type ReachCalibration } from "./ReachSetup";
+import { cameraStarTrial, reachProgress } from "./motion";
 import { useHeadset } from "./useHeadset";
 import { useMotionCamera } from "./useMotionCamera";
 import type { PracticeRound, Side } from "./session";
@@ -20,11 +20,7 @@ export function SensorSession({
   lockedPause?: boolean;
 }) {
   const [source, setSource] = useState(round.source);
-  const [rest, setRest] = useState<Point | null>(null);
-  const [directions, setDirections] = useState<Point[]>([]);
-  const [firstDirection, setFirstDirection] = useState<Point | null>(null);
-  const reach = directions[0];
-  const [hint, setHint] = useState("");
+  const [calibration, setCalibration] = useState<ReachCalibration | null>(null);
   const cameraNeeded = source === "camera" || source === "blended";
   const eegNeeded = source === "eeg" || source === "blended";
   const [train, setTrain] = useState(false);
@@ -32,7 +28,7 @@ export function SensorSession({
   const [chosen, setChosen] = useState("");
   const [played, setPlayed] = useState(false);
   const eeg = useHeadset(
-    eegNeeded && (!cameraNeeded || !!reach),
+    eegNeeded && (!cameraNeeded || !!calibration),
     side,
     participant,
   );
@@ -40,97 +36,26 @@ export function SensorSession({
     if (eeg.calibration) round.record.calibration = eeg.calibration;
   }, [round, eeg.calibration]);
   const camera = useMotionCamera(cameraNeeded, side);
-  const preview = useRef<HTMLVideoElement>(null);
-  useEffect(() => {
-    if (preview.current) preview.current.srcObject = camera.stream;
-  }, [camera.stream]);
-  function capture(addAnother = false) {
-    const point = camera.latest();
-    if (!point) {
-      setHint("Wait until your arm is in view, then try again.");
-      return;
-    }
-    if (!rest) {
-      setRest(point);
-      setHint("");
-      return;
-    }
-    if (reachProgress(rest, point, point) === null) {
-      setHint(
-        "The two positions are too close for the camera to distinguish. Try a different comfortable movement or use one button.",
-      );
-      return;
-    }
-    if (addAnother) {
-      setFirstDirection(point);
-    } else if (firstDirection) {
-      if (!distinctDirection(rest, firstDirection, point)) {
-        setHint("Try a different direction, or play with your first one.");
-        return;
-      }
-      setDirections([firstDirection, point]);
-    } else {
-      setDirections([point]);
-    }
-    setHint("");
-  }
   function switchInput(next: "button" | "camera" | "eeg") {
     round.switchInput(next);
     setSource(round.source);
   }
-  if (cameraNeeded && !reach)
+  if (cameraNeeded && !calibration)
     return (
-      <section className="practice-panel">
-        <h1>Set your reach</h1>
-        <p>
-          Keep your {side} shoulder, wrist, and hip in view. Choose a movement
-          that feels comfortable.
-        </p>
-        <video
-          ref={preview}
-          autoPlay
-          playsInline
-          muted
-          className="practice-preview"
-          aria-label="Mirrored camera preview"
-        />
-        <p role="status">{camera.status}</p>
-        <p>
-          {firstDirection
-            ? "Move from rest in a second comfortable direction and hold."
-            : rest
-              ? "Move your hand to a comfortable reach and hold it there."
-              : "Let your arm rest in its starting position."}
-        </p>
-        <div className="button-row">
-          <button className="primary" onClick={() => capture()}>
-            {firstDirection
-              ? "Set second direction"
-              : rest
-                ? "Set comfortable reach"
-                : "Set resting position"}
+      <ReachSetup
+        camera={camera}
+        side={side}
+        stars={round.record.game === "stars"}
+        onReady={setCalibration}
+      >
+        {source === "blended" && (
+          <button onClick={() => switchInput("eeg")}>
+            Continue with EEG only
           </button>
-          {rest &&
-            round.record.game === "stars" &&
-            (firstDirection ? (
-              <button onClick={() => setDirections([firstDirection])}>
-                Play with first direction
-              </button>
-            ) : (
-              <button onClick={() => capture(true)}>
-                Save reach and add a second direction
-              </button>
-            ))}
-          {source === "blended" && (
-            <button onClick={() => switchInput("eeg")}>
-              Continue with EEG only
-            </button>
-          )}
-          <button onClick={() => switchInput("button")}>Use one button</button>
-          <button onClick={end}>End session</button>
-        </div>
-        {hint && <p role="alert">{hint}</p>}
-      </section>
+        )}
+        <button onClick={() => switchInput("button")}>Use one button</button>
+        <button onClick={end}>End session</button>
+      </ReachSetup>
     );
   if (eegNeeded && !played)
     return (
@@ -212,9 +137,12 @@ export function SensorSession({
       </section>
     );
   const observation = () => {
+    const rest = calibration?.rest;
+    const directions = calibration?.directions;
+    const reach = directions?.[0];
     const point = camera.latest();
     const trial =
-      cameraNeeded && rest && reach && round.record.game === "stars"
+      cameraNeeded && rest && directions && round.record.game === "stars"
         ? cameraStarTrial(rest, directions, point, round.starIndex)
         : null;
     const movement = trial

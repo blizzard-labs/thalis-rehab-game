@@ -34,20 +34,25 @@ for (const secondDirection of [false, true]) {
     await page.getByRole("button", { name: "Start game" }).click();
     await expect(page.getByText("Arm in view")).toBeVisible({ timeout: 12000 });
     await page.getByRole("button", { name: "Set resting position" }).click();
+    await expect(
+      page.getByRole("button", { name: "Save direction 1" }),
+    ).toBeVisible();
     await pose(page, 0.45);
     await settlePreview(page);
+    await page.getByRole("button", { name: "Save direction 1" }).click();
     if (secondDirection) {
-      await page
-        .getByRole("button", { name: "Save reach and add a second direction" })
-        .click();
-      await page.getByRole("button", { name: "Set second direction" }).click();
-      await expect(page.getByRole("alert")).toHaveText(/different direction/);
+      await page.getByRole("button", { name: "Save direction 2" }).click();
+      await expect(page.getByRole("alert")).toHaveText(/matches direction 1/);
       await pose(page, -0.45);
-      await settlePreview(page);
-      await page.getByRole("button", { name: "Set second direction" }).click();
-    } else {
-      await page.getByRole("button", { name: "Set comfortable reach" }).click();
+      await page.getByRole("button", { name: "Save direction 2" }).click();
     }
+    await page
+      .getByRole("button", {
+        name: secondDirection
+          ? "Play with 2 directions"
+          : "Play with 1 direction",
+      })
+      .click();
     const ready = page.getByText(
       "Guide the net to the star and hold, then return to rest.",
     );

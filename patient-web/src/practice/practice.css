@@ -374,3 +374,5 @@
   color: var(--forest);
   font-weight: 700;
 }
+.reach-setup-preview { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
+.direction-guide { width: clamp(100px,20vw,145px); height: auto; background: #f5f8ef; border-radius: 50%; }

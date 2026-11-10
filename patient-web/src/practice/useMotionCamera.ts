@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import type { MotionSample } from "./motion";
+import { medianWrist, type MotionSample } from "./motion";
 import type { Side } from "./session";
 
 export function useMotionCamera(enabled: boolean, side: Side) {
   const [status, setStatus] = useState("Opening camera…");
   const [stream, setStream] = useState<MediaStream | null>(null);
-  const sample = useRef<MotionSample | null>(null);
+  const samples = useRef<MotionSample[]>([]);
   useEffect(() => {
     if (!enabled) return;
     let stopped = false;
@@ -21,7 +21,7 @@ export function useMotionCamera(enabled: boolean, side: Side) {
       worker?.terminate();
       media?.getTracks().forEach((track) => track.stop());
       video.srcObject = null;
-      sample.current = null;
+      samples.current = [];
     };
     const fail = (message: string) => {
       if (!stopped) {
@@ -67,9 +67,12 @@ export function useMotionCamera(enabled: boolean, side: Side) {
         }
         if (data.kind === "sample") {
           busy = false;
-          sample.current = data.point
-            ? { point: data.point, time: data.time }
-            : null;
+          if (data.point) {
+            samples.current.push({ point: data.point, time: data.time });
+            if (samples.current.length > 5) samples.current.shift();
+          } else {
+            samples.current = [];
+          }
           setStatus(
             data.point
               ? "Arm in view"
@@ -115,8 +118,9 @@ export function useMotionCamera(enabled: boolean, side: Side) {
     };
   }, [enabled, side]);
   function latest() {
-    const value = sample.current;
+    const value = samples.current[samples.current.length - 1];
     return value && performance.now() - value.time < 650 ? value.point : null;
   }
-  return { status, stream, latest };
+  const steady = () => medianWrist(samples.current, performance.now());
+  return { status, stream, latest, steady };
 }

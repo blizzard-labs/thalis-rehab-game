@@ -4,6 +4,30 @@ export type Point = { x: number; y: number };
 type Landmark = Point & { z: number; visibility?: number };
 export type MotionSample = { point: Point; time: number };
 
+export const maxReachDirections = 4;
+
+/** Use actual recent frames so a single landmark jump cannot set a calibration point. */
+export function medianWrist(
+  samples: MotionSample[],
+  now: number,
+): MotionSample | null {
+  const fresh = samples.filter((sample) => now - sample.time <= 480);
+  if (fresh.length < 3) return null;
+  function median(axis: "x" | "y") {
+    const sorted = fresh
+      .map((sample) => sample.point[axis])
+      .sort((a, b) => a - b);
+    const mid = Math.floor(sorted.length / 2);
+    return sorted.length % 2
+      ? sorted[mid]
+      : (sorted[mid - 1] + sorted[mid]) / 2;
+  }
+  return {
+    point: { x: median("x"), y: median("y") },
+    time: fresh[fresh.length - 1].time,
+  };
+}
+
 export function wristOffset(pose: Landmark[], side: Side): Point | null {
   const offset = side === "right" ? 1 : 0;
   const [shoulder, wrist, hip] = [11, 15, 23].map((i) => pose[i + offset]);
@@ -57,7 +81,7 @@ export function distinctDirection(rest: Point, first: Point, next: Point) {
     by = next.y - rest.y;
   return (
     ax * bx + ay * by <=
-    Math.cos(Math.PI / 4) * Math.hypot(ax, ay) * Math.hypot(bx, by)
+    Math.cos(Math.PI / 6) * Math.hypot(ax, ay) * Math.hypot(bx, by)
   );
 }
 
@@ -71,7 +95,8 @@ export function cameraStarTrial(
   shot: number,
 ) {
   // Out-and-back order gives each direction both a long and a short reach.
-  const lane = directions.length === 1 ? 0 : [0, 1, 1, 0][shot % 4];
+  const sweep = shot % (directions.length * 2);
+  const lane = Math.min(sweep, directions.length * 2 - 1 - sweep);
   const endpoint = directions[lane];
   const depth = distances[shot % distances.length];
   const target = {

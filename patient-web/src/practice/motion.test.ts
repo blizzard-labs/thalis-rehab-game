@@ -1,6 +1,7 @@
 import { netRadius } from "../reach/starGeometry";
 import { expect, it } from "vitest";
 import {
+  medianWrist,
   cameraStarTrial,
   distinctDirection,
   wristOffset,
@@ -69,4 +70,43 @@ it("uses both captured directions and distinguishes an off-axis wrist from rest"
   expect(
     cameraStarTrial(rest, directions, { x: 0, y: -0.41 }, 1).onTarget,
   ).toBe(true);
+});
+
+it("captures the median of fresh frames and rejects stale samples", () => {
+  const samples = [0.21, 0.2, 6, 0.19, 0.2].map((x, i) => ({
+    point: { x, y: 1 },
+    time: 100 + i * 80,
+  }));
+  expect(medianWrist(samples, 430)).toEqual({
+    point: { x: 0.2, y: 1 },
+    time: 420,
+  });
+  expect(medianWrist(samples, 850)).toBeNull();
+  expect(medianWrist(samples.slice(-1), 430)).toBeNull();
+});
+
+it("visits every calibrated direction at both distances for one through four saved reaches", () => {
+  const rest = { x: 0, y: 0 },
+    points = [
+      { x: 1, y: 0 },
+      { x: 0, y: 1 },
+      { x: -1, y: 0 },
+      { x: 0, y: -1 },
+    ];
+  for (let count = 1; count <= 4; count++) {
+    const hits = Array.from({ length: count }, () => new Set<string>());
+    for (let shot = 0; shot < count * 2; shot++) {
+      const { goal } = cameraStarTrial(
+        rest,
+        points.slice(0, count),
+        null,
+        shot,
+      ).aim;
+      const dx = 300 - goal.x,
+        dy = goal.y - 330;
+      const lane = points.findIndex((p) => dx * p.x + dy * p.y > 0);
+      hits[lane].add(Math.hypot(dx, dy) > 100 ? "long" : "short");
+    }
+    for (const lane of hits) expect(lane.size).toBe(2);
+  }
 });
