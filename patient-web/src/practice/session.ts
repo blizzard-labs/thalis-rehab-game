@@ -19,6 +19,7 @@ export type CameraStarFrame = {
   time: number | null;
   cleared: boolean;
   nearTarget: boolean;
+  atBasket?: boolean;
   neural: number | null;
 };
 const holdSeconds = 0.4;
@@ -156,9 +157,14 @@ export class PracticeRound {
   get celebrating() {
     return this.record.rewards > 0 && this.elapsedSinceReward < 0.85;
   }
+  get carryingFruit() {
+    return (
+      this.record.game === "fruit" && this.record.actions > this.record.rewards
+    );
+  }
   get strokePhase() {
-    if (!this.record.rewards || this.elapsedSinceReward >= .85) return 0;
-    return Math.sin(Math.PI * this.elapsedSinceReward / .85);
+    if (!this.record.rewards || this.elapsedSinceReward >= 0.85) return 0;
+    return Math.sin((Math.PI * this.elapsedSinceReward) / 0.85);
   }
   get effortReach() {
     return Math.min(1, this.level / this.threshold);
@@ -193,8 +199,13 @@ export class PracticeRound {
 
   press(onTarget = this.scanSlot === scanTargetSlot(this.record.rewards)) {
     if (this.paused || this.source !== "button") return;
+    if (this.carryingFruit) {
+      this.reward();
+      return;
+    }
     this.record.actions++;
     this.log("action");
+    if (this.record.game === "fruit") return;
     if (this.record.game === "garden") {
       if (this.progress === 0) this.plant.reset();
       this.progress = Math.min(1, this.progress + 0.25);
@@ -255,6 +266,20 @@ export class PracticeRound {
     this.level = Math.max(0, Math.min(1, observation));
     measurement.validSeconds += dt;
     measurement.weightedLevel += this.level * dt;
+    if (this.carryingFruit) {
+      const relaxed = this.level < this.threshold * 0.65;
+      const deposited = cameraStar
+        ? cameraStar.atBasket &&
+          (this.source === "camera" ||
+            (cameraStar.neural !== null &&
+              cameraStar.neural < this.threshold * 0.65))
+        : relaxed;
+      if (deposited) {
+        this.reward();
+        this.released = true;
+      }
+      return;
+    }
     if (cameraStar) {
       this.holdCameraStar(cameraStar, onTarget);
     } else {
@@ -267,6 +292,7 @@ export class PracticeRound {
     this.log("action");
     this.released = false;
     this.clearHold();
+    if (this.record.game === "fruit") return;
     if (this.record.game === "garden" && this.progress === 0)
       this.plant.reset();
     this.progress =

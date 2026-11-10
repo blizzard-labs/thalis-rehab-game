@@ -94,6 +94,7 @@ function ClinicApp() {
             onEnd={() => setView("summary")}
           />
         );
+      case "fruit":
       case "river":
         return <LinkedAdventure game={view} side={identity.affectedSide} paused={link.paused || link.conn !== "open"}
           store={link.store} stats={stats} onEnd={()=>setView("summary")}/>;

@@ -1,9 +1,10 @@
-export const games = ["garden", "stars", "river"] as const;
+export const games = ["garden", "stars", "river", "fruit"] as const;
 export type Game = (typeof games)[number];
 export const gameNames: Record<Game, string> = {
   garden: "Garden Grow",
   stars: "Star Catcher",
   river: "River Rowing",
+  fruit: "Fruit Picking",
 };
 export const gameDetails = {
   garden: {
@@ -23,6 +24,13 @@ export const gameDetails = {
     description: "Pull the oars, choose a channel and discover the riverbank.",
     unit: "stroke",
     units: "strokes",
+  },
+  fruit: {
+    icon: "🍐",
+    description:
+      "Reach for ripe orchard fruit and bring it back to your harvest basket.",
+    unit: "fruit",
+    units: "fruit",
   },
 } satisfies Record<
   Game,

@@ -9,7 +9,7 @@ from uuid import uuid4
 from aiohttp import web
 
 
-GAMES = {"garden": "Garden Grow", "stars": "Star Catcher", "river": "River Rowing"}
+GAMES = {"garden": "Garden Grow", "stars": "Star Catcher", "river": "River Rowing", "fruit": "Fruit Picking"}
 
 
 @dataclass

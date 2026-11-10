@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { games, gameDetails } from "./catalog";
+import { OrchardArt } from "../adventures/Orchard";
 import { RiverArt } from "../adventures/River";
 import { duration, Garden, NightSky } from "./GameView";
 import {
@@ -103,11 +104,19 @@ function Summary({
           <dd>{record.actions}</dd>
         </div>
         <div>
-          <dt>{gameDetails[record.game].units[0].toUpperCase() + gameDetails[record.game].units.slice(1)}</dt>
+          <dt>
+            {gameDetails[record.game].units[0].toUpperCase() +
+              gameDetails[record.game].units.slice(1)}
+          </dt>
           <dd>{record.rewards}</dd>
         </div>
       </dl>
-      {record.garden?.goal && <p>Bloom goal · {record.rewards} of {record.garden.goal}{record.rewards >= record.garden.goal ? " · Reached" : ""}</p>}
+      {record.garden?.goal && (
+        <p>
+          Bloom goal · {record.rewards} of {record.garden.goal}
+          {record.rewards >= record.garden.goal ? " · Reached" : ""}
+        </p>
+      )}
       <div className="button-row">
         <button className="primary" onClick={onBack}>
           Back to games
@@ -138,9 +147,7 @@ function GameSetup({
     <section className="practice-panel">
       <button onClick={onBack}>← Games</button>
       <h1>{gameNames[game]}</h1>
-      <p>
-        {gameDetails[game].description}
-      </p>
+      <p>{gameDetails[game].description}</p>
       <fieldset>
         <legend>Input</legend>
         {(["button", "camera", "eeg", "blended"] as const).map((input) => (
@@ -250,13 +257,17 @@ export function PracticeApp() {
                   <div className={`card-art ${id}-preview`} aria-hidden="true">
                     {id === "garden" ? (
                       <Garden growth={0.85} bloom />
-                    ) : id === "stars" ? <NightSky target={1} /> : <RiverArt/>}
+                    ) : id === "stars" ? (
+                      <NightSky target={1} />
+                    ) : id === "river" ? (
+                      <RiverArt />
+                    ) : (
+                      <OrchardArt />
+                    )}
                   </div>
                   <div className="card-copy">
                     <h2>{gameNames[id]}</h2>
-                    <p>
-                      {gameDetails[id].description}
-                    </p>
+                    <p>{gameDetails[id].description}</p>
                     <span aria-hidden="true">↗</span>
                   </div>
                 </button>

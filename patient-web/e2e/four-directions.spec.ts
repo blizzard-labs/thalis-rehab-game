@@ -157,3 +157,15 @@ test("a paired-oar stroke requires both independently calibrated arms", async ({
   });
   await expect(page.getByText("1 stroke", { exact: true })).toBeVisible();
 });
+
+test("camera orchard keeps a picked fruit until the measured wrist returns to the basket",async({page})=>{
+  await attachWristReplay(page); await page.goto("/");
+  await page.getByRole("button",{name:/Fruit Picking/}).click();
+  await page.getByLabel("Camera",{exact:true}).check();await page.getByRole("button",{name:"Start game"}).click();
+  await expect(page.getByText("Arm in view")).toBeVisible();await page.getByRole("button",{name:"Set resting position"}).click();
+  await page.getByRole("button",{name:"Save direction 1"}).click();await wrist(page,1,0);
+  await page.getByRole("button",{name:"Play with 1 direction"}).click();
+  await expect(page.getByText("Return to your resting position and relax to basket the fruit.")).toBeVisible();
+  await expect(page.getByText("0 fruit",{exact:true})).toBeVisible();
+  await wrist(page,0,0);await expect(page.getByText("1 fruit",{exact:true})).toBeVisible();
+});

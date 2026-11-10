@@ -182,6 +182,11 @@ export function Play({
   if (!garden && round.record.game !== "stars")
     return (
       <AdventurePlay
+        aim={
+          round.source === "camera" || round.source === "blended"
+            ? aim.current
+            : null
+        }
         round={round}
         side={side}
         sourceLabel={sourceLabel}

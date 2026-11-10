@@ -192,3 +192,30 @@ it("keeps every chosen bloom beyond six and resumes planting in an older partial
     "Aster",
   ]);
 });
+
+it("holds picked fruit through pause, checkpoint and input fallback until it is placed", () => {
+  const round = new PracticeRound("fruit", "camera", true);
+  const frame = {
+    time: 1000,
+    cleared: true,
+    nearTarget: true,
+    neural: null,
+    atBasket: false,
+  };
+  for (let i = 0; i < 6; i++)
+    round.tick(0.1, 1, true, { ...frame, time: 1000 + i * 100 });
+  expect(round.carryingFruit).toBe(true);
+  expect(round.record.rewards).toBe(0);
+  round.tick(0.2, null);
+  round.tick(0.2, 1, true, { ...frame, time: 1900 });
+  expect(round.record.actions).toBe(1);
+  const resumed = PracticeRound.restore(structuredClone(round.record), true);
+  resumed.setPaused(true);
+  resumed.switchInput("button");
+  resumed.press();
+  expect(resumed.carryingFruit).toBe(true);
+  resumed.setPaused(false);
+  resumed.press();
+  expect(resumed.record.rewards).toBe(1);
+  expect(resumed.carryingFruit).toBe(false);
+});

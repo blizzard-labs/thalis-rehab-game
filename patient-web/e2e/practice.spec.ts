@@ -249,3 +249,17 @@ test("a rower can pull a stroke, switch channels, reach a landing and save a cor
   await page.getByRole("button",{name:"End session"}).click();
   await expect(page.getByText("Strokes",{exact:true})).toBeVisible();
 });
+
+test("orchard fruit must be picked and delivered, including with a single switch",async({page})=>{
+  await page.goto("/"); await page.getByRole("button",{name:/Fruit Picking/}).click();
+  await page.getByRole("button",{name:"Start game"}).click();
+  await page.getByTestId("ripe-fruit").click();
+  await expect(page.getByText("0 fruit",{exact:true})).toBeVisible();
+  await page.getByTestId("fruit-basket").click();
+  await expect(page.getByText("1 fruit",{exact:true})).toBeVisible();
+  await page.getByRole("button",{name:"Pick",exact:true}).focus();
+  await page.keyboard.press("Space"); await page.keyboard.press("Space");
+  await expect(page.getByText("2 fruit",{exact:true})).toBeVisible();
+  await page.getByRole("button",{name:"End session"}).click();
+  await expect(page.getByText("Fruit",{exact:true})).toBeVisible();
+});

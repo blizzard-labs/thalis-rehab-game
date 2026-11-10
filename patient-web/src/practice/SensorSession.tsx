@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { shoulder, withinNet } from "../reach/starGeometry";
 import { Play } from "./GameView";
 import { ReachSetup, type ReachCalibration } from "./ReachSetup";
 import { cameraStarTrial, reachProgress } from "./motion";
@@ -24,6 +25,8 @@ export function SensorSession({
   const [rowing, setRowing] = useState(round.record.rowing);
   const [otherReach, setOtherReach] = useState<ReachCalibration | null>(null);
   const pairedOars = round.record.game === "river" && rowing === "paired";
+  const directional =
+    round.record.game === "stars" || round.record.game === "fruit";
   const cameraNeeded = source === "camera" || source === "blended";
   const eegNeeded = source === "eeg" || source === "blended";
   const [train, setTrain] = useState(false);
@@ -80,7 +83,7 @@ export function SensorSession({
         key={secondArm ? "other" : "selected"}
         camera={secondArm ? { ...camera, latest: camera.otherWrist } : camera}
         side={secondArm ? (side === "left" ? "right" : "left") : side}
-        stars={round.record.game === "stars"}
+        stars={directional}
         onReady={secondArm ? setOtherReach : setCalibration}
       >
         {source === "blended" && (
@@ -175,16 +178,17 @@ export function SensorSession({
     const rest = calibration?.rest;
     const directions = calibration?.directions;
     const reach = directions?.[0];
-    const frame =
-      cameraNeeded && round.record.game === "stars" ? camera.tracked() : null;
+    const frame = cameraNeeded && directional ? camera.tracked() : null;
     const trial =
-      cameraNeeded && rest && directions && round.record.game === "stars"
+      cameraNeeded && rest && directions && directional
         ? cameraStarTrial(
             rest,
             directions,
             frame?.point ?? null,
-            round.starIndex,
-            round.record.rewards - 1,
+            round.record.game === "fruit"
+              ? round.record.rewards
+              : round.starIndex,
+            round.record.game === "fruit" ? -1 : round.record.rewards - 1,
           )
         : null;
     const point = camera.latest();
@@ -212,6 +216,7 @@ export function SensorSession({
       time: frame?.time ?? null,
       cleared: trial.cleared,
       nearTarget: trial.nearTarget,
+      atBasket: !!trial.aim.wrist && withinNet(trial.aim.wrist, shoulder),
       neural,
     };
     if (source === "camera")
