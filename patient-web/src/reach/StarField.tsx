@@ -23,6 +23,7 @@ export function StarField({
   reach,
   pct,
   camera,
+  background,
   guides,
   pointer,
   meterLabel = "Reach power",
@@ -35,6 +36,7 @@ export function StarField({
   reach: number;
   pct: number;
   camera?: ReactNode;
+  background?: ReactNode;
   guides?: ReactNode;
   meterLabel?: string;
   pointer?: Pick<
@@ -52,6 +54,7 @@ export function StarField({
   return (
     <div className="stars-row">
       <div className="stars-sky" aria-hidden="true" />
+      {background}
       <div className="stars-ground" aria-hidden="true" />
 
       {camera && <div className="stars-camera">{camera}</div>}

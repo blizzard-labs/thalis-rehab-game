@@ -146,11 +146,17 @@
 }
 .meadow-flower--new {
   transform-origin: 50% 100%;
-  animation: open-meadow-flower .55s ease-out;
+  animation: open-meadow-flower 0.55s ease-out;
 }
 @keyframes open-meadow-flower {
-  from { transform: translateX(-50%) scale(.5); opacity: .4; }
-  to { transform: translateX(-50%) scale(1); opacity: 1; }
+  from {
+    transform: translateX(-50%) scale(0.5);
+    opacity: 0.4;
+  }
+  to {
+    transform: translateX(-50%) scale(1);
+    opacity: 1;
+  }
 }
 .pollinators {
   z-index: 3;
@@ -519,4 +525,53 @@
 }
 .live-game[data-paused="true"] .foraging-bee {
   transition-duration: 0s;
+}
+.completed-sky {
+  position: absolute;
+  z-index: 0;
+  inset: 1% 12% auto 15%;
+  height: 30%;
+  display: grid;
+  grid-template-columns: repeat(var(--sky-wide), minmax(0, 1fr));
+  grid-auto-rows: minmax(0, 1fr);
+  align-items: center;
+  justify-items: center;
+  pointer-events: none;
+}
+.sky-patterns {
+  position: absolute;
+}
+.finished-constellation {
+  grid-column: var(--wide-col);
+  grid-row: var(--wide-row);
+  width: min(78%, 105px);
+  height: min(82%, 86px);
+  transform: rotate(var(--tilt));
+  opacity: 0.83;
+  animation: star-chart-arrival 0.85s ease-out;
+}
+@keyframes star-chart-arrival {
+  from {
+    opacity: 0.18;
+    transform: rotate(var(--tilt)) scale(0.68);
+  }
+  60% {
+    opacity: 1;
+  }
+  to {
+    opacity: 0.83;
+    transform: rotate(var(--tilt)) scale(1);
+  }
+}
+@media (max-width: 600px) {
+  .completed-sky {
+    inset: 1% 8% auto 14%;
+    height: 20%;
+    grid-template-columns: repeat(var(--sky-narrow), minmax(0, 1fr));
+  }
+  .finished-constellation {
+    grid-column: var(--narrow-col);
+    grid-row: var(--narrow-row);
+    max-width: 66px;
+  }
 }

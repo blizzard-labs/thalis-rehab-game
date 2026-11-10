@@ -1,9 +1,14 @@
 import { shoulder, type Point } from "../reach/starGeometry";
 import type { Side } from "./session";
 
-const skies = [
+export const skies = [
   {
     name: "The Kite",
+    strokes: [
+      [0, 1, 2, 3, 0],
+      [3, 4, 5],
+      [1, 3],
+    ],
     dots: [
       [12, 35],
       [57, 7],
@@ -15,6 +20,11 @@ const skies = [
   },
   {
     name: "The Sailboat",
+    strokes: [
+      [0, 1, 2, 3, 0],
+      [4, 5, 0],
+      [5, 1],
+    ],
     dots: [
       [8, 52],
       [94, 52],
@@ -26,6 +36,7 @@ const skies = [
   },
   {
     name: "The Crown",
+    strokes: [[0, 1, 2, 3, 4, 5, 6, 0]],
     dots: [
       [8, 21],
       [26, 48],
@@ -38,6 +49,32 @@ const skies = [
   },
 ];
 const cycleLength = skies.reduce((n, sky) => n + sky.dots.length, 0);
+
+/** Each full trip through the catalog earns another copy of every constellation. */
+export function completedConstellationCount(stars: number) {
+  let count = Math.floor(stars / cycleLength) * skies.length;
+  let remaining = stars % cycleLength;
+  for (const sky of skies) {
+    if (remaining < sky.dots.length) break;
+    remaining -= sky.dots.length;
+    count++;
+  }
+  return count;
+}
+
+/** Show a segment once both its endpoint stars have been caught. */
+export function chartPath(sky: (typeof skies)[number], lit = sky.dots.length) {
+  const segments: string[] = [];
+  for (const stroke of sky.strokes) {
+    for (let i = 1; i < stroke.length; i++) {
+      const a = stroke[i - 1],
+        b = stroke[i];
+      if (a < lit && b < lit)
+        segments.push(`M${sky.dots[a].join(" ")}L${sky.dots[b].join(" ")}`);
+    }
+  }
+  return segments.join(" ");
+}
 
 export function scanTargetSlot(shot: number) {
   return (shot * 2 + 1) % 3;

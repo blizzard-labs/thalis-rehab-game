@@ -63,6 +63,9 @@ test.describe("touch play", () => {
       ).toBeVisible();
       await expect(goal).not.toHaveAttribute("transform", position);
     }
+    await expect(
+      page.getByRole("img", { name: "The Kite, completed constellation 1" }),
+    ).toBeVisible();
     expect(positions.size).toBe(7);
     await expect(page.getByText("7 stars", { exact: true })).toBeVisible();
     await page.getByRole("button", { name: "End session" }).click();
@@ -195,4 +198,36 @@ test("a player fills the meadow past six flowers, meets a personal goal and call
   await expect(page.getByText("10 blooms", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "End session" }).click();
   await expect(page.getByText("Bloom goal · 10 of 8 · Reached")).toBeVisible();
+});
+
+test("completed constellations stay in the sky through a second Kite and pause", async ({
+  page,
+}) => {
+  await page.clock.install();
+  await page.goto("/");
+  await page.getByRole("button", { name: /Star Catcher/ }).click();
+  await page.getByRole("button", { name: "Start game" }).click();
+  const target = page.getByTestId("reach-goal");
+  for (let i = 0; i < 25; i++) {
+    await target.click();
+    await page.clock.runFor(1050);
+  }
+  const sky = page.getByRole("group", { name: "4 completed constellations" });
+  for (const [i, name] of [
+    "The Kite",
+    "The Sailboat",
+    "The Crown",
+    "The Kite",
+  ].entries())
+    await expect(
+      sky.getByRole("img", {
+        name: `${name}, completed constellation ${i + 1}`,
+      }),
+    ).toBeVisible();
+  await page.getByRole("button", { name: "Pause" }).click();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(sky.getByRole("img")).toHaveCount(4);
+  await page.getByRole("button", { name: "Resume" }).click();
+  await target.click();
+  await expect(page.getByText("26 stars", { exact: true })).toBeVisible();
 });

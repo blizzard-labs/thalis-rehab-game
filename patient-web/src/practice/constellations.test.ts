@@ -1,6 +1,10 @@
 import { expect, it } from "vitest";
 import { netRadius, scanningWrist, shoulder } from "../reach/starGeometry";
-import { constellationAt, scanTargetSlot } from "./constellations";
+import {
+  completedConstellationCount,
+  constellationAt,
+  scanTargetSlot,
+} from "./constellations";
 
 const id = "05ac3782-36da-48cb-9f77-8fc35b1025ca";
 it("moves the golden star along each constellation, including chart and lap boundaries", () => {
@@ -39,4 +43,23 @@ it("keeps the same target on resume and changes sky orientation for a new sessio
   expect(
     constellationAt("85ac3782-36da-48cb-9f77-8fc35b1025ca", 13, "right").goal,
   ).not.toEqual(constellationAt(id, 13, "right").goal);
+});
+
+it("adds only finished outlines, including every repeat in later laps", () => {
+  const boundaries = [
+    [0, 0],
+    [5, 0],
+    [6, 1],
+    [11, 1],
+    [12, 2],
+    [18, 2],
+    [19, 3],
+    [24, 3],
+    [25, 4],
+    [38, 6],
+    [190, 30],
+  ];
+  for (const [stars, completed] of boundaries) {
+    expect(completedConstellationCount(stars)).toBe(completed);
+  }
 });

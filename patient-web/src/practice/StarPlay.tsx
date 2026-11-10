@@ -1,4 +1,9 @@
-import type { StarLayout } from "./constellations";
+import {
+  chartPath,
+  completedConstellationCount,
+  type StarLayout,
+} from "./constellations";
+import { CompletedSky } from "./CompletedSky";
 import { useEffect, useRef, useState } from "react";
 import type { PointerEvent, ReactNode } from "react";
 import { StarField } from "../reach/StarField";
@@ -21,17 +26,14 @@ export function StarChart({
         aria-label={`${sky.name}, ${lit} of ${sky.dots.length} stars`}
         viewBox="0 0 106 85"
       >
-        <polyline
-          points={sky.dots.map((p) => p.join(",")).join(" ")}
+        <path
+          d={chartPath(sky)}
           fill="none"
           stroke="#9992b4"
           strokeDasharray="2 5"
         />
-        <polyline
-          points={sky.dots
-            .slice(0, lit)
-            .map((p) => p.join(","))
-            .join(" ")}
+        <path
+          d={chartPath(sky, lit)}
           fill="none"
           stroke="#ffdc75"
           strokeWidth="2"
@@ -110,6 +112,11 @@ export function StarPlay({
       meterLabel={manual ? "Aim" : "Reach power"}
       cue={celebrate ? "Star caught" : "Golden star"}
       camera={camera}
+      background={
+        <CompletedSky
+          count={completedConstellationCount(round.record.rewards)}
+        />
+      }
       guides={
         <>
           {!aim && (
