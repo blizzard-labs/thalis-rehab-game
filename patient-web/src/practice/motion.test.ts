@@ -56,7 +56,7 @@ it("alternates catch distances inside a single calibrated reach and rejects the 
   expect(cameraStarTrial(rest, [reach], null, 1).onTarget).toBe(false);
 });
 
-it("uses both captured directions and distinguishes an off-axis wrist from rest", () => {
+it("uses both captured directions and checks departure in the previous direction", () => {
   const rest = { x: 0, y: 0 },
     first = { x: 0.2, y: 0 },
     second = { x: 0, y: -1 };
@@ -65,7 +65,10 @@ it("uses both captured directions and distinguishes an off-axis wrist from rest"
   const directions = [first, second];
   const held = cameraStarTrial(rest, directions, first, 1);
   expect(held.onTarget).toBe(false);
-  expect(held.atRest).toBe(false);
+  expect(held.cleared).toBe(false);
+  expect(cameraStarTrial(rest, directions, { x: 0, y: -0.41 }, 1).cleared).toBe(
+    true,
+  );
   expect(held.aim.goal.x).toBe(300);
   expect(
     cameraStarTrial(rest, directions, { x: 0, y: -0.41 }, 1).onTarget,
@@ -81,7 +84,7 @@ it("captures the median of fresh frames and rejects stale samples", () => {
     point: { x: 0.2, y: 1 },
     time: 420,
   });
-  expect(medianWrist(samples, 850)).toBeNull();
+  expect(medianWrist(samples, 950)).toBeNull();
   expect(medianWrist(samples.slice(-1), 430)).toBeNull();
 });
 

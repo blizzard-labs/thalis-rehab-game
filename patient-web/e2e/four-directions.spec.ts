@@ -102,12 +102,6 @@ test("saves four chosen directions, retries duplicates, and plays every saved re
   await save(4, points[3]);
   await page.getByRole("button", { name: "Play with 4 directions" }).click();
   for (const [i, depth] of [1, 0.41, 0.94, 0.37].entries()) {
-    await wrist(page, 0, 0);
-    await expect(
-      page.getByText(
-        "Guide the net to the star and hold, then return to rest.",
-      ),
-    ).toBeVisible();
     await wrist(page, points[i][0] * depth, points[i][1] * depth);
     await expect(
       page.getByText(`${i + 1} star${i ? "s" : ""}`, { exact: true }),

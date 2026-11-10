@@ -68,6 +68,9 @@ export function useMotionCamera(enabled: boolean, side: Side) {
         if (data.kind === "sample") {
           busy = false;
           if (data.point) {
+            const previous = samples.current[samples.current.length - 1];
+            if (previous && data.time - previous.time > 500)
+              samples.current = [];
             samples.current.push({ point: data.point, time: data.time });
             if (samples.current.length > 5) samples.current.shift();
           } else {
@@ -122,5 +125,14 @@ export function useMotionCamera(enabled: boolean, side: Side) {
     return value && performance.now() - value.time < 650 ? value.point : null;
   }
   const steady = () => medianWrist(samples.current, performance.now());
-  return { status, stream, latest, steady };
+  // A shorter median in play keeps the net responsive. With fewer frames the
+  // newest observation can aim the net, but one frame alone cannot complete a hold.
+  function tracked() {
+    const recent = samples.current.slice(-3);
+    const newest = recent[recent.length - 1];
+    const now = performance.now();
+    if (!newest || now - newest.time > 500) return null;
+    return medianWrist(recent, now) ?? newest;
+  }
+  return { status, stream, latest, steady, tracked };
 }

@@ -1,4 +1,4 @@
-import { shoulder, withinNet } from "../reach/starGeometry";
+import { netRadius, shoulder } from "../reach/starGeometry";
 import type { Side } from "./session";
 export type Point = { x: number; y: number };
 type Landmark = Point & { z: number; visibility?: number };
@@ -11,8 +11,8 @@ export function medianWrist(
   samples: MotionSample[],
   now: number,
 ): MotionSample | null {
-  const fresh = samples.filter((sample) => now - sample.time <= 480);
-  if (fresh.length < 3) return null;
+  const fresh = samples.filter((sample) => now - sample.time <= 1200);
+  if (fresh.length < 3 || now - fresh[fresh.length - 1].time > 500) return null;
   function median(axis: "x" | "y") {
     const sorted = fresh
       .map((sample) => sample.point[axis])
@@ -88,12 +88,7 @@ export function distinctDirection(rest: Point, first: Point, next: Point) {
 // Each target lies between rest and a position the player actually demonstrated.
 // Leave more than a hoop diameter between consecutive short and long targets.
 const distances = [1, 0.41, 0.94, 0.37, 0.98, 0.43, 0.96, 0.39];
-export function cameraStarTrial(
-  rest: Point,
-  directions: Point[],
-  wrist: Point | null,
-  shot: number,
-) {
+function cameraTarget(rest: Point, directions: Point[], shot: number) {
   // Out-and-back order gives each direction both a long and a short reach.
   const sweep = shot % (directions.length * 2);
   const lane = Math.min(sweep, directions.length * 2 - 1 - sweep);
@@ -103,23 +98,43 @@ export function cameraStarTrial(
     x: rest.x + (endpoint.x - rest.x) * depth,
     y: rest.y + (endpoint.y - rest.y) * depth,
   };
-  const goal = wristInSky(rest, endpoint, target);
+  return { endpoint, goal: wristInSky(rest, endpoint, target), depth };
+}
+
+export function cameraStarTrial(
+  rest: Point,
+  directions: Point[],
+  wrist: Point | null,
+  shot: number,
+  lastCaught = shot - 1,
+) {
+  const { endpoint, goal, depth } = cameraTarget(rest, directions, shot);
   const screenWrist = wrist && wristInSky(rest, endpoint, wrist);
-  // Lateral motion is still movement. A hand held in the previous direction
-  // should not count as resting just because the new target is perpendicular.
-  const displacement = wrist && Math.hypot(wrist.x - rest.x, wrist.y - rest.y);
-  const fullReach = Math.hypot(endpoint.x - rest.x, endpoint.y - rest.y);
-  const shortestReach = Math.min(
-    ...directions.map((p) => Math.hypot(p.x - rest.x, p.y - rest.y)),
-  );
+  const distance = screenWrist
+    ? Math.hypot(screenWrist.x - goal.x, screenWrist.y - goal.y)
+    : Infinity;
+  // Test departure in the captured star's own calibration. Different directions
+  // can have very different comfortable lengths.
+  let cleared = lastCaught < 0;
+  if (!cleared && wrist) {
+    const previous = cameraTarget(rest, directions, lastCaught);
+    const inPreviousLane = wristInSky(rest, previous.endpoint, wrist);
+    cleared =
+      Math.hypot(
+        inPreviousLane.x - previous.goal.x,
+        inPreviousLane.y - previous.goal.y,
+      ) >
+      netRadius + 8;
+  }
+  const relativeDistance =
+    screenWrist &&
+    Math.hypot(screenWrist.x - shoulder.x, screenWrist.y - shoulder.y) / 190;
   return {
-    // Score relative to this star. Small calibrated reaches keep their full input range.
     level:
-      displacement === null
-        ? null
-        : Math.min(1, displacement / (fullReach * depth)),
+      relativeDistance === null ? null : Math.min(1, relativeDistance / depth),
     aim: { wrist: screenWrist, goal },
-    onTarget: screenWrist !== null && withinNet(screenWrist, goal),
-    atRest: displacement !== null && displacement < shortestReach * 0.25,
+    onTarget: distance <= netRadius,
+    nearTarget: distance <= netRadius + 8,
+    cleared,
   };
 }

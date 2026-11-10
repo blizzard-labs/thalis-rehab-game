@@ -95,3 +95,79 @@ it("tracks off-target camera effort without awarding a star until the hoop overl
   expect(round.record.rewards).toBe(1);
   expect(round.record.measurements.blended!.validSeconds).toBeCloseTo(1.6);
 });
+
+it("credits a first camera hold without a trip to rest, and requires leaving the caught star for the next one", () => {
+  const round = new PracticeRound("stars", "camera", true);
+  let time = 1000;
+  const update = (cleared: boolean, onTarget = true, nearTarget = onTarget) => {
+    time += 100;
+    round.tick(0.1, 1, onTarget, { time, cleared, nearTarget, neural: null });
+  };
+  update(true);
+  update(true);
+  for (let i = 0; i < 10; i++)
+    round.tick(0.1, 1, true, {
+      time,
+      cleared: true,
+      nearTarget: true,
+      neural: null,
+    });
+  expect(round.record.rewards).toBe(0);
+  update(true, false, true); // brief jitter just outside the hoop
+  expect(round.catchProgress).toBeGreaterThan(0);
+  for (let i = 0; i < 4; i++) update(true);
+  expect(round.record.rewards).toBe(1);
+  for (let i = 0; i < 12; i++) update(false);
+  expect(round.record.rewards).toBe(1);
+  update(true, false);
+  for (let i = 0; i < 6; i++) update(true);
+  expect(round.record.rewards).toBe(2);
+});
+
+it("drops a partial hold on missing frames, and waits for fresh EEG release in blended play", () => {
+  const round = new PracticeRound("stars", "blended", true);
+  let time = 1000;
+  const update = (neural: number | null) => {
+    time += 100;
+    round.tick(0.1, neural === null ? null : 0.4 + 0.6 * neural, true, {
+      time,
+      cleared: true,
+      nearTarget: true,
+      neural,
+    });
+  };
+  for (let i = 0; i < 8; i++) update(1);
+  expect(round.record.rewards).toBe(0);
+  update(0);
+  update(1);
+  expect(round.catchProgress).toBeGreaterThan(0);
+  update(null);
+  expect(round.catchProgress).toBe(0);
+  for (let i = 0; i < 5; i++) update(1);
+  expect(round.record.rewards).toBe(1);
+  for (let i = 0; i < 9; i++) update(1);
+  expect(round.record.rewards).toBe(1);
+});
+
+it("accepts EEG release and camera departure in either order between blended catches", () => {
+  for (const relaxFirst of [true, false]) {
+    const round = new PracticeRound("stars", "blended", true);
+    let time = 0;
+    const sample = (neural: number, cleared: boolean, onTarget = true) => {
+      time += 100;
+      round.tick(0.1, 0.4 + 0.6 * neural, onTarget, {
+        time,
+        cleared,
+        nearTarget: onTarget,
+        neural,
+      });
+    };
+    sample(0, true);
+    for (let i = 0; i < 4; i++) sample(1, true);
+    expect(round.record.rewards).toBe(1);
+    sample(relaxFirst ? 0 : 1, !relaxFirst, false);
+    sample(relaxFirst ? 1 : 0, relaxFirst, false);
+    for (let i = 0; i < 5; i++) sample(1, true);
+    expect(round.record.rewards).toBe(2);
+  }
+});

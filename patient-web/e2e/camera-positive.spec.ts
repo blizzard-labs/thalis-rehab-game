@@ -53,20 +53,14 @@ for (const secondDirection of [false, true]) {
           : "Play with 1 direction",
       })
       .click();
-    const ready = page.getByText(
-      "Guide the net to the star and hold, then return to rest.",
-    );
     const goal = page.getByTestId("reach-goal");
-    await pose(page, 0);
-    await expect(ready).toBeVisible();
-    const first = (await goal.getAttribute("transform"))!;
+    await expect(page.getByTestId("camera-feed")).toBeVisible();
     await pose(page, 0.45);
     await expect(page.getByText("1 star", { exact: true })).toBeVisible({
       timeout: 8000,
     });
-    await expect(goal).not.toHaveAttribute("transform", first);
-    await pose(page, 0);
-    await expect(ready).toBeVisible();
+    const caughtPosition = (await goal.getAttribute("transform"))!;
+    await expect(goal).not.toHaveAttribute("transform", caughtPosition);
     await pose(page, secondDirection ? -0.23 : 0.2);
     await expect(page.getByText("2 stars", { exact: true })).toBeVisible({
       timeout: 8000,

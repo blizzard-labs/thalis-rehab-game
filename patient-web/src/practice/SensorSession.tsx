@@ -140,11 +140,19 @@ export function SensorSession({
     const rest = calibration?.rest;
     const directions = calibration?.directions;
     const reach = directions?.[0];
-    const point = camera.latest();
+    const frame =
+      cameraNeeded && round.record.game === "stars" ? camera.tracked() : null;
     const trial =
       cameraNeeded && rest && directions && round.record.game === "stars"
-        ? cameraStarTrial(rest, directions, point, round.starIndex)
+        ? cameraStarTrial(
+            rest,
+            directions,
+            frame?.point ?? null,
+            round.starIndex,
+            round.record.rewards - 1,
+          )
         : null;
+    const point = camera.latest();
     const movement = trial
       ? trial.level
       : rest && reach && point
@@ -152,9 +160,15 @@ export function SensorSession({
         : null;
     const aim = trial?.aim ?? null;
     const onTarget = trial?.onTarget ?? true;
-    const atRest = trial?.atRest ?? true;
-    if (source === "camera") return { level: movement, aim, onTarget, atRest };
-    const neural = eeg.latest();
+    const neural = eegNeeded ? eeg.latest() : null;
+    const cameraStar = trial && {
+      time: frame?.time ?? null,
+      cleared: trial.cleared,
+      nearTarget: trial.nearTarget,
+      neural,
+    };
+    if (source === "camera")
+      return { level: movement, aim, onTarget, cameraStar };
     round.inputSampleMs =
       neural !== null && (source !== "blended" || movement !== null)
         ? eeg.sampleMs()
@@ -165,7 +179,7 @@ export function SensorSession({
           ? null
           : 0.6 * neural + 0.4 * movement
         : neural;
-    return { level, aim, onTarget, atRest };
+    return { level, aim, onTarget, cameraStar };
   };
   const status = [cameraNeeded && camera.status, eegNeeded && eeg.message]
     .filter(Boolean)

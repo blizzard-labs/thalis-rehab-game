@@ -15,7 +15,7 @@ NeuroReach is an open-source wellness and engagement prototype for seated upper-
 
 ## Play on localhost
 
-Use Node.js 22.12 or later. From the repository root, run `npm --prefix patient-web ci` once, then `npm start` and open **http://127.0.0.1:5173**. Choose Garden Grow or Star Catcher and use a button, touch, keyboard, or an adaptive switch. Pause or end a round at any time. Saving a summary is optional and local to the browser. Choose **Camera** to set a resting position and a comfortable reach for either arm. The browser processes frames in a local worker. A return to rest separates successive actions. You can switch to one-button input during setup or play. QR links from the clinician console still open the paired workflow.
+Use Node.js 22.12 or later. From the repository root, run `npm --prefix patient-web ci` once, then `npm start` and open **http://127.0.0.1:5173**. Choose Garden Grow or Star Catcher and use a button, touch, keyboard, or an adaptive switch. Pause or end a round at any time. Saving a summary is optional and local to the browser. Choose **Camera** to set a resting position and a comfortable reach for either arm. The browser processes frames in a local worker. In Star Catcher, save up to four comfortable directions and hold the net over a star until its ring fills. Move clear of that catch to collect the next one. In Garden Grow, return to rest between actions. You can switch to one-button input during setup or play. QR links from the clinician console still open the paired workflow.
 
 ### Local EEG companion
 

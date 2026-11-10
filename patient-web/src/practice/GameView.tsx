@@ -3,7 +3,7 @@ import { scanningWrist, withinNet } from "../reach/starGeometry";
 import { constellationAt } from "./constellations";
 import { StarPlay, StarChart, type CameraAim } from "./StarPlay";
 import type { ReactNode } from "react";
-import type { Side } from "./session";
+import type { CameraStarFrame, Side } from "./session";
 import { GardenPlay, SeedTray } from "./GardenPlay";
 import { CameraFeed } from "../scenes/CameraFeed";
 import "./gameplay.css";
@@ -39,14 +39,33 @@ export function Garden({ growth, bloom }: { growth: number; bloom: boolean }) {
 
 function gameCue(round: PracticeRound) {
   if (round.paused) return "Paused";
+  if (round.record.game === "stars" && round.celebrating)
+    return "Caught! A new light on your star chart.";
+  if (
+    round.record.game === "stars" &&
+    (round.source === "camera" || round.source === "blended")
+  ) {
+    if (round.catchProgress > 0) return "Hold here while the ring fills.";
+    if (
+      round.source === "blended" &&
+      round.record.rewards === 0 &&
+      round.needsRest
+    )
+      return "Relax briefly to ready the EEG for your first catch.";
+    if (round.source === "blended")
+      return round.needsRest
+        ? "Relax briefly and move the net away from the last catch."
+        : "Imagine moving your hand as you guide the net to the star.";
+    if (round.record.rewards > 0 && round.needsRest)
+      return "Move the net away from the last catch toward the new star.";
+    return "Guide the net to the star and hold briefly.";
+  }
   if (round.source !== "button") {
     if (round.needsRest) return "Return to rest before the next action.";
     if (round.source === "eeg")
       return "Imagine moving your selected hand, then relax.";
     if (round.source === "blended")
       return "Imagine moving your hand as you reach, then relax.";
-    if (round.record.game === "stars")
-      return "Guide the net to the star and hold, then return to rest.";
     return "Reach to your comfortable position, then return to rest.";
   }
   if (round.record.game === "garden") {
@@ -56,7 +75,6 @@ function gameCue(round: PracticeRound) {
       ? "Three kinds of flowers brought a butterfly to your garden!"
       : "A bee found your flower! Water to start the next one.";
   }
-  if (round.celebrating) return "Caught! A new light on your star chart.";
   const event = round.record.events[round.record.events.length - 1];
   if (event?.kind === "action" && round.record.elapsed - event.seconds < 0.85)
     return "Just missed. Aim the hoop over the golden star.";
@@ -80,7 +98,7 @@ export function Play({
     level: number | null;
     aim: CameraAim | null;
     onTarget: boolean;
-    atRest: boolean;
+    cameraStar: CameraStarFrame | null;
   };
   status?: string;
   lockedPause?: boolean;
@@ -106,7 +124,7 @@ export function Play({
           observation.level,
           observation.onTarget &&
             (round.record.game !== "stars" || !round.celebrating),
-          observation.atRest,
+          observation.cameraStar,
         );
       }
       last = now;

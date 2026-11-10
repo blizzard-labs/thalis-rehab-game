@@ -13,6 +13,14 @@ export const sourceNames = {
   blended: "Camera + EEG",
 };
 
+export type CameraStarFrame = {
+  time: number | null;
+  cleared: boolean;
+  nearTarget: boolean;
+  neural: number | null;
+};
+const holdSeconds = 0.4;
+
 export interface PracticeRecord {
   id: string;
   started: string;
@@ -70,6 +78,13 @@ export class PracticeRound {
   private paintedSample: number | null = null;
 
   private held = 0;
+  private clearedCatch = false;
+  private relaxedImagery = false;
+  private cameraFrameTime: number | null = null;
+  private insideTime: number | null = null;
+  get catchProgress() {
+    return Math.min(1, this.held / holdSeconds);
+  }
   private released = false;
   get needsRest() {
     return !this.released;
@@ -184,7 +199,12 @@ export class PracticeRound {
     }
   }
 
-  tick(dt: number, observation: number | null, onTarget = true, atRest = true) {
+  tick(
+    dt: number,
+    observation: number | null,
+    onTarget = true,
+    cameraStar?: CameraStarFrame | null,
+  ) {
     if (this.paused || this.scheduleFinished) return;
     dt = Math.min(0.25, Math.max(0, dt));
     this.record.elapsed += dt;
@@ -224,23 +244,24 @@ export class PracticeRound {
     if (observation === null || !Number.isFinite(observation)) {
       measurement.missingSeconds += dt;
       this.level = 0;
-      this.held = 0;
+      this.clearHold();
       return;
     }
     this.level = Math.max(0, Math.min(1, observation));
     measurement.validSeconds += dt;
     measurement.weightedLevel += this.level * dt;
-    if (atRest && this.level < this.threshold * 0.65) this.released = true;
-    if (this.level < this.threshold || !this.released || !onTarget) {
-      this.held = 0;
-      return;
+    if (cameraStar) {
+      this.holdCameraStar(cameraStar, onTarget);
+    } else {
+      if (this.level < this.threshold * 0.65) this.released = true;
+      const engaged = this.level >= this.threshold && this.released && onTarget;
+      this.held = engaged ? this.held + dt : 0;
     }
-    this.held += dt;
-    if (this.held < 0.4) return;
+    if (this.held < holdSeconds) return;
     this.record.actions++;
     this.log("action");
     this.released = false;
-    this.held = 0;
+    this.clearHold();
     if (this.record.game === "garden" && this.progress === 0)
       this.plant.reset();
     this.progress =
@@ -299,8 +320,57 @@ export class PracticeRound {
       );
   }
 
-  private resetInput() {
+  private holdCameraStar(frame: CameraStarFrame, onTarget: boolean) {
+    const previous = this.cameraFrameTime;
+    if (frame.time === null) {
+      this.clearHold();
+      return;
+    }
+    if (frame.time === previous) return; // Several display ticks may show the same camera frame.
+    if (
+      previous !== null &&
+      (frame.time < previous || frame.time - previous > 500)
+    )
+      this.clearHold();
+    this.cameraFrameTime = frame.time;
+    const cameraOnly = this.source === "camera";
+    // A blended player may relax before or after moving away from the last star.
+    this.clearedCatch ||= frame.cleared;
+    this.relaxedImagery ||=
+      frame.neural !== null && frame.neural < this.threshold * 0.65;
+    if (this.clearedCatch && (cameraOnly || this.relaxedImagery))
+      this.released = true;
+    const ready = this.released && (cameraOnly || this.level >= this.threshold);
+    if (!onTarget || !ready) {
+      // Brief edge jitter can interrupt a hold without erasing it. Time outside
+      // the hoop never adds to the hold, and missing tracking clears it.
+      if (
+        !ready ||
+        !frame.nearTarget ||
+        this.insideTime === null ||
+        frame.time - this.insideTime > 160
+      ) {
+        this.held = 0;
+        this.insideTime = null;
+      }
+      return;
+    }
+    if (previous !== null && this.insideTime === previous) {
+      this.held += Math.min(0.25, (frame.time - previous) / 1000);
+    }
+    this.insideTime = frame.time;
+  }
+
+  private clearHold() {
+    this.clearedCatch = false;
+    this.relaxedImagery = false;
     this.held = 0;
+    this.cameraFrameTime = null;
+    this.insideTime = null;
+  }
+
+  private resetInput() {
+    this.clearHold();
     this.level = 0;
     this.released = false;
     this.inputSampleMs = null;

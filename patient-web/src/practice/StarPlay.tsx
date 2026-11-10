@@ -142,6 +142,20 @@ export function StarPlay({
                 strokeDasharray="5 12"
               />
             ))}
+          {aim && !celebrate && round.catchProgress > 0 && (
+            <circle
+              cx={goal.x}
+              cy={goal.y}
+              r="54"
+              pathLength="1"
+              fill="none"
+              stroke="#fff1aa"
+              strokeWidth="5"
+              transform={`rotate(-90 ${goal.x} ${goal.y})`}
+              strokeDasharray={`${round.catchProgress} 1`}
+              pointerEvents="none"
+            />
+          )}
           {celebrate && (
             <g
               className="catch-rays"
