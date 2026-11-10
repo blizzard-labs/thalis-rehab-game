@@ -79,6 +79,15 @@ for (const [title, reward, port, streamName] of [
       const record = JSON.parse(
         await readFile((await (await downloaded).path())!, "utf8"),
       );
+      const eegBins = record.intervals.filter(
+        (b: { source: string }) => b.source === "eeg",
+      );
+      expect(
+        eegBins.some((b: { metrics: Record<string, { seconds: number }> }) =>
+          ["muC3", "muCz", "muC4"].every((ch) => b.metrics[ch]?.seconds > 0),
+        ),
+      ).toBe(true);
+      expect(record.usedSyntheticEeg).toBe(true);
       expect(record.feedback.count).toBeGreaterThan(5);
       expect(record.feedback.p95Ms).toBeLessThan(250);
       console.log(

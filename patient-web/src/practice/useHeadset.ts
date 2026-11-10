@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import type { Readings } from "../reports/measurements";
 import type { Side } from "./session";
 
 export type ModelProfile = string | (() => Promise<string>);
@@ -28,6 +29,7 @@ export function useHeadset(
   const starting = useRef<WebSocket | null>(null);
   const score = useRef<{
     level: number;
+    features: Readings;
     expiresAt: number;
     sampleMs: number;
   } | null>(null);
@@ -135,6 +137,12 @@ export function useHeadset(
         lastAcceptedStamp = event.sampleMs;
         score.current = {
           level: event.level,
+          features: {
+            muC3: event.features?.muC3,
+            muCz: event.features?.muCz,
+            muC4: event.features?.muC4,
+            classifier: event.features?.classifier,
+          },
           sampleMs,
           expiresAt: performance.now() + maxSampleAgeMs - Math.max(0, age),
         };
@@ -190,6 +198,10 @@ export function useHeadset(
     ws.send(JSON.stringify({ cmd: "start", device, side, train, profile }));
   }
   return {
+    features: () =>
+      score.current && performance.now() < score.current.expiresAt
+        ? score.current.features
+        : {},
     sampleMs: () => score.current?.sampleMs ?? null,
     devices,
     phase,

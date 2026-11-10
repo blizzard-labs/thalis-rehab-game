@@ -40,8 +40,12 @@ export function SensorSession({
     modelProfile,
   );
   useEffect(() => {
-    if (eeg.calibration) round.record.calibration = eeg.calibration;
-  }, [round, eeg.calibration]);
+    round.record.arm = side;
+    if (eeg.calibration) {
+      round.record.calibration = eeg.calibration;
+      if (eeg.calibration.synthetic) round.record.usedSyntheticEeg = true;
+    }
+  }, [round, side, eeg.calibration]);
   const camera = useMotionCamera(
     cameraNeeded && (round.record.game !== "river" || !!rowing),
     side,
@@ -240,8 +244,13 @@ export function SensorSession({
             neural,
           }
         : null;
+    const readings = {
+      ...(cameraNeeded ? camera.angles() : {}),
+      ...(cameraNeeded && movement !== null ? { reach: movement * 100 } : {}),
+      ...(eegNeeded && neural !== null ? eeg.features() : {}),
+    };
     if (source === "camera")
-      return { level: movement, aim, onTarget, cameraHold };
+      return { level: movement, aim, onTarget, cameraHold, readings };
     round.inputSampleMs =
       neural !== null && (source !== "blended" || movement !== null)
         ? eeg.sampleMs()
@@ -252,7 +261,7 @@ export function SensorSession({
           ? null
           : 0.6 * neural + 0.4 * movement
         : neural;
-    return { level, aim, onTarget, cameraHold };
+    return { level, aim, onTarget, cameraHold, readings };
   };
   const status = [cameraNeeded && camera.status, eegNeeded && eeg.message]
     .filter(Boolean)

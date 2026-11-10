@@ -47,6 +47,7 @@ class IntentScoreResult:
     timestamp: float
     kinematic_score: float | None = None
     compensation_flag: bool = False
+    mu_erd: dict[str, float] | None = None
 
 
 class IntentScoreEngine:
@@ -117,7 +118,7 @@ class IntentScoreEngine:
                 timestamp=now,
             )
 
-        erd_score = self._compute_erd_score(ring_buffer)
+        erd_score, mu_erd = self._compute_erd_score(ring_buffer)
         classifier_score = self._compute_classifier_score(self.classifier_input or ring_buffer)
 
         if self.classifier_reliable and classifier_score is not None:
@@ -154,11 +155,12 @@ class IntentScoreEngine:
             timestamp=now,
             kinematic_score=reported_kin,
             compensation_flag=comp_flag,
+            mu_erd=mu_erd,
         )
 
     # ------------------------------------------------------------------
 
-    def _compute_erd_score(self, ring_buffer: RingBuffer) -> float:
+    def _compute_erd_score(self, ring_buffer: RingBuffer) -> tuple[float, dict[str, float]]:
         """C3+C4 mu-band ERD averaged, clipped to [0, 100] (ERS -> 0).
 
         Returns 0.0 until a full ERD window of real samples exists: band power
@@ -166,7 +168,7 @@ class IntentScoreEngine:
         would otherwise inject a large startup transient into the EMA.
         """
         if ring_buffer.n_samples_available() < self.erd_window_samples:
-            return 0.0
+            return 0.0, {}
         window = ring_buffer.get_window(self.erd_window_samples)
         erd = self.erd_calculator.compute_erd(window, self.eeg_channel_labels)
 
@@ -175,7 +177,10 @@ class IntentScoreEngine:
             # No C3/C4 in this montage: fall back to all available mu ERDs.
             mu_vals = [bands.get("mu", 0.0) for bands in erd.values()]
         erd_avg = float(np.mean(mu_vals)) if mu_vals else 0.0
-        return float(np.clip(erd_avg, 0.0, 100.0))
+        return float(np.clip(erd_avg, 0.0, 100.0)), {
+            ch: float(bands["mu"]) for ch, bands in erd.items()
+            if "mu" in bands and np.isfinite(bands["mu"])
+        }
 
     def _compute_classifier_score(self, ring_buffer: RingBuffer) -> float | None:
         """Classifier EEG_Score (0–100), or None when unavailable this cycle."""

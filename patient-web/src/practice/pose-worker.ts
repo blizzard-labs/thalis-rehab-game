@@ -1,5 +1,5 @@
 import { FilesetResolver, PoseLandmarker } from "@mediapipe/tasks-vision";
-import { wristOffset } from "./motion";
+import { poseAngles, wristOffset } from "./motion";
 import type { Side } from "./session";
 
 let detector: PoseLandmarker | undefined;
@@ -24,11 +24,12 @@ self.onmessage = async ({
       });
       self.postMessage({ kind: "ready" });
     } else if (detector) {
-      const pose =
-        detector.detectForVideo(data.frame, data.time).landmarks[0] ?? [];
+      const result = detector.detectForVideo(data.frame, data.time);
+      const pose = result.landmarks[0] ?? [];
       self.postMessage({
         kind: "sample",
         point: wristOffset(pose, data.side),
+        angles: poseAngles(result.worldLandmarks[0] ?? [], data.side),
         otherPoint: wristOffset(pose, data.side === "left" ? "right" : "left"),
         time: data.time,
       });

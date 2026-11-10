@@ -1,3 +1,8 @@
+import {
+  recordInterval,
+  type Interval,
+  type Readings,
+} from "../reports/measurements";
 import { scanTargetSlot } from "./constellations";
 import { PlantGrowthModel } from "../garden/PlantGrowthModel";
 import { seedAt, type Seed } from "../garden/seeds";
@@ -32,6 +37,10 @@ export interface PracticeRecord {
   elapsed: number;
   actions: number;
   rewards: number;
+  arm?: Side;
+  gentle?: boolean;
+  usedSyntheticEeg?: boolean;
+  intervals?: Interval[];
   measurements: Partial<
     Record<
       Source,
@@ -114,6 +123,8 @@ export class PracticeRound {
       elapsed: 0,
       actions: 0,
       rewards: 0,
+      gentle: easy,
+      intervals: [],
       measurements: {},
       events: [],
     };
@@ -228,10 +239,26 @@ export class PracticeRound {
     observation: number | null,
     onTarget = true,
     cameraHold?: CameraHoldFrame | null,
+    readings: Readings = {},
   ) {
     if (this.paused || this.scheduleFinished) return;
     dt = Math.min(0.25, Math.max(0, dt));
+    const start = this.record.elapsed;
     this.record.elapsed += dt;
+    const observed =
+      observation !== null &&
+      Number.isFinite(observation) &&
+      this.source !== "button";
+    recordInterval(
+      (this.record.intervals ??= []),
+      start,
+      this.record.elapsed,
+      this.source,
+      this.threshold,
+      observed
+        ? { ...readings, input: Math.max(0, Math.min(1, observation)) * 100 }
+        : readings,
+    );
     const elapsed = this.record.elapsed;
     const schedule = this.record.schedule;
     if (

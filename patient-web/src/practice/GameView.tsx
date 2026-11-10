@@ -1,3 +1,4 @@
+import type { Readings } from "../reports/measurements";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { scanningWrist, withinNet } from "../reach/starGeometry";
 import { constellationAt } from "./constellations";
@@ -105,6 +106,7 @@ export function Play({
     aim: CameraAim | null;
     onTarget: boolean;
     cameraHold: CameraHoldFrame | null;
+    readings?: Readings;
   };
   status?: string;
   lockedPause?: boolean;
@@ -137,6 +139,7 @@ export function Play({
           observation.onTarget &&
             (round.record.game !== "stars" || !round.celebrating),
           observation.cameraHold,
+          observation.readings,
         );
         tickObserver.current?.(
           round.record.elapsed - before,

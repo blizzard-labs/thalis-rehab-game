@@ -138,3 +138,34 @@ export function cameraStarTrial(
     cleared,
   };
 }
+
+/** Relative angles in MediaPipe world coordinates. An obscured joint supplies no angle. */
+export function poseAngles(world: Landmark[], side: Side) {
+  const offset = side === "right" ? 1 : 0;
+  const [hip, shoulder, elbow, wrist] = [23, 11, 13, 15].map(
+    (i) => world[i + offset],
+  );
+  const visible = (p: Landmark | undefined) =>
+    p && (p.visibility ?? 0) >= 0.5 && [p.x, p.y, p.z].every(Number.isFinite);
+  const angle = (a: Landmark, b: Landmark, c: Landmark) => {
+    if (!visible(a) || !visible(b) || !visible(c)) return undefined;
+    const u = [a.x - b.x, a.y - b.y, a.z - b.z],
+      v = [c.x - b.x, c.y - b.y, c.z - b.z];
+    const scale = Math.hypot(...u) * Math.hypot(...v);
+    if (scale < 0.0001) return undefined;
+    const cosine = u.reduce((dot, value, i) => dot + value * v[i], 0) / scale;
+    return (Math.acos(Math.min(1, Math.max(-1, cosine))) * 180) / Math.PI;
+  };
+  let tilt: number | undefined;
+  if ([11, 12, 23, 24].every((i) => visible(world[i]))) {
+    const dx = world[11].x + world[12].x - world[23].x - world[24].x;
+    const dy = world[23].y + world[24].y - world[11].y - world[12].y;
+    if (Math.hypot(dx, dy) > 0.04)
+      tilt = (Math.abs(Math.atan2(dx, dy)) * 180) / Math.PI;
+  }
+  return {
+    shoulder: angle(hip, shoulder, elbow),
+    elbow: angle(shoulder, elbow, wrist),
+    tilt,
+  };
+}

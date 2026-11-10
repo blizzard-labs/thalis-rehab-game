@@ -187,7 +187,7 @@ def run(stream, options, stop, emit):
         resting = baseline(inlet, stop, emit)
         dc = resting.mean(axis=1, keepdims=True)
         filters = CausalFilterChain(FS)
-        erd = ERDCalculator(channel_labels=["C3", "C4"], fs=FS)
+        erd = ERDCalculator(channel_labels=["C3", "Cz", "C4"], fs=FS)
         erd.calibrate_baseline(
             common_average_reference(filters.process_chunk(resting - dc)), labels
         )
@@ -255,6 +255,12 @@ def run(stream, options, stop, emit):
                     "type": "score",
                     "level": float(result.intent_score / 100) if valid else None,
                     "sampleMs": sample_ms,
+                    "features": (
+                        {**{"mu" + ch: val for ch, val in (result.mu_erd or {}).items()},
+                         **({"classifier": result.classifier_score} if result.classifier_score is not None
+                            and np.isfinite(result.classifier_score) else {})}
+                        if valid else {}
+                    ),
                     "contacts": bad,
                     "message": (
                         ("Synthetic test signal" if synthetic else "EEG connected")

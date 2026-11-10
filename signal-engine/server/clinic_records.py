@@ -94,6 +94,40 @@ def validate_record(r):
             ),
             "Invalid measured duration",
         )
+    if "intervals" in r:
+        rows = r["intervals"]
+        checked(isinstance(rows, list) and len(rows) <= math.ceil(r["elapsed"] / 30) + len(r["sources"]) + 1,
+                "Invalid measurement intervals")
+        prev_index, within = -1, 0
+        source_position = 0
+        for interval in rows:
+            checked(isinstance(interval, dict), "Invalid interval")
+            index = interval.get("index")
+            source = interval.get("source")
+            checked(type(index) is int and 0 <= index <= r["elapsed"] / 30 and index >= prev_index
+                    and source in r["sources"][source_position:], "Invalid interval order or source")
+            source_position = r["sources"].index(source, source_position)
+            seconds = interval.get("seconds")
+            checked(bounded(seconds, 30.001) and seconds > 0 and bounded(interval.get("above"), seconds + 0.001),
+                    "Invalid interval duration")
+            within = seconds + (within if index == prev_index else 0)
+            checked(within <= min(30, r["elapsed"] - index * 30) + 0.001, "Overlapping measurement intervals")
+            prev_index = index
+            metrics = interval.get("metrics")
+            allowed = set()
+            if source != "button":
+                allowed.add("input")
+            if source in ("camera", "blended"):
+                allowed.update(("reach", "shoulder", "elbow", "tilt"))
+            if source in ("eeg", "blended"):
+                allowed.update(("muC3", "muCz", "muC4", "classifier"))
+            checked(isinstance(metrics, dict) and metrics.keys() <= allowed, "Invalid interval metrics")
+            for value in metrics.values():
+                checked(isinstance(value, dict) and bounded(value.get("seconds"), seconds + 0.001)
+                        and value["seconds"] > 0 and all(type(value.get(k)) in (float, int)
+                        and math.isfinite(value[k]) for k in ("integral", "peak")), "Invalid interval measurement")
+    if "arm" in r:
+        checked(r["arm"] in ("left", "right"), "Invalid practice arm")
     if r.get("feedback"):
         feedback = r["feedback"]
         checked(

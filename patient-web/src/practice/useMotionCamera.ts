@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { medianWrist, type MotionSample } from "./motion";
+import type { Readings } from "../reports/measurements";
 import type { Side } from "./session";
 
 export function useMotionCamera(enabled: boolean, side: Side, both = false) {
   const [status, setStatus] = useState("Opening camera…");
   const [stream, setStream] = useState<MediaStream | null>(null);
+  const angles = useRef<{ time: number; values: Readings } | null>(null);
   const other = useRef<MotionSample | null>(null);
   const bothArms = useRef(both);
   bothArms.current = both;
@@ -26,6 +28,7 @@ export function useMotionCamera(enabled: boolean, side: Side, both = false) {
       video.srcObject = null;
       samples.current = [];
       other.current = null;
+      angles.current = null;
     };
     const fail = (message: string) => {
       if (!stopped) {
@@ -75,6 +78,9 @@ export function useMotionCamera(enabled: boolean, side: Side, both = false) {
         }
         if (data.kind === "sample") {
           busy = false;
+          angles.current = data.angles
+            ? { time: data.time, values: data.angles }
+            : null;
           other.current = data.otherPoint
             ? { point: data.otherPoint, time: data.time }
             : null;
@@ -153,5 +159,16 @@ export function useMotionCamera(enabled: boolean, side: Side, both = false) {
     other.current && performance.now() - other.current.time < 650
       ? other.current.point
       : null;
-  return { status, stream, latest, steady, tracked, otherWrist };
+  return {
+    status,
+    stream,
+    latest,
+    steady,
+    tracked,
+    otherWrist,
+    angles: () =>
+      angles.current && performance.now() - angles.current.time < 500
+        ? angles.current.values
+        : {},
+  };
 }
