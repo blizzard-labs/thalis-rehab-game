@@ -12,11 +12,11 @@ describe("GameModeSelect", () => {
     expect(screen.getByTestId("mode-stars")).toBeInTheDocument();
   });
 
-  it("disables placeholder modes that are not yet available", () => {
+  it("enables the playable modes", () => {
     render(<GameModeSelect onConfirm={() => {}} />);
     expect(screen.getByTestId("mode-garden")).not.toBeDisabled();
     expect(screen.getByTestId("mode-stars")).not.toBeDisabled();
-    expect(screen.getByTestId("mode-river")).toBeDisabled();
+    expect(screen.getByTestId("mode-river")).not.toBeDisabled();
   });
 
   it("allows selecting Star Catcher and confirms with its id", () => {

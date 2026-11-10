@@ -12,8 +12,8 @@ async function attachWristReplay(page: Page) {
       if (data.kind === "open") return self.postMessage({kind:"ready"});
       context.drawImage(data.frame,0,0,1,1);
       data.frame.close();
-      const [r,g] = context.getImageData(0,0,1,1).data;
-      self.postMessage({kind:"sample",time:data.time,point:{x:(r-128)/90,y:(g-128)/90}});
+      const [r,g,b] = context.getImageData(0,0,1,1).data;
+      self.postMessage({kind:"sample",time:data.time,point:{x:(r-128)/90,y:(g-128)/90},otherPoint:{x:(b-128)/90,y:0}});
     };
   `,
     }),
@@ -28,7 +28,8 @@ async function attachWristReplay(page: Page) {
           const { x, y } = (
             window as Window & { wrist?: { x: number; y: number } }
           ).wrist ?? { x: 0, y: 0 };
-          ctx.fillStyle = `rgb(${128 + 90 * x},${128 + 90 * y},128)`;
+          const other = (window as Window & { other?: number }).other ?? 0;
+          ctx.fillStyle = `rgb(${128 + 90 * x},${128 + 90 * y},${128 + 90 * other})`;
           ctx.fillRect(0, 0, 64, 64);
         };
         draw();
@@ -107,4 +108,52 @@ test("saves four chosen directions, retries duplicates, and plays every saved re
       page.getByText(`${i + 1} star${i ? "s" : ""}`, { exact: true }),
     ).toBeVisible();
   }
+});
+
+test("a paired-oar stroke requires both independently calibrated arms", async ({
+  page,
+}) => {
+  await attachWristReplay(page);
+  await page.goto("/");
+  await page.getByRole("button", { name: /River Rowing/ }).click();
+  await page.getByLabel("Camera", { exact: true }).check();
+  await page.getByRole("button", { name: "Start game" }).click();
+  await page.getByRole("button", { name: "Both arms" }).click();
+  await expect(page.getByText("Both arms in view")).toBeVisible();
+  await page.getByRole("button", { name: "Set resting position" }).click();
+  await wrist(page, 1, 0);
+  await expect(async () => {
+    await page
+      .getByRole("button", { name: "Set comfortable reach" })
+      .click({ timeout: 500 });
+    await expect(
+      page.getByRole("button", { name: "Set resting position" }),
+    ).toBeVisible({ timeout: 500 });
+  }).toPass();
+  await page.getByRole("button", { name: "Set resting position" }).click();
+  await page.evaluate(() => {
+    Object.assign(window, { other: 1 });
+  });
+  await expect(async () => {
+    await page
+      .getByRole("button", { name: "Set comfortable reach" })
+      .click({ timeout: 500 });
+    await expect(page.getByText("0 strokes", { exact: true })).toBeVisible({
+      timeout: 500,
+    });
+  }).toPass();
+  await wrist(page, 0, 0);
+  await page.evaluate(() => {
+    Object.assign(window, { other: 0 });
+  });
+  await expect(
+    page.getByText("Pull toward your calibrated position, then ease back."),
+  ).toBeVisible();
+  await wrist(page, 1, 0);
+  await page.waitForTimeout(650);
+  await expect(page.getByText("0 strokes", { exact: true })).toBeVisible();
+  await page.evaluate(() => {
+    Object.assign(window, { other: 1 });
+  });
+  await expect(page.getByText("1 stroke", { exact: true })).toBeVisible();
 });

@@ -231,3 +231,21 @@ test("completed constellations stay in the sky through a second Kite and pause",
   await target.click();
   await expect(page.getByText("26 stars", { exact: true })).toBeVisible();
 });
+
+test("a rower can pull a stroke, switch channels, reach a landing and save a correctly labeled summary", async ({page}) => {
+  await page.goto("/");
+  await page.getByRole("button",{name:/River Rowing/}).click();
+  await page.getByRole("button",{name:"Start game"}).click();
+  await page.getByRole("button",{name:"Stone narrows"}).click();
+  const boat=page.getByRole("img",{name:/Rowboat at/});
+  const box=(await boat.boundingBox())!;
+  await page.mouse.move(box.x+box.width*.5,box.y+box.height*.45);
+  await page.mouse.down(); await page.mouse.move(box.x+box.width*.5,box.y+box.height*.8); await page.mouse.up();
+  await expect(page.getByText("1 stroke",{exact:true})).toBeVisible();
+  for(let i=0;i<3;i++) await page.getByRole("button",{name:"Row",exact:true}).click();
+  await expect(page.getByRole("img",{name:"Rowboat at The Old Bridge"})).toBeVisible();
+  await page.getByRole("button",{name:"Pause",exact:true}).click();
+  await expect(page.getByRole("button",{name:"Row",exact:true})).toBeDisabled();
+  await page.getByRole("button",{name:"End session"}).click();
+  await expect(page.getByText("Strokes",{exact:true})).toBeVisible();
+});

@@ -2,9 +2,12 @@ import { useEffect, useRef, useState } from "react";
 import { medianWrist, type MotionSample } from "./motion";
 import type { Side } from "./session";
 
-export function useMotionCamera(enabled: boolean, side: Side) {
+export function useMotionCamera(enabled: boolean, side: Side, both = false) {
   const [status, setStatus] = useState("Opening camera…");
   const [stream, setStream] = useState<MediaStream | null>(null);
+  const other = useRef<MotionSample | null>(null);
+  const bothArms = useRef(both);
+  bothArms.current = both;
   const samples = useRef<MotionSample[]>([]);
   useEffect(() => {
     if (!enabled) return;
@@ -22,6 +25,7 @@ export function useMotionCamera(enabled: boolean, side: Side) {
       media?.getTracks().forEach((track) => track.stop());
       video.srcObject = null;
       samples.current = [];
+      other.current = null;
     };
     const fail = (message: string) => {
       if (!stopped) {
@@ -67,6 +71,9 @@ export function useMotionCamera(enabled: boolean, side: Side) {
         }
         if (data.kind === "sample") {
           busy = false;
+          other.current = data.otherPoint
+            ? { point: data.otherPoint, time: data.time }
+            : null;
           if (data.point) {
             const previous = samples.current[samples.current.length - 1];
             if (previous && data.time - previous.time > 500)
@@ -77,9 +84,13 @@ export function useMotionCamera(enabled: boolean, side: Side) {
             samples.current = [];
           }
           setStatus(
-            data.point
-              ? "Arm in view"
-              : "Move your shoulder, wrist, and hip into view.",
+            bothArms.current
+              ? data.point && data.otherPoint
+                ? "Both arms in view"
+                : "Keep both shoulders, wrists and hips in view."
+              : data.point
+                ? "Arm in view"
+                : "Move your shoulder, wrist, and hip into view.",
           );
         }
       };
@@ -134,5 +145,9 @@ export function useMotionCamera(enabled: boolean, side: Side) {
     if (!newest || now - newest.time > 500) return null;
     return medianWrist(recent, now) ?? newest;
   }
-  return { status, stream, latest, steady, tracked };
+  const otherWrist = () =>
+    other.current && performance.now() - other.current.time < 650
+      ? other.current.point
+      : null;
+  return { status, stream, latest, steady, tracked, otherWrist };
 }

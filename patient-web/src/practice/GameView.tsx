@@ -8,6 +8,7 @@ import { BloomGoal } from "./BloomGoal";
 import { beeCount, GardenPlay, SeedTray } from "./GardenPlay";
 import { CameraFeed } from "../scenes/CameraFeed";
 import "./gameplay.css";
+import { AdventurePlay } from "../adventures/AdventurePlay";
 import { Flower } from "../garden/Flower";
 import { gameNames, PracticeRound, sourceNames } from "./session";
 
@@ -91,6 +92,8 @@ export function Play({
   side,
   status,
   lockedPause = false,
+  sourceLabel,
+  onTick,
   children,
   stream,
 }: {
@@ -105,11 +108,15 @@ export function Play({
   };
   status?: string;
   lockedPause?: boolean;
+  sourceLabel?: string;
+  onTick?: (seconds: number, level: number | null) => void;
   children?: ReactNode;
   stream?: MediaStream | null;
 }) {
   const [, redraw] = useState(0);
   const [beeCall, setBeeCall] = useState<number | null>(null);
+  const tickObserver = useRef(onTick);
+  tickObserver.current = onTick;
   const finish = useRef(onEnd);
   finish.current = onEnd;
   const observe = useRef(observation);
@@ -123,12 +130,17 @@ export function Play({
       if (!round.paused) {
         const observation = observe.current();
         aim.current = observation.aim;
+        const before = round.record.elapsed;
         round.tick(
           (now - last) / 1000,
           observation.level,
           observation.onTarget &&
             (round.record.game !== "stars" || !round.celebrating),
           observation.cameraStar,
+        );
+        tickObserver.current?.(
+          round.record.elapsed - before,
+          observation.level,
         );
       }
       last = now;
@@ -167,6 +179,21 @@ export function Play({
   const scan = scanningWrist(round.scanning, round.easy, layout.stops, reduced);
   const aligned = withinNet(scan, layout.goal);
   const redrawRound = () => redraw((n) => n + 1);
+  if (!garden && round.record.game !== "stars")
+    return (
+      <AdventurePlay
+        round={round}
+        side={side}
+        sourceLabel={sourceLabel}
+        status={status}
+        controls={children}
+        action={action}
+        redraw={redrawRound}
+        onEnd={onEnd}
+        lockedPause={lockedPause}
+        clock={duration(round.record.elapsed)}
+      />
+    );
   const press = () => {
     if (!garden && round.celebrating) return;
     round.press(aligned);

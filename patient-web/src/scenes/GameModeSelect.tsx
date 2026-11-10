@@ -1,28 +1,9 @@
 import { useState } from "react";
 import { WaitingSpinner } from "./WaitingSpinner";
 
-export type GameModeId = "garden" | "river" | "stars";
+import { games, gameNames, gameDetails, type Game } from "../practice/catalog";
+export type GameModeId = Game;
 
-type GameMode = {
-  id: GameModeId;
-  title: string;
-  icon: string;
-  /** Only Garden Grow is wired up this round; the rest are UI placeholders. */
-  available: boolean;
-};
-
-const MODES: GameMode[] = [
-  { id: "garden", title: "Garden Grow", icon: "🌱", available: true },
-  { id: "river", title: "River Rowing", icon: "🚣", available: false },
-  { id: "stars", title: "Star Catcher", icon: "⭐", available: true },
-];
-
-/**
- * Post-calibration popup (spec §6 catalogue). The patient picks a game mode,
- * which outlines the chosen icon with a check, then confirms with a green
- * "I'm ready" gate mirroring the pre-calibration gate. Only Garden Grow is
- * selectable for now — the other two are visible-but-disabled placeholders.
- */
 export function GameModeSelect(
   { onConfirm, clinicianReady = true }: { onConfirm: (id: GameModeId) => void; clinicianReady?: boolean },
 ) {
@@ -37,25 +18,23 @@ export function GameModeSelect(
         </p>
 
         <div className="modeselect-grid">
-          {MODES.map((m) => (
+          {games.map((id) => (
             <button
-              key={m.id}
+              key={id}
               type="button"
               className="modeselect-mode"
-              data-testid={`mode-${m.id}`}
-              data-selected={selected === m.id}
-              data-available={m.available}
-              disabled={!m.available}
-              aria-pressed={selected === m.id}
-              onClick={() => setSelected(m.id)}
+              data-testid={`mode-${id}`}
+              data-selected={selected === id}
+              data-available={true}
+              aria-pressed={selected === id}
+              onClick={() => setSelected(id)}
             >
               <span className="modeselect-icon">
-                <span className="modeselect-glyph">{m.icon}</span>
-                {selected === m.id && <span className="modeselect-check">✓</span>}
+                <span className="modeselect-glyph">{gameDetails[id].icon}</span>
+                {selected === id && <span className="modeselect-check">✓</span>}
               </span>
               <span className="modeselect-label">
-                {m.title}
-                {!m.available && <small className="modeselect-soon"> Coming soon</small>}
+                {gameNames[id]}
               </span>
             </button>
           ))}

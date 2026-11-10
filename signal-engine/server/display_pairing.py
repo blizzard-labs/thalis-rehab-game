@@ -9,6 +9,9 @@ from uuid import uuid4
 from aiohttp import web
 
 
+GAMES = {"garden": "Garden Grow", "stars": "Star Catcher", "river": "River Rowing"}
+
+
 @dataclass
 class Display:
     participant: str
@@ -74,7 +77,7 @@ class DisplayPairing:
         if d and d.state != "complete" and (d.token or time.monotonic() < d.expires):
             raise web.HTTPConflict(text="End the other display session on this station first.")
         p = db.execute("SELECT * FROM participants WHERE id=?", (b.get("participant"),)).fetchone()
-        if not p or b.get("game") not in ("garden", "stars"):
+        if not p or b.get("game") not in GAMES:
             raise web.HTTPBadRequest(text="Invalid participant or game.")
         protocol = json.loads(p["protocol"])
         self.current = Display(

@@ -18,13 +18,12 @@ from datetime import datetime, timezone
 from xml.sax.saxutils import escape
 
 from aiohttp import web
-from server.display_pairing import DisplayPairing
+from server.display_pairing import DisplayPairing, GAMES
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table
 
 PREFIX = "/api/staff"
 COOKIE = "nr_staff"
-GAMES = {"garden": "Garden Grow", "stars": "Star Catcher"}
 SOURCES = {
     "button": "One button",
     "camera": "Camera",

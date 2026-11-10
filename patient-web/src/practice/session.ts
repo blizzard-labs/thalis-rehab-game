@@ -2,10 +2,12 @@ import { scanTargetSlot } from "./constellations";
 import { PlantGrowthModel } from "../garden/PlantGrowthModel";
 import { seedAt, type Seed } from "../garden/seeds";
 
-export type Game = "garden" | "stars";
+import type { Game } from "./catalog";
+import type { Channel } from "../adventures/River";
+export { gameNames, type Game } from "./catalog";
 export type Source = "button" | "camera" | "eeg" | "blended";
 export type Side = "left" | "right";
-export const gameNames = { garden: "Garden Grow", stars: "Star Catcher" };
+
 export const sourceNames = {
   button: "One button",
   camera: "Camera",
@@ -37,6 +39,8 @@ export interface PracticeRecord {
   >;
   feedback?: { count: number; p95Ms: number; buckets?: Record<number, number> };
   schedule?: "short" | "clinic";
+  channel?: Channel;
+  rowing?: "single" | "paired";
   garden?: { next: Seed; bed: Seed[]; goal?: number };
   calibration?: {
     method: string;
@@ -152,6 +156,10 @@ export class PracticeRound {
   get celebrating() {
     return this.record.rewards > 0 && this.elapsedSinceReward < 0.85;
   }
+  get strokePhase() {
+    if (!this.record.rewards || this.elapsedSinceReward >= .85) return 0;
+    return Math.sin(Math.PI * this.elapsedSinceReward / .85);
+  }
   get effortReach() {
     return Math.min(1, this.level / this.threshold);
   }
@@ -191,7 +199,7 @@ export class PracticeRound {
       if (this.progress === 0) this.plant.reset();
       this.progress = Math.min(1, this.progress + 0.25);
       if (this.progress >= 1) this.reward();
-    } else if (onTarget) {
+    } else if (this.record.game !== "stars" || onTarget) {
       this.reward();
     }
   }

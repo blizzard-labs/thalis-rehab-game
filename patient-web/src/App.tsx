@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
+import { LinkedAdventure } from "./adventures/LinkedAdventure";
+import { games, type Game } from "./practice/catalog";
 import { PracticeApp } from "./practice/PracticeApp";
 import { WelcomeScene } from "./scenes/WelcomeScene";
 import { CalibrationScene } from "./scenes/CalibrationScene";
@@ -12,7 +14,7 @@ import { config, readSessionCode } from "./config";
 import { usePatientLink } from "./net/usePatientLink";
 import { useCameraPublish } from "./net/useCameraPublish";
 
-type View = "pairing" | "welcome" | "calibration" | "modeselect" | "garden" | "stars" | "summary";
+type View = "pairing" | "welcome" | "calibration" | "modeselect" | Game | "summary";
 
 export default function App() {
   return readSessionCode() ? <ClinicApp /> : <PracticeApp />;
@@ -33,7 +35,7 @@ function ClinicApp() {
 
   const paired = link.session;
   const [view, setView] = useState<View>(code ? "pairing" : "welcome");
-  const cameraActive = ["calibration","modeselect","garden","stars"].includes(view) && !link.ended;
+  const cameraActive = ["calibration","modeselect",...games].includes(view) && !link.ended;
   useCameraPublish(link, !!code && link.conn === "open" && cameraActive);
   useEffect(() => { if (link.ended) setView("summary"); }, [link.ended]);
   const identity = (code ? paired : null) ?? config.patient;
@@ -67,8 +69,7 @@ function ClinicApp() {
           />
         );
       case "modeselect":
-        // Garden Grow and Star Catcher are wired; GameModeSelect disables the rest.
-        return <GameModeSelect clinicianReady={code ? link.clinicianLive : true} onConfirm={(id) => setView(id === "stars" ? "stars" : "garden")} />;
+        return <GameModeSelect clinicianReady={code ? link.clinicianLive : true} onConfirm={setView} />;
       case "garden":
         return (
           <GardenScene
@@ -93,6 +94,9 @@ function ClinicApp() {
             onEnd={() => setView("summary")}
           />
         );
+      case "river":
+        return <LinkedAdventure game={view} side={identity.affectedSide} paused={link.paused || link.conn !== "open"}
+          store={link.store} stats={stats} onEnd={()=>setView("summary")}/>;
       case "summary":
         return <SummaryScene stats={stats} onRestart={link.ended ? undefined : quit} />;
     }

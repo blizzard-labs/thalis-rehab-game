@@ -29,6 +29,7 @@ self.onmessage = async ({
       self.postMessage({
         kind: "sample",
         point: wristOffset(pose, data.side),
+        otherPoint: wristOffset(pose, data.side === "left" ? "right" : "left"),
         time: data.time,
       });
     }

@@ -21,6 +21,9 @@ export function SensorSession({
 }) {
   const [source, setSource] = useState(round.source);
   const [calibration, setCalibration] = useState<ReachCalibration | null>(null);
+  const [rowing, setRowing] = useState(round.record.rowing);
+  const [otherReach, setOtherReach] = useState<ReachCalibration | null>(null);
+  const pairedOars = round.record.game === "river" && rowing === "paired";
   const cameraNeeded = source === "camera" || source === "blended";
   const eegNeeded = source === "eeg" || source === "blended";
   const [train, setTrain] = useState(false);
@@ -28,25 +31,57 @@ export function SensorSession({
   const [chosen, setChosen] = useState("");
   const [played, setPlayed] = useState(false);
   const eeg = useHeadset(
-    eegNeeded && (!cameraNeeded || !!calibration),
+    eegNeeded &&
+      (!cameraNeeded || (!!calibration && (!pairedOars || !!otherReach))),
     side,
     participant,
   );
   useEffect(() => {
     if (eeg.calibration) round.record.calibration = eeg.calibration;
   }, [round, eeg.calibration]);
-  const camera = useMotionCamera(cameraNeeded, side);
+  const camera = useMotionCamera(
+    cameraNeeded && (round.record.game !== "river" || !!rowing),
+    side,
+    pairedOars,
+  );
   function switchInput(next: "button" | "camera" | "eeg") {
     round.switchInput(next);
     setSource(round.source);
   }
-  if (cameraNeeded && !calibration)
+  if (cameraNeeded && round.record.game === "river" && !rowing)
+    return (
+      <section className="practice-panel">
+        <h1>Choose your oars</h1>
+        <p>
+          Row with your selected arm, or calibrate both arms for a coordinated
+          stroke.
+        </p>
+        <div className="button-row">
+          {(["single", "paired"] as const).map((mode) => (
+            <button
+              key={mode}
+              onClick={() => {
+                round.record.rowing = mode;
+                setRowing(mode);
+              }}
+            >
+              {mode === "single" ? "One arm" : "Both arms"}
+            </button>
+          ))}
+          <button onClick={() => switchInput("button")}>Use one button</button>
+          <button onClick={end}>End session</button>
+        </div>
+      </section>
+    );
+  const secondArm = !!calibration && pairedOars && !otherReach;
+  if (cameraNeeded && (!calibration || secondArm))
     return (
       <ReachSetup
-        camera={camera}
-        side={side}
+        key={secondArm ? "other" : "selected"}
+        camera={secondArm ? { ...camera, latest: camera.otherWrist } : camera}
+        side={secondArm ? (side === "left" ? "right" : "left") : side}
         stars={round.record.game === "stars"}
-        onReady={setCalibration}
+        onReady={secondArm ? setOtherReach : setCalibration}
       >
         {source === "blended" && (
           <button onClick={() => switchInput("eeg")}>
@@ -153,11 +188,23 @@ export function SensorSession({
           )
         : null;
     const point = camera.latest();
-    const movement = trial
+    let movement = trial
       ? trial.level
       : rest && reach && point
         ? reachProgress(rest, reach, point)
         : null;
+    if (pairedOars && cameraNeeded && otherReach) {
+      const other = camera.otherWrist();
+      const otherLevel =
+        other &&
+        reachProgress(otherReach.rest, otherReach.directions[0], other);
+      movement =
+        movement === null || otherLevel === null
+          ? null
+          : round.needsRest
+            ? Math.max(movement, otherLevel)
+            : Math.min(movement, otherLevel);
+    }
     const aim = trial?.aim ?? null;
     const onTarget = trial?.onTarget ?? true;
     const neural = eegNeeded ? eeg.latest() : null;

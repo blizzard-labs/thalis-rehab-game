@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { games, gameDetails } from "./catalog";
+import { RiverArt } from "../adventures/River";
 import { duration, Garden, NightSky } from "./GameView";
 import {
   downloadRecord,
@@ -101,7 +103,7 @@ function Summary({
           <dd>{record.actions}</dd>
         </div>
         <div>
-          <dt>{record.game === "garden" ? "Blooms" : "Stars"}</dt>
+          <dt>{gameDetails[record.game].units[0].toUpperCase() + gameDetails[record.game].units.slice(1)}</dt>
           <dd>{record.rewards}</dd>
         </div>
       </dl>
@@ -137,9 +139,7 @@ function GameSetup({
       <button onClick={onBack}>← Games</button>
       <h1>{gameNames[game]}</h1>
       <p>
-        {game === "garden"
-          ? "Choose seeds and grow a flower bed that attracts pollinators."
-          : "Guide your net to golden stars to draw constellations."}
+        {gameDetails[game].description}
       </p>
       <fieldset>
         <legend>Input</legend>
@@ -238,7 +238,7 @@ export function PracticeApp() {
               Practice at your own pace. You can pause or finish at any time.
             </p>
             <div className="game-cards">
-              {(["garden", "stars"] as const).map((id) => (
+              {games.map((id) => (
                 <button
                   key={id}
                   className="game-card"
@@ -247,19 +247,15 @@ export function PracticeApp() {
                     setPage("setup");
                   }}
                 >
-                  <div className="card-art" aria-hidden="true">
+                  <div className={`card-art ${id}-preview`} aria-hidden="true">
                     {id === "garden" ? (
                       <Garden growth={0.85} bloom />
-                    ) : (
-                      <NightSky target={1} />
-                    )}
+                    ) : id === "stars" ? <NightSky target={1} /> : <RiverArt/>}
                   </div>
                   <div className="card-copy">
                     <h2>{gameNames[id]}</h2>
                     <p>
-                      {id === "garden"
-                        ? "Grow a flower, one action at a time."
-                        : "Find a star and bring it home."}
+                      {gameDetails[id].description}
                     </p>
                     <span aria-hidden="true">↗</span>
                   </div>
