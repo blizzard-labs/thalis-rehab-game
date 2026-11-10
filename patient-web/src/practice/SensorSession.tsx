@@ -40,12 +40,12 @@ export function SensorSession({
     modelProfile,
   );
   useEffect(() => {
-    round.record.arm = side;
+    if (source !== "button") round.record.arm = side;
     if (eeg.calibration) {
       round.record.calibration = eeg.calibration;
       if (eeg.calibration.synthetic) round.record.usedSyntheticEeg = true;
     }
-  }, [round, side, eeg.calibration]);
+  }, [round, source, side, eeg.calibration]);
   const camera = useMotionCamera(
     cameraNeeded && (round.record.game !== "river" || !!rowing),
     side,

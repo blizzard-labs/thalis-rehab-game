@@ -1,3 +1,4 @@
+import { ReportButton } from "../reports/ReportReader";
 import { useEffect, useState } from "react";
 import { gameNames, PracticeRound, sourceNames } from "./session";
 import type { Game, PracticeRecord, Side, Source } from "./session";
@@ -17,6 +18,7 @@ type Participant = {
   assessments: { date: string; fma: number; arat: number }[];
 };
 type Visit = {
+  participant: string;
   id: string;
   record: PracticeRecord;
   note: string;
@@ -46,6 +48,11 @@ async function api<T>(
   return response.json();
 }
 
+async function checkReportAccess() {
+  if (!(await api<Auth>("state")).authenticated)
+    throw new Error("Station locked");
+}
+
 function errorText(error: unknown) {
   return error instanceof Error
     ? error.message
@@ -66,7 +73,9 @@ export function StaffWorkspace({ onExit }: { onExit: () => void }) {
   const [round, setRound] = useState<PracticeRound | null>(null);
   const [display, setDisplay] = useState<DisplayState | null>(null);
   const [finishing, setFinishing] = useState(false);
-  const [visits, setVisits] = useState<Visit[]>([]);
+  const [savedVisits, setVisits] = useState<Visit[]>([]);
+  const visits = savedVisits.filter((v) => v.participant === selected);
+  const [loadedParticipant, setLoadedParticipant] = useState("");
   const [game, setGame] = useState<Game>("garden");
   const participant = people.find((p) => p.id === selected);
   async function load() {
@@ -97,10 +106,14 @@ export function StaffWorkspace({ onExit }: { onExit: () => void }) {
     let current = true;
     setRemove(false);
     setVisits([]);
+    setLoadedParticipant("");
     if (selected && !round)
       api<Visit[]>("participants/" + selected)
         .then((rows) => {
-          if (current) setVisits(rows);
+          if (current) {
+            setVisits(rows);
+            setLoadedParticipant(selected);
+          }
         })
         .catch((err) => {
           if (current) setError(errorText(err));
@@ -476,6 +489,18 @@ export function StaffWorkspace({ onExit }: { onExit: () => void }) {
                 </button>
               </fieldset>
               <h3>Session history</h3>
+              {loadedParticipant === selected && (
+                <ReportButton
+                  key={selected}
+                  reader={{
+                    name: participant.name,
+                    id: participant.id,
+                    assessments: participant.assessments,
+                  }}
+                  visits={visits}
+                  authorize={checkReportAccess}
+                />
+              )}
               {!visits.length && <p>No sessions recorded yet.</p>}
               <ul className="session-list">
                 {visits.map((v) => (
@@ -522,11 +547,18 @@ export function StaffWorkspace({ onExit }: { onExit: () => void }) {
                       </details>
                     </div>
                     <span className="button-row">
-                      <a href={"/api/staff/reports/" + v.id + ".pdf"} download>
-                        PDF
-                      </a>
+                      <ReportButton
+                        reader={{
+                          name: participant.name,
+                    id: participant.id,
+                          assessments: participant.assessments,
+                        }}
+                        visit={v}
+                        visits={visits}
+                        authorize={checkReportAccess}
+                      />
                       <a href={"/api/staff/reports/" + v.id + ".csv"} download>
-                        CSV
+                        Event CSV
                       </a>
                     </span>
                   </li>

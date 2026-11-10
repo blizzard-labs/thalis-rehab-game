@@ -43,8 +43,25 @@ test("isolated staff station records actions, exports reports and locks the rost
     await page.getByRole("button", { name: "Pause" }).click();
     await page.getByRole("button", { name: "End session" }).click();
     await expect(page.getByText(/4 actions/)).toBeVisible();
+    await page
+      .getByRole("button", { name: "Session report", exact: true })
+      .click();
+    const reader = page.getByRole("dialog", { name: "Session report" });
+    await expect(
+      reader.getByRole("table", { name: "Practice timeline" }),
+    ).toBeVisible();
+    await expect(
+      reader.getByText(/4 logged actions produced 1 bloom/),
+    ).toBeVisible();
+    await reader.getByRole("button", { name: "Close report" }).click();
+    await page.getByRole("button", { name: "Progress report" }).click();
+    const trends = page.getByRole("dialog", { name: "Longitudinal report" });
+    await expect(trends.getByText(/1 completed visit/)).toBeVisible();
+    await trends.getByLabel("Game", { exact: true }).selectOption("stars");
+    await expect(trends.getByText(/0 completed visits/)).toBeVisible();
+    await trends.getByRole("button", { name: "Close report" }).click();
     const csv = await page
-      .getByRole("link", { name: "CSV" })
+      .getByRole("link", { name: "Event CSV" })
       .getAttribute("href");
     const report = await page.request.get("http://127.0.0.1:18766" + csv);
     expect(await report.text()).toContain("Rewards,1");

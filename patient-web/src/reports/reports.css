@@ -1,0 +1,350 @@
+.nr-report {
+  box-sizing: border-box;
+  width: min(900px, 97vw);
+  max-height: 94svh;
+  margin: auto;
+  padding: 0;
+  border: 1px solid #707070;
+  border-radius: 0;
+  background: #fff;
+  color: #111;
+  box-shadow: 0 12px 42px #20202050;
+  font:
+    14px/1.45 Arial,
+    Helvetica,
+    sans-serif;
+  text-align: left;
+}
+.nr-report::backdrop {
+  background: #2229;
+}
+.nr-report .report-tools,
+.report-filters {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 18px;
+  border-bottom: 1px solid #aaa;
+  background: #f3f3f3;
+}
+.nr-report .report-tools {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+.nr-report .report-tools span {
+  display: flex;
+  gap: 7px;
+}
+.nr-report .report-tools button {
+  font:
+    600 13px Arial,
+    sans-serif;
+  color: #222;
+  border: 1px solid #707070;
+  background: white;
+  border-radius: 2px;
+  min-height: 40px;
+  padding: 5px 11px;
+}
+.nr-report .report-tools button:hover {
+  background: #e5e5e5;
+}
+.nr-report .report-filters {
+  justify-content: flex-start;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+.report-filters label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #333;
+  font-size: 12px;
+}
+.report-filters :is(input, select) {
+  background: white;
+  color: #111;
+  border: 1px solid #999;
+  border-radius: 0;
+  min-height: 36px;
+  padding: 4px 6px;
+  font: inherit;
+}
+.nr-report .report-paper {
+  padding: clamp(16px, 4.8vw, 48px);
+  background: white;
+  color: #111;
+}
+.nr-report .form-masthead {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  justify-content: space-between;
+  border-bottom: 2px solid #111;
+  padding-bottom: 5px;
+  margin: 0 0 12px;
+}
+.nr-report .form-masthead h1,
+.nr-report .form-identifiers h2,
+.nr-report .form-panel h2 {
+  font-family: Arial, Helvetica, sans-serif;
+  letter-spacing: 0;
+  color: #111;
+  margin: 0;
+  font-weight: 700;
+}
+.nr-report .form-masthead h1 {
+  font-size: 13px;
+  line-height: 1.3;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+  flex: 1;
+}
+.form-masthead strong {
+  font-size: 12px;
+  color: #b42318;
+  white-space: nowrap;
+}
+.form-masthead span,
+.form-panel header span {
+  font-size: 10.5px;
+  color: #363636;
+  text-align: right;
+}
+.form-identifiers {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border: 1px solid #777;
+}
+.form-identifiers > div {
+  padding: 9px 12px;
+}
+.form-identifiers > div + div {
+  border-left: 1px solid #777;
+}
+.nr-report .form-identifiers h2 {
+  text-transform: uppercase;
+  font-size: 11px;
+  margin: 0 0 6px;
+}
+.form-identifiers dl {
+  margin: 0;
+  font-size: 12px;
+}
+.form-identifiers dl > div {
+  display: grid;
+  grid-template-columns: minmax(77px, 29%) 1fr;
+  gap: 5px;
+  padding: 2px 0;
+}
+.form-identifiers dt {
+  color: #444;
+}
+.form-identifiers dd {
+  margin: 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.nr-report .form-panel {
+  margin: 12px 0 0;
+  border: 1px solid #777;
+}
+.nr-report .form-panel > header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  background: #d9d9d9;
+  padding: 4px 10px;
+  border-bottom: 1px solid #777;
+}
+.nr-report .form-panel h2 {
+  font-size: 13px;
+  line-height: 1.5;
+}
+.form-body {
+  padding: 9px 11px;
+}
+.form-body > p {
+  margin: 0;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+  font-size: 13px;
+}
+.form-body > p + div {
+  margin-top: 8px;
+}
+.report-table {
+  overflow-x: auto;
+}
+.report-table table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 12px;
+  line-height: 1.35;
+  font-variant-numeric: tabular-nums;
+}
+.report-table th,
+.report-table td {
+  border: 1px solid #9b9b9b;
+  padding: 4px 7px;
+  vertical-align: top;
+  text-align: left;
+}
+.report-table th {
+  background: #ededed;
+  color: #172029;
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+.report-table td:first-child {
+  font-weight: 600;
+}
+.report-table td:nth-child(2) {
+  font-variant-numeric: tabular-nums;
+}
+.report-table td svg {
+  display: block;
+  width: 58px;
+  height: 16px;
+}
+.form-body figure {
+  margin: 10px 0 0;
+  padding: 0;
+  background: white;
+  border: 0;
+  border-radius: 0;
+}
+.form-body figcaption {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  font-weight: 700;
+  gap: 8px;
+}
+.form-body figcaption span {
+  font-size: 10.5px;
+  font-weight: 400;
+  color: #444;
+}
+.form-body figure svg,
+.trend-tiles svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.plot-key {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  color: #333;
+}
+.plot-key::before {
+  content: "";
+  width: 15px;
+  border-top: 2px solid #222;
+}
+.plot-key span {
+  margin-left: 8px;
+}
+.trend-tiles {
+  display: grid;
+  grid-auto-columns: minmax(0, 1fr);
+  grid-auto-flow: column;
+  gap: 8px;
+  margin-bottom: 9px;
+}
+.trend-tiles > div {
+  border: 1px solid #999;
+  padding: 6px;
+}
+.trend-tiles > div > div:first-child {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  gap: 4px;
+}
+.nr-report .report-reliability {
+  font-size: 11px;
+  font-style: italic;
+  line-height: 1.45;
+  margin: 14px 0 0;
+  color: #333;
+}
+@media (max-width: 570px) {
+  .nr-report {
+    width: 99vw;
+    max-height: 97svh;
+  }
+  .nr-report .report-paper {
+    padding: 14px 10px;
+  }
+  .nr-report .form-masthead {
+    flex-wrap: wrap;
+  }
+  .form-masthead h1 {
+    min-width: 65%;
+  }
+  .form-identifiers > div {
+    padding: 6px;
+  }
+  .form-identifiers dl > div {
+    display: block;
+  }
+  .form-identifiers dd {
+    font-size: 11px;
+  }
+  .nr-report .form-panel > header {
+    flex-wrap: wrap;
+  }
+  .report-table th,
+  .report-table td {
+    padding: 4px;
+  }
+  .trend-tiles {
+    grid-template-columns: 1fr 1fr;
+    grid-auto-flow: row;
+  }
+  .report-filters label {
+    display: grid;
+    gap: 1px;
+  }
+  .nr-report .report-filters {
+    gap: 5px;
+  }
+  .form-body {
+    padding: 7px;
+  }
+}
+.form-status {
+  display: inline-block;
+  padding: 0 4px;
+  border: 1px solid #444;
+  font-size: 0.85em;
+  letter-spacing: 0.02em;
+}
+.form-sign {
+  display: grid;
+  grid-template-columns: auto 1fr auto 22%;
+  border: 1px solid #888;
+  margin-top: 12px;
+  font-size: 11px;
+}
+.form-sign > * {
+  padding: 5px 8px;
+}
+.form-sign b {
+  background: #eee;
+  border-right: 1px solid #999;
+}
+.form-sign b:not(:first-child) {
+  border-left: 1px solid #999;
+}
+.form-measures td:nth-child(2),
+.form-measures th:nth-child(2) {
+  text-align: right;
+}

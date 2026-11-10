@@ -75,5 +75,9 @@ for (const secondDirection of [false, true]) {
         ),
       )
       .toBe("ended");
+    await page.getByRole("button",{name:"Session report"}).click();
+    const reader=page.getByRole("dialog",{name:"Session report"});
+    await expect(reader.getByRole("table",{name:"Movement and posture"}).getByText("Elbow opening · °")).toBeVisible();
+    await expect(reader.getByRole("heading",{name:"EEG and calibration"})).toHaveCount(0);
   });
 }

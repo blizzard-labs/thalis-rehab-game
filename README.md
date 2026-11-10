@@ -73,6 +73,12 @@ The production web build in `patient-web/dist` can be served at the root of an H
 
 To create the Windows prototype installer locally, build the web app, install the companion requirements and PyInstaller 6.16, run `python -m PyInstaller packaging/companion.spec`, then compile `packaging/windows.iss` with Inno Setup 6. User records live outside the application installation and survive replacement of the executable. Download a station backup before upgrading.
 
+### Session and longitudinal reports
+
+Open **Session report** from a finished round or from session history. Open **Progress report** in **Saved sessions** or after selecting a participant in the staff workspace. Choose a 4-, 12-, or 52-week period, a game, and an optional through date. These selections apply to the on-screen report and its PDF and CSV downloads. Session reports opened from history also include a four-week comparison when earlier visits for that game are available. The guest report uses this browser’s saved rounds and works offline. Staff reports include that participant’s assessments and visit notes. The existing station event CSV remains available for auditing individual actions.
+
+New sensor rounds keep 30-second summaries of observed input, cortical mu ERD, classifier output when available, and camera-derived arm angles and trunk tilt. Frame-level EEG, images and pose coordinates are never written into reports. Charts show missing observations as gaps. Historical records retain their event timelines and original totals. Weekly comparisons use completed visits with comparable game, input path, arm and pace; simulated EEG and interrupted visits are excluded. Joint angles are relative camera estimates. FMA-UE and ARAT scores come from staff entries.
+
 The [sample session report](NeuroReach-StarCatcher-Session-Report-Sample.pdf) is a design reference. Generated reports contain the measurements actually recorded for that session.
 
 ## Repository layout

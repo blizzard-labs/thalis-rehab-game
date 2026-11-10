@@ -1,3 +1,4 @@
+import { ReportButton } from "../reports/ReportReader";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { games, gameDetails } from "./catalog";
 import { LighthouseArt } from "../adventures/Lighthouse";
@@ -72,6 +73,19 @@ function History({
         <p role="status">Opening saved sessions…</p>
       )}
       {records?.length === 0 && <p>You haven’t saved a session yet.</p>}
+      {records && records.length > 0 && (
+        <ReportButton
+          reader={{ name: "Guest practice" }}
+          visits={records.map((record) => ({ record, status: "complete" }))}
+          authorize={
+            guest
+              ? async () => {
+                  await currentGuest(guest);
+                }
+              : undefined
+          }
+        />
+      )}
       <ul className="session-list">
         {records?.map((r) => (
           <li key={r.id}>
@@ -81,7 +95,24 @@ function History({
               {new Date(r.started).toLocaleString()} · {duration(r.elapsed)} ·{" "}
               {r.sources.map((s) => sourceNames[s]).join(" → ")}
             </span>
-            <button onClick={() => downloadRecord(r)}>Download</button>
+            <span className="button-row">
+              <ReportButton
+                reader={{ name: "Guest practice" }}
+                visit={{ record: r, status: "complete" }}
+                visits={records.map((record) => ({
+                  record,
+                  status: "complete",
+                }))}
+                authorize={
+                  guest
+                    ? async () => {
+                        await currentGuest(guest);
+                      }
+                    : undefined
+                }
+              />
+              <button onClick={() => downloadRecord(r)}>Download</button>
+            </span>
           </li>
         ))}
       </ul>
@@ -167,6 +198,17 @@ function Summary({
         <button onClick={save} disabled={saved}>
           {saved ? "Saved on this device" : "Save on this device"}
         </button>
+        <ReportButton
+          reader={{ name: "Guest practice" }}
+          visit={{ record, status: "complete" }}
+          authorize={
+            guest
+              ? async () => {
+                  await currentGuest(guest);
+                }
+              : undefined
+          }
+        />
         <button onClick={() => downloadRecord(record)}>Download</button>
       </div>
       {error && <p role="alert">{error}</p>}
