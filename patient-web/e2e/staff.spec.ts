@@ -40,7 +40,7 @@ test("isolated staff station records actions, exports reports and locks the rost
       .click();
     for (let i = 0; i < 4; i++)
       await page.getByRole("button", { name: "Water" }).click();
-    await page.getByRole("button", { name: "Pause" }).click();
+    await page.getByRole("button", { name: "Pause", exact: true }).click();
     await page.getByRole("button", { name: "End session" }).click();
     await expect(page.getByText(/4 actions/)).toBeVisible();
     await page

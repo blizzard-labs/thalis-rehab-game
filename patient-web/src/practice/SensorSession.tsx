@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import type { LiveInput } from "./station";
+import { useEffect, useState, type MutableRefObject } from "react";
 import { shoulder, withinNet } from "../reach/starGeometry";
 import { Play } from "./GameView";
 import { ReachSetup, type ReachCalibration } from "./ReachSetup";
@@ -13,10 +14,14 @@ export function SensorSession({
   end,
   lockedPause,
   modelProfile,
+  displayInput = false,
+  monitor,
 }: {
   round: PracticeRound;
   side: Side;
   modelProfile?: ModelProfile;
+  displayInput?: boolean;
+  monitor?: MutableRefObject<LiveInput | null>;
   end: () => void;
   lockedPause?: boolean;
 }) {
@@ -38,6 +43,7 @@ export function SensorSession({
       (!cameraNeeded || (!!calibration && (!pairedOars || !!otherReach))),
     side,
     modelProfile,
+    displayInput,
   );
   useEffect(() => {
     if (source !== "button") round.record.arm = side;
@@ -51,6 +57,20 @@ export function SensorSession({
     side,
     pairedOars,
   );
+  useEffect(() => {
+    if (!monitor) return;
+    monitor.current = {
+      phase: "setup",
+      camera: cameraNeeded ? camera.status : "",
+      eeg: eegNeeded ? eeg.message : "",
+      input: null,
+      cameraLevel: null,
+      eegLevel: null,
+    };
+    return () => {
+      monitor.current = null;
+    };
+  }, [monitor, source, cameraNeeded, eegNeeded, camera.status, eeg.message]);
   function switchInput(next: "button" | "camera" | "eeg") {
     round.switchInput(next);
     setSource(round.source);
@@ -249,18 +269,28 @@ export function SensorSession({
       ...(cameraNeeded && movement !== null ? { reach: movement * 100 } : {}),
       ...(eegNeeded && neural !== null ? eeg.features() : {}),
     };
-    if (source === "camera")
-      return { level: movement, aim, onTarget, cameraHold, readings };
+
     round.inputSampleMs =
       neural !== null && (source !== "blended" || movement !== null)
         ? eeg.sampleMs()
         : null;
     const level =
-      source === "blended"
-        ? neural === null || movement === null
-          ? null
-          : 0.6 * neural + 0.4 * movement
-        : neural;
+      source === "camera"
+        ? movement
+        : source === "blended"
+          ? neural === null || movement === null
+            ? null
+            : 0.6 * neural + 0.4 * movement
+          : neural;
+    if (monitor)
+      monitor.current = {
+        phase: "play",
+        camera: cameraNeeded ? camera.status : "",
+        eeg: eegNeeded ? eeg.message : "",
+        input: source === "button" ? null : level,
+        cameraLevel: cameraNeeded ? movement : null,
+        eegLevel: eegNeeded ? neural : null,
+      };
     return { level, aim, onTarget, cameraHold, readings };
   };
   const status = [cameraNeeded && camera.status, eegNeeded && eeg.message]

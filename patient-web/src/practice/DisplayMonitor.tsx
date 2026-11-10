@@ -1,32 +1,49 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import QRCode from "qrcode";
-import type { PracticeRecord } from "./session";
+import { PairedDisplay } from "./PairedDisplay";
+import {
+  api,
+  errorText,
+  playerToken,
+  StationError,
+  type DisplayState,
+  type Participant,
+} from "./station";
+import { gameNames } from "./session";
 
-export type DisplayState = {
-  session: string;
-  state: string;
-  paired: boolean;
-  connected: boolean;
-  patientPaused: boolean;
-  url: string | null;
-  record: PracticeRecord | null;
-};
 export function DisplayMonitor({
   initial,
+  participant,
+  localToken,
+  onToken,
   onClose,
+  onLock,
 }: {
   initial: DisplayState;
+  participant?: Participant;
+  localToken: string;
+  onToken: (token: string) => void;
   onClose: () => void;
+  onLock: () => void;
 }) {
-  const [display, setDisplay] = useState(initial);
-  const [error, setError] = useState("");
-  const [qr, setQr] = useState("");
+  const [display, setDisplay] = useState(initial),
+    [error, setError] = useState(""),
+    [busy, setBusy] = useState(false),
+    [qr, setQr] = useState("");
+  const sending = useRef(false),
+    requestEpoch = useRef(0),
+    close = useRef(onClose),
+    lock = useRef(onLock);
+  close.current = onClose;
+  lock.current = onLock;
+  const local = display.target === "workstation";
   useEffect(() => {
     let current = true;
+    setQr("");
     if (display.url)
-      void QRCode.toDataURL(display.url, { width: 180 })
-        .then((image) => {
-          if (current) setQr(image);
+      void QRCode.toDataURL(display.url, { width: 160 })
+        .then((img) => {
+          if (current) setQr(img);
         })
         .catch(() => {});
     return () => {
@@ -37,26 +54,29 @@ export function DisplayMonitor({
     let current = true,
       timer = 0;
     async function poll() {
+      const epoch = requestEpoch.current;
       try {
-        const res = await fetch("/api/staff/display", {
-          cache: "no-store",
-          signal: AbortSignal.timeout(4000),
-        });
-        if (!res.ok) throw new Error("Could not read display status.");
-        const d = await res.json();
+        const next = await api<DisplayState | null>("display");
         if (!current) return;
-        if (d?.session === initial.session) {
-          setDisplay(d);
-          setError("");
-        } else {
-          setError("This display session is no longer active.");
+        if (!next || next.session !== initial.session) {
+          close.current();
           return;
         }
+        if (!sending.current && epoch === requestEpoch.current) {
+          setDisplay(next);
+          if (next.state === "complete" && local) {
+            playerToken(next.session, null);
+            close.current();
+            return;
+          }
+        }
       } catch (err) {
-        if (current)
-          setError(
-            err instanceof Error ? err.message : "Connection interrupted.",
-          );
+        if (!current) return;
+        if (err instanceof StationError && err.status === 401) {
+          lock.current();
+          return;
+        }
+        setError(errorText(err));
       }
       if (current) timer = window.setTimeout(poll, 750);
     }
@@ -65,47 +85,67 @@ export function DisplayMonitor({
       current = false;
       clearTimeout(timer);
     };
-  }, [initial.session]);
+  }, [initial.session, local]);
   async function control(command: string) {
+    if (sending.current) return;
+    sending.current = true;
+    requestEpoch.current++;
+    setBusy(true);
+    setError("");
     try {
-      const res = await fetch("/api/staff/display/control", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ command, session: display.session }),
-      });
-      if (!res.ok) throw new Error(await res.text());
-      setDisplay(await res.json());
-      setError("");
+      if (command === "recover") {
+        const r = await api<{ token: string }>("display/recover", "POST", {
+          session: display.session,
+        });
+        onToken(r.token);
+      } else {
+        setDisplay(
+          await api<DisplayState>("display/control", "POST", {
+            session: display.session,
+            command,
+          }),
+        );
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not send control.");
+      if (err instanceof StationError && err.status === 401) lock.current();
+      else setError(errorText(err));
+    } finally {
+      sending.current = false;
+      requestEpoch.current++;
+      setBusy(false);
     }
   }
+  const waiting = display.state === "waiting",
+    done = display.state === "complete",
+    ending = display.state === "ending";
+  const resting = display.patientPaused || display.state === "paused";
   return (
-    <section className="practice-panel">
-      <h1>Patient display</h1>
+    <section className="station-monitor">
+      <h1>{local ? "Live session" : "Patient display"}</h1>
+      <p>
+        {participant?.name} · {gameNames[display.game]}
+      </p>
       <p role="status">
-        {!display.paired
-          ? "Waiting for the patient to pair…"
-          : display.state === "complete"
-            ? "Session complete"
-            : display.connected
-              ? display.patientPaused
-                ? "Patient resting"
-                : "Display connected"
-              : "Waiting for the display to reconnect…"}
+        {done
+          ? display.outcome === "cancelled"
+            ? "Invitation cancelled"
+            : "Session complete"
+          : display.expired
+            ? "Invitation expired"
+            : !display.paired
+              ? "Waiting for the patient to pair…"
+              : display.connected
+                ? resting
+                  ? "Patient resting"
+                  : "Display connected"
+                : "Waiting for the display to reconnect…"}
       </p>
       {display.url && (
         <div className="display-invite">
           {qr && <img src={qr} alt="Patient pairing QR code" />}
-          <p>
-            <a href={display.url} target="_blank" rel="noreferrer">
-              Open patient display
-            </a>
-            <br />
-            {display.url.startsWith("http://localhost")
-              ? "Use a second window on this computer."
-              : "Scan on the patient device using the clinic network."}
-          </p>
+          <a href={display.url} target="_blank" rel="noreferrer">
+            Open patient display
+          </a>
         </div>
       )}
       {display.record && (
@@ -116,33 +156,48 @@ export function DisplayMonitor({
       )}
       {error && <p role="alert">{error}</p>}
       <div className="button-row">
-        {display.state === "waiting" && (
+        {waiting && (
           <button
-            className="primary"
-            disabled={!display.connected}
+            disabled={busy || !display.connected}
             onClick={() => control("start")}
           >
             Start patient game
           </button>
         )}
-        {display.state === "playing" && !display.patientPaused && (
-          <button onClick={() => control("pause")}>Pause patient game</button>
-        )}
-        {(display.state === "paused" ||
-          (display.state === "playing" && display.patientPaused)) && (
-          <button onClick={() => control("resume")}>Resume patient game</button>
-        )}
-        {display.state !== "complete" && (
-          <button onClick={() => control(display.state === "ending" ? "finish-saved" : "end")}>
-            {display.state === "ending"
-              ? "Finish with last saved record"
-              : "End display session"}
+        {display.state === "playing" && !resting && (
+          <button disabled={busy} onClick={() => control("pause")}>
+            Pause patient game
           </button>
         )}
-        {(display.state === "complete" || error) && (
-          <button onClick={onClose}>Return to roster</button>
+        {resting && !done && !ending && (
+          <button
+            disabled={busy || !display.connected}
+            onClick={() => control("resume")}
+          >
+            Resume patient game
+          </button>
         )}
+        {!done && (
+          <button
+            disabled={busy || (ending && display.connected)}
+            onClick={() => control(ending ? "finish-saved" : "end")}
+          >
+            {ending ? "Finish with last saved record" : "End display session"}
+          </button>
+        )}
+        {local && !localToken && !display.connected && !done && !ending && (
+          <button disabled={busy} onClick={() => control("recover")}>
+            Recover patient game here
+          </button>
+        )}
+        {(done || error) && <button onClick={onClose}>Return to roster</button>}
       </div>
+      {local && localToken && !done && (
+        <PairedDisplay
+          key={localToken}
+          local={{ session: display.session, token: localToken }}
+        />
+      )}
     </section>
   );
 }

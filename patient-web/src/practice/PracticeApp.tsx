@@ -352,7 +352,12 @@ function GameSetup({
 export function PracticeApp() {
   const [page, setPage] = useState<
     "home" | "history" | "setup" | "play" | "summary" | "staff" | "handoff"
-  >("home");
+  >(() =>
+    location.hash === "#staff" &&
+    ["localhost", "127.0.0.1"].includes(location.hostname)
+      ? "staff"
+      : "home",
+  );
   const [game, setGame] = useState<Game>("garden");
   const [side, setSide] = useState<Side>("right");
   const [round, setRound] = useState<PracticeRound | null>(null);
@@ -413,6 +418,8 @@ export function PracticeApp() {
     }
   }
   const back = () => {
+    if (location.hash === "#staff")
+      history.replaceState(null, "", location.pathname + location.search);
     setRound(null);
     setPage("home");
   };
@@ -552,7 +559,14 @@ export function PracticeApp() {
         )}
         {page === "home" &&
           ["127.0.0.1", "localhost"].includes(location.hostname) && (
-            <button onClick={() => setPage("staff")}>Staff workspace</button>
+            <button
+              onClick={() => {
+                history.replaceState(null, "", "#staff");
+                setPage("staff");
+              }}
+            >
+              Staff workspace
+            </button>
           )}
       </footer>
     </div>

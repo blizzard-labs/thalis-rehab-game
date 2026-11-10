@@ -1,63 +1,19 @@
 import { ReportButton } from "../reports/ReportReader";
-import { useEffect, useState } from "react";
-import { gameNames, PracticeRound, sourceNames } from "./session";
-import type { Game, PracticeRecord, Side, Source } from "./session";
-import { SensorSession } from "./SensorSession";
-import { DisplayMonitor, type DisplayState } from "./DisplayMonitor";
-
-type Participant = {
-  id: string;
-  name: string;
-  side: Side;
-  consent: string;
-  protocol: {
-    source: Source;
-    easy: boolean;
-    schedule?: PracticeRecord["schedule"];
-  };
-  assessments: { date: string; fma: number; arat: number }[];
-};
-type Visit = {
-  participant: string;
-  id: string;
-  record: PracticeRecord;
-  note: string;
-  status: string;
-  updated: string;
-};
-type Auth = { configured: boolean; authenticated: boolean };
-
-async function api<T>(
-  path: string,
-  method = "GET",
-  body?: unknown,
-): Promise<T> {
-  const response = await fetch("/api/staff/" + path, {
-    method,
-    headers: { "Content-Type": "application/json" },
-    body: body === undefined ? undefined : JSON.stringify(body),
-    cache: "no-store",
-  });
-  if (!response.ok)
-    throw new Error(
-      (await response.text()).slice(0, 200) ||
-        "The local companion is unavailable.",
-    );
-  if (!response.headers.get("content-type")?.includes("application/json"))
-    throw new Error("Start the local companion with npm run companion.");
-  return response.json();
-}
-
-async function checkReportAccess() {
-  if (!(await api<Auth>("state")).authenticated)
-    throw new Error("Station locked");
-}
-
-function errorText(error: unknown) {
-  return error instanceof Error
-    ? error.message
-    : "Could not access the local clinic records.";
-}
+import { useEffect, useRef, useState } from "react";
+import { gameNames, sourceNames } from "./session";
+import type { Game, Side } from "./session";
+import { DisplayMonitor } from "./DisplayMonitor";
+import {
+  api,
+  checkReportAccess,
+  errorText,
+  playerToken,
+  StationError,
+  type Auth,
+  type Participant,
+  type Visit,
+  type DisplayState,
+} from "./station";
 
 export function StaffWorkspace({ onExit }: { onExit: () => void }) {
   const [auth, setAuth] = useState<Auth | null>(null);
@@ -70,9 +26,10 @@ export function StaffWorkspace({ onExit }: { onExit: () => void }) {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [remove, setRemove] = useState(false);
-  const [round, setRound] = useState<PracticeRound | null>(null);
+  const working = useRef(false);
+  const [localToken, setLocalToken] = useState("");
   const [display, setDisplay] = useState<DisplayState | null>(null);
-  const [finishing, setFinishing] = useState(false);
+
   const [savedVisits, setVisits] = useState<Visit[]>([]);
   const visits = savedVisits.filter((v) => v.participant === selected);
   const [loadedParticipant, setLoadedParticipant] = useState("");
@@ -84,18 +41,35 @@ export function StaffWorkspace({ onExit }: { onExit: () => void }) {
     if (session.authenticated) {
       setPeople(await api<Participant[]>("participants"));
       const active = await api<DisplayState | null>("display");
-      if (active && active.state !== "complete") setDisplay(active);
+      if (active && active.state !== "complete") {
+        setSelected(active.participant);
+        setLocalToken(playerToken(active.session));
+        setDisplay(active);
+      }
     }
   }
   async function act(work: () => Promise<void>) {
-    if (busy) return;
+    if (working.current) return;
+    working.current = true;
     setBusy(true);
     setError("");
     try {
       await work();
     } catch (err) {
+      if (
+        err instanceof StationError &&
+        err.status === 401 &&
+        auth?.authenticated
+      ) {
+        setAuth({ configured: true, authenticated: false });
+        setPeople([]);
+        setVisits([]);
+        setSelected("");
+        setDisplay(null);
+      }
       setError(errorText(err));
     } finally {
+      working.current = false;
       setBusy(false);
     }
   }
@@ -107,7 +81,7 @@ export function StaffWorkspace({ onExit }: { onExit: () => void }) {
     setRemove(false);
     setVisits([]);
     setLoadedParticipant("");
-    if (selected && !round)
+    if (selected && !display)
       api<Visit[]>("participants/" + selected)
         .then((rows) => {
           if (current) {
@@ -121,71 +95,58 @@ export function StaffWorkspace({ onExit }: { onExit: () => void }) {
     return () => {
       current = false;
     };
-  }, [selected, round, display]);
-  useEffect(() => {
-    if (!round || finishing) return;
-    let current = true,
-      writing = false;
-    const timer = window.setInterval(async () => {
-      if (writing) return;
-      writing = true;
-      try {
-        await api("sessions", "PUT", {
-          participant: selected,
-          record: round.record,
-          status: "playing",
-        });
-      } catch (err) {
-        if (current) setError("Progress could not be saved. " + errorText(err));
-      } finally {
-        writing = false;
-      }
-    }, 3000);
-    return () => {
-      current = false;
-      clearInterval(timer);
-    };
-  }, [round, selected, finishing]);
-
-  async function end() {
-    if (!round) return;
-    round.setPaused(true);
-    setFinishing(true);
+  }, [selected, display]);
+  async function launch(target: "workstation" | "display") {
+    if (!participant) return;
     await act(async () => {
-      await api("sessions", "PUT", {
-        participant: selected,
-        record: round.record,
-        status: "complete",
-      });
-      setFinishing(false);
-      setRound(null);
+      try {
+        if (target === "workstation") {
+          const result = await api<{ display: DisplayState; token: string }>(
+            "display",
+            "POST",
+            { participant: participant.id, game, target },
+          );
+          playerToken(result.display.session, result.token);
+          setLocalToken(result.token);
+          setDisplay(result.display);
+        } else {
+          setLocalToken("");
+          setDisplay(
+            await api<DisplayState>("display", "POST", {
+              participant: participant.id,
+              game,
+              target,
+            }),
+          );
+        }
+      } catch (err) {
+        if (err instanceof StationError && err.status === 409) await load();
+        throw err;
+      }
     });
   }
-
   if (display)
     return (
-      <DisplayMonitor initial={display} onClose={() => setDisplay(null)} />
-    );
-  if (round && participant)
-    return (
-      <div>
-        {finishing ? (
-          <div className="practice-panel">
-            <h1>Finish session</h1>
-            <button disabled={busy} onClick={end}>
-              Save final report
-            </button>
-          </div>
-        ) : (
-          <SensorSession
-            round={round}
-            modelProfile={participant.id}
-            side={participant.side}
-            end={end}
-          />
-        )}
-        {error && <p role="alert">{error}</p>}
-      </div>
+      <DisplayMonitor
+        key={display.session}
+        initial={display}
+        participant={participant}
+        localToken={localToken}
+        onToken={(token) => {
+          playerToken(display.session, token);
+          setLocalToken(token);
+        }}
+        onClose={() => {
+          setLocalToken("");
+          setDisplay(null);
+        }}
+        onLock={() => {
+          setDisplay(null);
+          setPeople([]);
+          setVisits([]);
+          setAuth({ configured: true, authenticated: false });
+        }}
+      />
     );
 
   return (
@@ -266,6 +227,8 @@ export function StaffWorkspace({ onExit }: { onExit: () => void }) {
             <label>
               Participant{" "}
               <select
+                aria-label="Participant"
+                disabled={busy}
                 value={selected}
                 onChange={(e) => setSelected(e.target.value)}
               >
@@ -378,6 +341,8 @@ export function StaffWorkspace({ onExit }: { onExit: () => void }) {
                 <label>
                   Game{" "}
                   <select
+                    aria-label="Game"
+                    disabled={busy}
                     value={game}
                     onChange={(e) => setGame(e.target.value as Game)}
                   >
@@ -391,6 +356,7 @@ export function StaffWorkspace({ onExit }: { onExit: () => void }) {
                 <label>
                   Input{" "}
                   <select
+                    aria-label="Input"
                     value={participant.protocol.source}
                     disabled={busy}
                     onChange={(e) => {
@@ -430,6 +396,7 @@ export function StaffWorkspace({ onExit }: { onExit: () => void }) {
                 <label>
                   Session length{" "}
                   <select
+                    aria-label="Session length"
                     value={participant.protocol.schedule ?? "short"}
                     disabled={busy}
                     onChange={(e) => {
@@ -451,40 +418,11 @@ export function StaffWorkspace({ onExit }: { onExit: () => void }) {
                 <button
                   className="primary"
                   disabled={busy}
-                  onClick={() =>
-                    act(async () => {
-                      const session = new PracticeRound(
-                        game,
-                        participant.protocol.source,
-                        participant.protocol.easy,
-                        participant.protocol.schedule ?? "short",
-                      );
-                      const started=await api<{harborBase?:number}>("sessions", "PUT", {
-                        participant: selected,
-                        record: session.record,
-                        status: "playing",
-                      });
-                      if (game==="keeper") session.record.harborBase=started.harborBase ?? 0;
-                      setRound(session);
-                      setFinishing(false);
-                    })
-                  }
+                  onClick={() => launch("workstation")}
                 >
                   Start supervised session
                 </button>
-                <button
-                  disabled={busy}
-                  onClick={() =>
-                    act(async () => {
-                      setDisplay(
-                        await api<DisplayState>("display", "POST", {
-                          participant: selected,
-                          game,
-                        }),
-                      );
-                    })
-                  }
-                >
+                <button disabled={busy} onClick={() => launch("display")}>
                   Pair a patient display
                 </button>
               </fieldset>
@@ -550,7 +488,7 @@ export function StaffWorkspace({ onExit }: { onExit: () => void }) {
                       <ReportButton
                         reader={{
                           name: participant.name,
-                    id: participant.id,
+                          id: participant.id,
                           assessments: participant.assessments,
                         }}
                         visit={v}

@@ -15,6 +15,7 @@ export function useHeadset(
   enabled: boolean,
   side: Side,
   modelProfile?: ModelProfile,
+  displayInput = false,
 ) {
   const [attempt, setAttempt] = useState(0);
   const [phase, setPhase] = useState<Phase>("connecting");
@@ -40,7 +41,7 @@ export function useHeadset(
     setMessage("Discovering Unicorn streams…");
     const local =
       location.hostname === "127.0.0.1" || location.hostname === "localhost";
-    const display = location.hash.startsWith("#display=");
+    const display = displayInput || location.hash.startsWith("#display=");
     if (!local && !display) {
       setPhase("error");
       setMessage(
@@ -168,7 +169,7 @@ export function useHeadset(
       score.current = null;
       ws.close();
     };
-  }, [enabled, attempt]);
+  }, [enabled, attempt, displayInput]);
 
   async function start(device: string, train: boolean, remember: boolean) {
     const ws = socket.current;

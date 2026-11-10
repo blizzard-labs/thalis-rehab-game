@@ -1,6 +1,7 @@
 """Single-use invitation and per-display session control for a supervised station."""
 
 from dataclasses import dataclass
+from datetime import datetime, timezone
 import json
 import secrets
 import time
@@ -39,6 +40,11 @@ class Display:
     revision: int = 0
     patient_paused: bool = False
     harbor_base: int = 0
+    target: str = "display"
+    invite_origin: str = ""
+    started: str | None = None
+    outcome: str | None = None
+    telemetry: dict | None = None
 
 
 class DisplayPairing:
@@ -55,10 +61,24 @@ class DisplayPairing:
             raise web.HTTPForbidden(text="Display authorization expired.")
         return d
 
+    @staticmethod
+    def connected(d):
+        return bool(d.last_seen and time.monotonic() - d.last_seen < 5)
+
+    @staticmethod
+    def issue_player(d, response_body, secure):
+        d.token = secrets.token_urlsafe(32)
+        d.last_seen = time.monotonic()
+        response = web.json_response({**response_body, "token": d.token})
+        response.set_cookie("nr_display", d.token, path="/api/display/eeg", httponly=True,
+                            secure=secure, samesite="Strict")
+        return response
+
     def register(self, app):
         app.router.add_post("/api/staff/display", self.create)
         app.router.add_get("/api/staff/display", self.monitor)
         app.router.add_post("/api/staff/display/control", self.control)
+        app.router.add_post("/api/staff/display/recover", self.recover)
         app.router.add_post("/api/display/claim", self.claim)
         app.router.add_post("/api/display/sync", self.sync)
 
@@ -69,12 +89,19 @@ class DisplayPairing:
         return {
             "session": d.session_id,
             "state": d.state,
+            "participant": d.participant,
+            "target": d.target,
+            "game": d.game, "side": d.side, "easy": d.easy,
+            "source": d.source, "schedule": d.schedule, "started": d.started,
+            "outcome": d.outcome, "revision": d.revision,
+            "expired": not d.token and time.monotonic() >= d.expires,
+            "telemetry": d.telemetry if self.connected(d) else None,
             "paired": bool(d.token),
             "patientPaused": d.patient_paused,
-            "connected": bool(d.last_seen and time.monotonic() - d.last_seen < 5),
+            "connected": self.connected(d),
             "url": (
-                self.origin + "/#display=" + d.code
-                if not d.token and d.state != "complete"
+                d.invite_origin + "/#display=" + d.code
+                if d.target == "display" and not d.token and d.state != "complete" and time.monotonic() < d.expires
                 else None
             ),
             "record": d.record,
@@ -89,6 +116,9 @@ class DisplayPairing:
         p = db.execute("SELECT * FROM participants WHERE id=?", (b.get("participant"),)).fetchone()
         if not p or b.get("game") not in GAMES:
             raise web.HTTPBadRequest(text="Invalid participant or game.")
+        target = b.get("target", "display")
+        if target not in ("display", "workstation"):
+            raise web.HTTPBadRequest(text="Choose a patient screen.")
         protocol = json.loads(p["protocol"])
         self.current = Display(
             p["id"],
@@ -100,9 +130,39 @@ class DisplayPairing:
             str(uuid4()),
             secrets.token_urlsafe(24),
             time.monotonic() + 600,
+            target=target,
+            invite_origin=(self.origin if self.origin.startswith("https://")
+                           else f"{request.scheme}://{request.host}"),
             harbor_base=keeper_work(db, p["id"]) if b["game"] == "keeper" else 0,
         )
+        # On the same computer, play can begin immediately without a QR claim.
+        if target == "workstation":
+            d = self.current
+            self.start(d)
+            return self.issue_player(d, {"display": self.status()}, request.secure)
         return web.json_response(self.status())
+
+    def start(self, d):
+        d.started = datetime.now(timezone.utc).isoformat()
+        initial = {"id": d.session_id, "started": d.started, "game": d.game,
+                   "sources": [d.source], "gentle": d.easy, "schedule": d.schedule,
+                   "elapsed": 0, "actions": 0, "rewards": 0, "intervals": [],
+                   "events": [], "measurements": {}}
+        d.record = self.save(self.database(), initial, d.participant, "playing")
+        d.state = "playing"
+        d.revision += 1
+
+    async def recover(self, request):
+        self.staff(request)
+        b = await request.json()
+        d = self.current
+        if not d or d.session_id != b.get("session") or d.target != "workstation" or d.state not in ("playing", "paused"):
+            raise web.HTTPConflict(text="This workstation run is no longer active.")
+        if self.connected(d):
+            raise web.HTTPConflict(text="The patient game is open in another window.")
+        d.state = "paused"
+        d.revision += 1
+        return self.issue_player(d, {}, request.secure)
 
     async def monitor(self, request):
         self.staff(request)
@@ -112,6 +172,7 @@ class DisplayPairing:
         d = self.current
         if d.record:
             self.save(self.database(), d.record, d.participant, status)
+        d.outcome = status if d.record else "cancelled" if not d.started else "interrupted"
         d.state = "complete"
 
     async def control(self, request):
@@ -127,7 +188,9 @@ class DisplayPairing:
             # Ask a connected screen to flush the last actions before finalization.
             if d.state in ("ending", "complete"):
                 return web.json_response(self.status())
-            if not d.last_seen or time.monotonic() - d.last_seen > 5:
+            if d.state == "waiting":
+                self.end("cancelled")
+            elif not self.connected(d):
                 self.end("interrupted")
             else:
                 d.state = "ending"
@@ -139,14 +202,15 @@ class DisplayPairing:
                     text="Request session end before finishing the saved record."
                 )
             self.end("interrupted")
-        elif (
-            d.token
-            and d.state not in ("ending", "complete")
-            and command in ("start", "pause", "resume")
-        ):
-            d.state = "paused" if command == "pause" else "playing"
+        elif command == "start" and d.state == "waiting" and d.token and self.connected(d):
+            self.start(d)
+            return web.json_response(self.status())
+        elif command == "pause" and d.state == "playing":
+            d.state = "paused"
+        elif command == "resume" and (d.state == "paused" or (d.state == "playing" and d.patient_paused)) and self.connected(d):
+            d.state = "playing"
         else:
-            raise web.HTTPBadRequest(text="The display is not ready for that action.")
+            raise web.HTTPConflict(text="The patient screen is not ready for that control.")
         d.revision += 1
         d.patient_paused = False
         return web.json_response(self.status())
@@ -162,18 +226,7 @@ class DisplayPairing:
             or not secrets.compare_digest(d.code, str(b.get("code", "")))
         ):
             raise web.HTTPForbidden(text="This invitation has expired or was already used.")
-        d.token = secrets.token_urlsafe(32)
-        d.last_seen = time.monotonic()
-        response = web.json_response({"token": d.token})
-        response.set_cookie(
-            "nr_display",
-            d.token,
-            path="/api/display/eeg",
-            httponly=True,
-            secure=request.secure,
-            samesite="Strict",
-        )
-        return response
+        return self.issue_player(d, {}, request.secure)
 
     async def sync(self, request):
         token = request.headers.get("Authorization", "").removeprefix("Bearer ")
@@ -181,6 +234,8 @@ class DisplayPairing:
         b = await request.json()
         d.last_seen = time.monotonic()
         r = b.get("record")
+        if r and d.state == "waiting":
+            raise web.HTTPConflict(text="Staff must start the session first.")
         if r and d.state != "complete":
             if (
                 not isinstance(r, dict)
@@ -192,16 +247,23 @@ class DisplayPairing:
             ):
                 raise web.HTTPForbidden(text="Session mismatch.")
             status = "complete" if b.get("finished") is True else "playing"
-            d.record = self.save(self.database(), r, d.participant, status)
+            d.record = self.save(self.database(), {**r, "started": d.started}, d.participant, status)
             if d.state == "playing" and b.get("revision") == d.revision:
                 d.patient_paused = b.get("paused") is True
+            monitor = b.get("telemetry")
+            if isinstance(monitor, dict) and monitor.get("phase") in ("setup", "play"):
+                d.telemetry = {key: str(monitor.get(key, ""))[:180] for key in ("phase", "camera", "eeg")}
+                for key in ("input", "cameraLevel", "eegLevel"):
+                    level = monitor.get(key)
+                    d.telemetry[key] = level if type(level) in (int, float) and 0 <= level <= 1 else None
             if status == "complete":
-                d.state = "complete"
+                d.state = d.outcome = "complete"
         return web.json_response(
             {
                 "session": d.session_id,
                 "state": d.state,
                 "revision": d.revision,
+                "started": d.started,
                 "patientPaused": d.patient_paused,
                 "game": d.game,
                 "side": d.side,

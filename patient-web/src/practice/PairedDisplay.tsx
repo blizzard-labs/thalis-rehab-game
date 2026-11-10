@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import "./practice.css";
+import type { LiveInput } from "./station";
 import { SensorSession } from "./SensorSession";
 import { gameNames, PracticeRound } from "./session";
 import type { Game, Side, Source, PracticeRecord } from "./session";
@@ -36,10 +37,15 @@ async function post(path: string, body: unknown, token?: string) {
   return res.json();
 }
 
-export function PairedDisplay() {
+export function PairedDisplay({
+  local,
+}: { local?: { session: string; token: string } } = {}) {
+  const telemetry = useRef<LiveInput | null>(null);
+
   const code = location.hash.slice("#display=".length);
-  const key = "nr-display-" + code;
+  const key = local ? "nr-workstation-" + local.session : "nr-display-" + code;
   const [token, setToken] = useState(() => {
+    if (local) return local.token;
     try {
       return sessionStorage.getItem(key) || "";
     } catch {
@@ -68,6 +74,7 @@ export function PairedDisplay() {
             paused: live.current?.paused,
             revision: revision.current,
             finished: ending.current,
+            telemetry: telemetry.current,
           },
           token,
         );
@@ -88,7 +95,10 @@ export function PairedDisplay() {
           ending.current = true;
           setFinishing(true);
         }
-        const recovering = !live.current && !!d.record;
+        const recovering =
+          !live.current &&
+          !!d.record &&
+          (d.record.elapsed > 0 || d.record.events.length > 0);
         if (d.state !== "waiting" && !live.current) {
           const r = d.record
             ? PracticeRound.restore(d.record, d.easy)
@@ -161,12 +171,14 @@ export function PairedDisplay() {
   };
   const done = snapshot?.state === "complete";
   return (
-    <div className="practice-app">
-      <header className="practice-nav">
-        <span className="brand">NeuroReach</span>
-        <span>Patient display</span>
-      </header>
-      <main className="practice-main">
+    <div className={local ? "station-player" : "practice-app"}>
+      {!local && (
+        <header className="practice-nav">
+          <span className="brand">NeuroReach</span>
+          <span>Patient display</span>
+        </header>
+      )}
+      <div className={local ? "station-game-body" : "practice-main"}>
         {error && <p role="alert">{error}</p>}
         {expired ? (
           <section className="practice-panel">
@@ -203,11 +215,13 @@ export function PairedDisplay() {
             round={round}
             side={snapshot.side}
             modelProfile={snapshot.session}
+            displayInput
+            monitor={telemetry}
             end={finish}
             lockedPause={snapshot.state === "paused" || !!error}
           />
         )}
-      </main>
+      </div>
     </div>
   );
 }
