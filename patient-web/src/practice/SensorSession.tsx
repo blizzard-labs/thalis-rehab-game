@@ -3,7 +3,7 @@ import { shoulder, withinNet } from "../reach/starGeometry";
 import { Play } from "./GameView";
 import { ReachSetup, type ReachCalibration } from "./ReachSetup";
 import { cameraStarTrial, reachProgress } from "./motion";
-import { useHeadset } from "./useHeadset";
+import { useHeadset, type ModelProfile } from "./useHeadset";
 import { useMotionCamera } from "./useMotionCamera";
 import type { PracticeRound, Side } from "./session";
 
@@ -12,11 +12,11 @@ export function SensorSession({
   side,
   end,
   lockedPause,
-  participant,
+  modelProfile,
 }: {
   round: PracticeRound;
   side: Side;
-  participant?: string;
+  modelProfile?: ModelProfile;
   end: () => void;
   lockedPause?: boolean;
 }) {
@@ -37,7 +37,7 @@ export function SensorSession({
     eegNeeded &&
       (!cameraNeeded || (!!calibration && (!pairedOars || !!otherReach))),
     side,
-    participant,
+    modelProfile,
   );
   useEffect(() => {
     if (eeg.calibration) round.record.calibration = eeg.calibration;

@@ -30,11 +30,11 @@ jobs:
       - working-directory: patient-web
         env:
           NEUROREACH_BROWSER: firefox
-        run: npm run test:e2e -- practice.spec.ts -g "guest grows|phone player|camera denial"
+        run: npm run test:e2e -- practice.spec.ts guest-handoff.spec.ts -g "guest grows|phone player|camera denial|the next guest|a guest tab"
       - working-directory: patient-web
         env:
           NEUROREACH_BROWSER: webkit
-        run: npm run test:e2e -- practice.spec.ts -g "guest grows|phone player|camera denial"
+        run: npm run test:e2e -- practice.spec.ts guest-handoff.spec.ts -g "guest grows|phone player|camera denial|the next guest|a guest tab"
       - uses: actions/upload-artifact@v4
         with:
           name: neuroreach-web

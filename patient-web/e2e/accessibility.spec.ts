@@ -25,6 +25,10 @@ test("core player screens have no automated WCAG A/AA findings at phone width", 
   await page.goto("/");
   await page.getByRole("heading", { name: "Choose a game" }).waitFor();
   await check();
+  await page.getByRole("button", { name: "Next guest" }).click();
+  await expect(page.getByRole("button", { name: "Keep this guest" })).toBeFocused();
+  await check();
+  await page.keyboard.press("Enter");
   await page.getByRole("button", { name: /Garden Grow/ }).click();
   await check();
   await page.getByRole("button", { name: "Start game" }).click();

@@ -202,6 +202,7 @@ export function PairedDisplay() {
           <SensorSession
             round={round}
             side={snapshot.side}
+            modelProfile={snapshot.session}
             end={finish}
             lockedPause={snapshot.state === "paused" || !!error}
           />

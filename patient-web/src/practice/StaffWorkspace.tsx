@@ -166,7 +166,7 @@ export function StaffWorkspace({ onExit }: { onExit: () => void }) {
         ) : (
           <SensorSession
             round={round}
-            participant={participant.id}
+            modelProfile={participant.id}
             side={participant.side}
             end={end}
           />

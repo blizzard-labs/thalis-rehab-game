@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { games, gameDetails } from "./catalog";
 import { LighthouseArt } from "../adventures/Lighthouse";
 import { keeperStory, keeperWork } from "../adventures/keeperStory";
@@ -8,31 +8,52 @@ import { duration, Garden, NightSky } from "./GameView";
 import {
   downloadRecord,
   gameNames,
-  historyStore,
   PracticeRound,
   sourceNames,
 } from "./session";
 import type { Game, PracticeRecord, Side, Source } from "./session";
+import {
+  GuestChanged,
+  clearGuestRecords,
+  currentGuest,
+  guestRecords,
+  nextGuest,
+  saveGuestRecord,
+} from "./guestHistory";
 import { StaffWorkspace } from "./StaffWorkspace";
 import { SensorSession } from "./SensorSession";
 import "./practice.css";
 
-function History({ onBack }: { onBack: () => void }) {
-  const [records, setRecords] = useState<PracticeRecord[]>([]);
+function History({
+  guest,
+  onBack,
+}: {
+  guest: string | null | undefined;
+  onBack: () => void;
+}) {
+  const [records, setRecords] = useState<PracticeRecord[] | null>(null);
   const [error, setError] = useState("");
   const [confirm, setConfirm] = useState(false);
   useEffect(() => {
-    historyStore<PracticeRecord[]>("readonly", (s) => s.getAll())
-      .then((rows) =>
-        setRecords(rows.sort((a, b) => b.started.localeCompare(a.started))),
-      )
-      .catch(() =>
-        setError("Saved sessions could not be opened on this browser."),
-      );
-  }, []);
+    if (!guest) return;
+    let active = true;
+    guestRecords(guest)
+      .then((rows) => {
+        if (active)
+          setRecords(rows.sort((a, b) => b.started.localeCompare(a.started)));
+      })
+      .catch(() => {
+        if (active)
+          setError("Saved sessions could not be opened on this browser.");
+      });
+    return () => {
+      active = false;
+    };
+  }, [guest]);
   async function clear() {
+    if (!guest) return;
     try {
-      await historyStore("readwrite", (s) => s.clear());
+      await clearGuestRecords(guest);
       setRecords([]);
       setConfirm(false);
     } catch {
@@ -44,9 +65,15 @@ function History({ onBack }: { onBack: () => void }) {
       <button onClick={onBack}>← Games</button>
       <h1>Saved sessions</h1>
       <p>Sessions you chose to keep in this browser.</p>
-      {!records.length && !error && <p>You haven’t saved a session yet.</p>}
+      {guest === null && (
+        <p role="alert">Saved sessions could not be opened on this browser.</p>
+      )}
+      {guest !== null && !records && !error && (
+        <p role="status">Opening saved sessions…</p>
+      )}
+      {records?.length === 0 && <p>You haven’t saved a session yet.</p>}
       <ul className="session-list">
-        {records.map((r) => (
+        {records?.map((r) => (
           <li key={r.id}>
             <span>
               <strong>{gameNames[r.game]}</strong>
@@ -58,7 +85,7 @@ function History({ onBack }: { onBack: () => void }) {
           </li>
         ))}
       </ul>
-      {records.length > 0 && (
+      {records && records.length > 0 && (
         <button onClick={confirm ? clear : () => setConfirm(true)}>
           {confirm ? "Confirm delete all sessions" : "Delete saved sessions"}
         </button>
@@ -72,9 +99,11 @@ function History({ onBack }: { onBack: () => void }) {
 }
 
 function Summary({
+  guest,
   record,
   onBack,
 }: {
+  guest?: string;
   record: PracticeRecord;
   onBack: () => void;
 }) {
@@ -82,10 +111,15 @@ function Summary({
   const [error, setError] = useState("");
   async function save() {
     try {
-      await historyStore("readwrite", (s) => s.put(record));
+      if (!guest) throw new Error("Storage unavailable");
+      await saveGuestRecord(guest, record);
       setSaved(true);
-    } catch {
-      setError("Storage is unavailable. You can still download this session.");
+    } catch (err) {
+      setError(
+        err instanceof GuestChanged
+          ? err.message
+          : "Storage is unavailable. You can still download this session.",
+      );
     }
   }
   return (
@@ -142,10 +176,12 @@ function Summary({
 
 function GameSetup({
   game,
+  guest,
   onBack,
   onStart,
 }: {
   game: Game;
+  guest: string | null | undefined;
   onBack: () => void;
   onStart: (
     source: Source,
@@ -160,9 +196,14 @@ function GameSetup({
   const [base, setBase] = useState<number | null>(null);
   const [historyError, setHistoryError] = useState(false);
   useEffect(() => {
-    if (game !== "keeper") return;
+    if (game !== "keeper" || guest === undefined) return;
+    if (guest === null) {
+      setHistoryError(true);
+      setBase(0);
+      return;
+    }
     let active = true;
-    historyStore<PracticeRecord[]>("readonly", (s) => s.getAll())
+    guestRecords(guest)
       .then((records) => {
         if (active) setBase(keeperWork(records));
       })
@@ -175,7 +216,7 @@ function GameSetup({
     return () => {
       active = false;
     };
-  }, [game]);
+  }, [game, guest]);
   return (
     <section className="practice-panel">
       <button onClick={onBack}>← Games</button>
@@ -261,11 +302,67 @@ function GameSetup({
 
 export function PracticeApp() {
   const [page, setPage] = useState<
-    "home" | "history" | "setup" | "play" | "summary" | "staff"
+    "home" | "history" | "setup" | "play" | "summary" | "staff" | "handoff"
   >("home");
   const [game, setGame] = useState<Game>("garden");
   const [side, setSide] = useState<Side>("right");
   const [round, setRound] = useState<PracticeRound | null>(null);
+  const [guest, setGuest] = useState<string | null>();
+  const activeGuest = useRef<string>();
+  const channel = useRef<BroadcastChannel | null>(null);
+  const [resetting, setResetting] = useState(false);
+  const [handoffError, setHandoffError] = useState("");
+  const [handoffComplete, setHandoffComplete] = useState(false);
+
+  const showGuest = useCallback((id: string) => {
+    if (activeGuest.current && activeGuest.current !== id) {
+      setRound(null);
+      setPage((current) => (current === "staff" ? current : "home"));
+      setHandoffError("");
+      setHandoffComplete(true);
+    }
+    activeGuest.current = id;
+    setGuest(id);
+  }, []);
+  useEffect(() => {
+    let mounted = true;
+    const refresh = () => {
+      void currentGuest()
+        .then((id) => {
+          if (mounted) showGuest(id);
+        })
+        .catch(() => {
+          if (mounted && !activeGuest.current) setGuest(null);
+        });
+    };
+    refresh();
+    if (typeof BroadcastChannel !== "undefined") {
+      channel.current = new BroadcastChannel("neuroreach-guest-handoff");
+      channel.current.onmessage = refresh;
+    }
+    window.addEventListener("focus", refresh);
+    window.addEventListener("pageshow", refresh);
+    return () => {
+      mounted = false;
+      channel.current?.close();
+      channel.current = null;
+      window.removeEventListener("focus", refresh);
+      window.removeEventListener("pageshow", refresh);
+    };
+  }, [showGuest]);
+  async function handOff() {
+    if (!guest || resetting) return;
+    setResetting(true);
+    try {
+      const id = await nextGuest(guest);
+      showGuest(id);
+      channel.current?.postMessage("changed");
+    } catch {
+      setHandoffError("Could not finish the handoff. Please try again.");
+    } finally {
+      setResetting(false);
+    }
+  }
   const back = () => {
     setRound(null);
     setPage("home");
@@ -287,6 +384,7 @@ export function PracticeApp() {
         {page === "home" && (
           <>
             <h1>Choose a game</h1>
+            {handoffComplete && <p role="status">Ready for the next guest.</p>}
             <p className="intro">
               Practice at your own pace. You can pause or finish at any time.
             </p>
@@ -296,6 +394,7 @@ export function PracticeApp() {
                   key={id}
                   className="game-card"
                   onClick={() => {
+                    setHandoffComplete(false);
                     setGame(id);
                     setPage("setup");
                   }}
@@ -324,10 +423,44 @@ export function PracticeApp() {
           </>
         )}
         {page === "staff" && <StaffWorkspace onExit={back} />}
-        {page === "history" && <History onBack={back} />}
+        {page === "history" && <History guest={guest} onBack={back} />}
+        {page === "handoff" && (
+          <section className="practice-panel">
+            <h1>Start the next guest’s turn?</h1>
+            <p>
+              This clears this browser’s saved guest sessions and lighthouse
+              progress, and disconnects the guest’s saved EEG calibration.
+              Download any sessions you want to keep first.
+            </p>
+            <div className="button-row">
+              <button
+                autoFocus
+                disabled={resetting}
+                onClick={() => setPage(round ? "summary" : "home")}
+              >
+                Keep this guest
+              </button>
+              <button
+                className="primary"
+                disabled={resetting || !guest}
+                onClick={handOff}
+              >
+                Clear and start next guest
+              </button>
+            </div>
+            {guest === null && (
+              <p role="alert">
+                Browser storage is unavailable. Open a new private window for
+                the next guest.
+              </p>
+            )}
+            {handoffError && <p role="alert">{handoffError}</p>}
+          </section>
+        )}
         {page === "setup" && (
           <GameSetup
             game={game}
+            guest={guest}
             onBack={back}
             onStart={(source, easy, arm, harborBase) => {
               setSide(arm);
@@ -342,15 +475,32 @@ export function PracticeApp() {
           <SensorSession
             round={round}
             side={side}
+            modelProfile={guest ? () => currentGuest(guest) : undefined}
             end={() => setPage("summary")}
           />
         )}
-        {page === "summary" && round && (
-          <Summary record={round.record} onBack={back} />
+        {(page === "summary" || page === "handoff") && round && (
+          <div hidden={page === "handoff"}>
+            <Summary
+              guest={guest ?? undefined}
+              record={round.record}
+              onBack={back}
+            />
+          </div>
         )}
       </main>
       <footer className="practice-foot">
         NeuroReach · Wellness &amp; engagement
+        {(page === "home" || page === "summary") && (
+          <button
+            onClick={() => {
+              setHandoffError("");
+              setPage("handoff");
+            }}
+          >
+            Next guest
+          </button>
+        )}
         {page === "home" &&
           ["127.0.0.1", "localhost"].includes(location.hostname) && (
             <button onClick={() => setPage("staff")}>Staff workspace</button>

@@ -423,31 +423,6 @@ export class PracticeRound {
   }
 }
 
-export async function historyStore<T>(
-  mode: IDBTransactionMode,
-  operation: (store: IDBObjectStore) => IDBRequest<T>,
-): Promise<T> {
-  return new Promise((resolve, reject) => {
-    const open = indexedDB.open("neuroreach-practice", 1);
-    open.onupgradeneeded = () =>
-      open.result.createObjectStore("rounds", { keyPath: "id" });
-    open.onerror = () => reject(open.error);
-    open.onsuccess = () => {
-      const db = open.result;
-      const tx = db.transaction("rounds", mode);
-      const request = operation(tx.objectStore("rounds"));
-      tx.oncomplete = () => {
-        db.close();
-        resolve(request.result);
-      };
-      tx.onabort = () => {
-        db.close();
-        reject(tx.error);
-      };
-    };
-  });
-}
-
 export function downloadRecord(record: PracticeRecord) {
   const url = URL.createObjectURL(
     new Blob([JSON.stringify(record, null, 2)], { type: "application/json" }),

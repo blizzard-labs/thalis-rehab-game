@@ -1,11 +1,16 @@
 import { useEffect, useRef, useState } from "react";
 import type { Side } from "./session";
 
+export type ModelProfile = string | (() => Promise<string>);
+
 type Device = { id: string; name: string };
 type Phase = "connecting" | "choose" | "calibrating" | "ready" | "error";
-const profileKey = "neuroreach-eeg-profile";
 
-export function useHeadset(enabled: boolean, side: Side, participant?: string) {
+export function useHeadset(
+  enabled: boolean,
+  side: Side,
+  modelProfile?: ModelProfile,
+) {
   const [attempt, setAttempt] = useState(0);
   const [phase, setPhase] = useState<Phase>("connecting");
   const [devices, setDevices] = useState<Device[]>([]);
@@ -16,6 +21,7 @@ export function useHeadset(enabled: boolean, side: Side, participant?: string) {
     synthetic: boolean;
   }>();
   const socket = useRef<WebSocket | null>(null);
+  const starting = useRef<WebSocket | null>(null);
   const score = useRef<{
     level: number;
     time: number;
@@ -135,28 +141,32 @@ export function useHeadset(enabled: boolean, side: Side, participant?: string) {
     };
   }, [enabled, attempt]);
 
-  function start(device: string, train: boolean, remember: boolean) {
+  async function start(device: string, train: boolean, remember: boolean) {
+    const ws = socket.current;
+    if (!ws || ws.readyState !== WebSocket.OPEN || starting.current === ws)
+      return;
+    starting.current = ws;
     let profile: string | null = null;
     if (remember) {
       try {
-        if (participant) profile = participant;
-        else {
-          profile = localStorage.getItem(profileKey) || crypto.randomUUID();
-          localStorage.setItem(profileKey, profile);
-        }
+        if (!modelProfile) throw new Error();
+        profile =
+          typeof modelProfile === "string"
+            ? modelProfile
+            : await modelProfile();
       } catch {
-        setMessage(
-          "This browser cannot save a model. Clear Remember calibration and try again.",
-        );
+        if (starting.current === ws) starting.current = null;
+        if (ws === socket.current)
+          setMessage(
+            "Could not open this player’s saved calibration. Return to the game menu or turn off model saving to continue.",
+          );
         return;
       }
     }
-    if (socket.current?.readyState !== WebSocket.OPEN) return;
+    if (socket.current !== ws || ws.readyState !== WebSocket.OPEN) return;
     setPhase("calibrating");
     setMessage("Connecting to the selected headset…");
-    socket.current.send(
-      JSON.stringify({ cmd: "start", device, side, train, profile }),
-    );
+    ws.send(JSON.stringify({ cmd: "start", device, side, train, profile }));
   }
   return {
     sampleMs: () => score.current?.sampleMs ?? null,
