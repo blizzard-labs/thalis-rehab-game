@@ -282,7 +282,7 @@ class CalibrationOrchestrator:
                 chunk, imu = eeg_inlet.get_chunk(max_samples=self.fs, timeout=min(remaining, 0.1))
                 if chunk.shape[1]:
                     motion.append(imu)
-                    gap |= eeg_inlet.last_chunk_gap
+                    gap |= eeg_inlet.last_chunk_gap or eeg_inlet.last_chunk_stale
             else:
                 chunk = eeg_inlet.get_eeg_chunk(max_samples=self.fs, timeout=min(remaining, 0.1))
             if chunk.shape[1] > 0:

@@ -19,7 +19,7 @@ import time
 from typing import List, Optional
 
 import numpy as np
-from pylsl import StreamInlet, resolve_byprop
+from pylsl import StreamInlet, local_clock, resolve_byprop
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +42,8 @@ _EEG_10_20_LABELS = {
 }
 
 _TIME_CORRECTION_REFRESH_S = 5.0
+_MAX_SAMPLE_AGE_S = 0.5
+_CLOCK_TOLERANCE_S = 0.125
 
 # Fixed g.tec Unicorn positional layout. Used as a fallback when a stream
 # carries no channel-label XML — the real Unicorn LSL bridge streams type
@@ -258,6 +260,7 @@ class EEGInlet:
         self._previous_counter = None
         self.last_sample_timestamp = None
         self.last_chunk_gap = False
+        self.last_chunk_stale = False
 
         # Time correction: refreshed at most every _TIME_CORRECTION_REFRESH_S.
         self._tc_lock = threading.Lock()
@@ -327,6 +330,9 @@ class EEGInlet:
         if self._valid_index is not None and np.any(arr[:, self._valid_index] != 1):
             self.last_chunk_gap = True
         self.last_sample_timestamp = stamps[-1]
+        # A continuous device counter also advances when an old backlog is replayed.
+        corrected = self.last_sample_timestamp + self.get_time_correction()
+        self.last_chunk_stale = not -_CLOCK_TOLERANCE_S <= local_clock() - corrected < _MAX_SAMPLE_AGE_S
         eeg = arr[:, self._eeg_idx].T.copy() * self._uv_scale
         imu = arr[:, self._imu_idx].T.copy()
         return eeg, imu

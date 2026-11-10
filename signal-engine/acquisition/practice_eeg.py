@@ -66,6 +66,11 @@ def baseline(inlet, stop, emit):
                     "EEG signal lost during calibration. Reconnect the headset and retry."
                 )
             continue
+        if inlet.last_chunk_stale:
+            pending, motion, count = [], [], 0
+            if time.monotonic() - last_sample > 3:
+                raise ValueError("EEG samples are delayed during calibration. Check the stream and retry.")
+            continue
         last_sample = time.monotonic()
         if inlet.last_chunk_gap:
             pending, motion, count = [], [], 0
@@ -219,8 +224,12 @@ def run(stream, options, stop, emit):
                 if time.monotonic() - last_sample > 3:
                     raise ValueError("EEG signal lost. Check the headset and reconnect.")
                 continue
-            last_sample = time.monotonic()
-            if inlet.last_chunk_gap or not np.isfinite(chunk).all():
+            if inlet.last_chunk_stale:
+                if time.monotonic() - last_sample > 3:
+                    raise ValueError("EEG samples are delayed. Check the stream and reconnect.")
+            else:
+                last_sample = time.monotonic()
+            if inlet.last_chunk_stale or inlet.last_chunk_gap or not np.isfinite(chunk).all():
                 raw, filtered, imu_buffer = (
                     RingBuffer(8, 1000),
                     RingBuffer(8, 1000),
@@ -228,7 +237,8 @@ def run(stream, options, stop, emit):
                 )
                 engine.classifier_input = raw
                 filters.reset()
-                emit({"type": "score", "level": None, "message": "Waiting for continuous EEG"})
+                message = "Waiting for fresh EEG" if inlet.last_chunk_stale else "Waiting for continuous EEG"
+                emit({"type": "score", "level": None, "message": message})
                 continue
             raw.push(chunk)
             imu_buffer.push(imu)

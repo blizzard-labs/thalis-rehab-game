@@ -3,6 +3,10 @@ import type { Side } from "./session";
 
 export type ModelProfile = string | (() => Promise<string>);
 
+const maxSampleAgeMs = 500;
+// Clock probes accept up to 250 ms round trip, so allow half that in forward skew.
+const clockToleranceMs = 125;
+
 type Device = { id: string; name: string };
 type Phase = "connecting" | "choose" | "calibrating" | "ready" | "error";
 
@@ -24,8 +28,8 @@ export function useHeadset(
   const starting = useRef<WebSocket | null>(null);
   const score = useRef<{
     level: number;
-    time: number;
-    sampleMs: number | null;
+    expiresAt: number;
+    sampleMs: number;
   } | null>(null);
   useEffect(() => {
     if (!enabled) return;
@@ -50,6 +54,7 @@ export function useHeadset(
     let closed = false,
       failed = false;
     let offset: number | null = null;
+    let lastAcceptedStamp = -Infinity;
     const fail = (reason: string) => {
       failed = true;
       score.current = null;
@@ -84,7 +89,7 @@ export function useHeadset(
     void syncClock();
     const clockTimer = window.setInterval(syncClock, 30000);
     ws.onmessage = ({ data }) => {
-      if (closed) return;
+      if (closed || failed) return;
       const event = JSON.parse(data);
       if (event.type === "devices") {
         setPhase("choose");
@@ -107,16 +112,32 @@ export function useHeadset(
           synthetic: event.synthetic === true,
         });
       } else if (event.type === "score") {
-        score.current = Number.isFinite(event.level)
-          ? {
-              level: event.level,
-              time: performance.now(),
-              sampleMs:
-                offset !== null && Number.isFinite(event.sampleMs)
-                  ? event.sampleMs - offset
-                  : null,
-            }
-          : null;
+        score.current = null;
+        if (!Number.isFinite(event.level)) {
+          setMessage(event.message);
+          return;
+        }
+        if (offset === null) {
+          setMessage("Synchronizing the display with the EEG station…");
+          return;
+        }
+        const sampleMs = event.sampleMs - offset;
+        const age = Date.now() - sampleMs;
+        if (
+          !Number.isFinite(event.sampleMs) ||
+          age < -clockToleranceMs ||
+          age >= maxSampleAgeMs ||
+          event.sampleMs <= lastAcceptedStamp
+        ) {
+          setMessage("Waiting for fresh EEG from the headset…");
+          return;
+        }
+        lastAcceptedStamp = event.sampleMs;
+        score.current = {
+          level: event.level,
+          sampleMs,
+          expiresAt: performance.now() + maxSampleAgeMs - Math.max(0, age),
+        };
         setMessage(event.message);
       } else if (event.type === "error") fail(event.message);
     };
@@ -177,7 +198,7 @@ export function useHeadset(
     start,
     retry: () => setAttempt((i) => i + 1),
     latest: () =>
-      score.current && performance.now() - score.current.time < 500
+      score.current && performance.now() < score.current.expiresAt
         ? score.current.level
         : null,
   };
