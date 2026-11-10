@@ -3,12 +3,14 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import { GameModeSelect } from "./GameModeSelect";
 
 describe("GameModeSelect", () => {
-  it("shows the completion prompt and three game modes", () => {
+  it("shows the completion prompt and all five game modes", () => {
     render(<GameModeSelect onConfirm={() => {}} />);
     expect(screen.getByText(/great work/i)).toBeInTheDocument();
     expect(screen.getByText(/choose a game mode to continue/i)).toBeInTheDocument();
     expect(screen.getByTestId("mode-garden")).toBeInTheDocument();
     expect(screen.getByTestId("mode-river")).toBeInTheDocument();
+    expect(screen.getByTestId("mode-fruit")).toBeInTheDocument();
+    expect(screen.getByTestId("mode-keeper")).toBeInTheDocument();
     expect(screen.getByTestId("mode-stars")).toBeInTheDocument();
   });
 

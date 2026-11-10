@@ -15,7 +15,7 @@ export const sourceNames = {
   blended: "Camera + EEG",
 };
 
-export type CameraStarFrame = {
+export type CameraHoldFrame = {
   time: number | null;
   cleared: boolean;
   nearTarget: boolean;
@@ -40,6 +40,7 @@ export interface PracticeRecord {
   >;
   feedback?: { count: number; p95Ms: number; buckets?: Record<number, number> };
   schedule?: "short" | "clinic";
+  harborBase?: number;
   channel?: Channel;
   rowing?: "single" | "paired";
   garden?: { next: Seed; bed: Seed[]; goal?: number };
@@ -162,9 +163,16 @@ export class PracticeRound {
       this.record.game === "fruit" && this.record.actions > this.record.rewards
     );
   }
+  get rowDistance() {
+    const remaining = Math.max(0, 1 - this.elapsedSinceReward / 0.85);
+    return Math.max(0, this.record.rewards - remaining * remaining);
+  }
   get strokePhase() {
     if (!this.record.rewards || this.elapsedSinceReward >= 0.85) return 0;
     return Math.sin((Math.PI * this.elapsedSinceReward) / 0.85);
+  }
+  get activationThreshold() {
+    return this.threshold;
   }
   get effortReach() {
     return Math.min(1, this.level / this.threshold);
@@ -219,7 +227,7 @@ export class PracticeRound {
     dt: number,
     observation: number | null,
     onTarget = true,
-    cameraStar?: CameraStarFrame | null,
+    cameraHold?: CameraHoldFrame | null,
   ) {
     if (this.paused || this.scheduleFinished) return;
     dt = Math.min(0.25, Math.max(0, dt));
@@ -268,11 +276,11 @@ export class PracticeRound {
     measurement.weightedLevel += this.level * dt;
     if (this.carryingFruit) {
       const relaxed = this.level < this.threshold * 0.65;
-      const deposited = cameraStar
-        ? cameraStar.atBasket &&
+      const deposited = cameraHold
+        ? cameraHold.atBasket &&
           (this.source === "camera" ||
-            (cameraStar.neural !== null &&
-              cameraStar.neural < this.threshold * 0.65))
+            (cameraHold.neural !== null &&
+              cameraHold.neural < this.threshold * 0.65))
         : relaxed;
       if (deposited) {
         this.reward();
@@ -280,8 +288,8 @@ export class PracticeRound {
       }
       return;
     }
-    if (cameraStar) {
-      this.holdCameraStar(cameraStar, onTarget);
+    if (cameraHold) {
+      this.holdCameraInput(cameraHold, onTarget);
     } else {
       if (this.level < this.threshold * 0.65) this.released = true;
       const engaged = this.level >= this.threshold && this.released && onTarget;
@@ -351,7 +359,7 @@ export class PracticeRound {
       );
   }
 
-  private holdCameraStar(frame: CameraStarFrame, onTarget: boolean) {
+  private holdCameraInput(frame: CameraHoldFrame, onTarget: boolean) {
     const previous = this.cameraFrameTime;
     if (frame.time === null) {
       this.clearHold();

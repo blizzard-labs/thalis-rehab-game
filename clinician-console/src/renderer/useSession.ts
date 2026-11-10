@@ -40,7 +40,7 @@ export function useSession() {
     return () => { current = false; };
   }, [nr]);
 
-  const open = useCallback(async (base: Omit<SessionInfo, "source">) => {
+  const open = useCallback(async (base: Omit<SessionInfo, "source" | "harborBase"> & {keeperProfile?:string}) => {
     if (!nr) return;
     const r = await nr.open({ ...base, source: sourceRef.current });
     setCode(r.code);

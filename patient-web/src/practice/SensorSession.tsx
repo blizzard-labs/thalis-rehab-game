@@ -86,6 +86,16 @@ export function SensorSession({
         stars={directional}
         onReady={secondArm ? setOtherReach : setCalibration}
       >
+        {pairedOars && (
+          <button
+            onClick={() => {
+              round.record.rowing = "single";
+              setRowing("single");
+            }}
+          >
+            Continue with one arm
+          </button>
+        )}
         {source === "blended" && (
           <button onClick={() => switchInput("eeg")}>
             Continue with EEG only
@@ -178,7 +188,11 @@ export function SensorSession({
     const rest = calibration?.rest;
     const directions = calibration?.directions;
     const reach = directions?.[0];
-    const frame = cameraNeeded && directional ? camera.tracked() : null;
+    const cameraStroke =
+      cameraNeeded &&
+      (round.record.game === "river" || round.record.game === "keeper");
+    const frame =
+      cameraNeeded && (directional || cameraStroke) ? camera.tracked() : null;
     const trial =
       cameraNeeded && rest && directions && directional
         ? cameraStarTrial(
@@ -191,7 +205,7 @@ export function SensorSession({
             round.record.game === "fruit" ? -1 : round.record.rewards - 1,
           )
         : null;
-    const point = camera.latest();
+    const point = cameraStroke ? (frame?.point ?? null) : camera.latest();
     let movement = trial
       ? trial.level
       : rest && reach && point
@@ -210,17 +224,24 @@ export function SensorSession({
             : Math.min(movement, otherLevel);
     }
     const aim = trial?.aim ?? null;
-    const onTarget = trial?.onTarget ?? true;
+    const reached = movement !== null && movement >= round.activationThreshold;
+    const onTarget = trial?.onTarget ?? (!cameraStroke || reached);
     const neural = eegNeeded ? eeg.latest() : null;
-    const cameraStar = trial && {
-      time: frame?.time ?? null,
-      cleared: trial.cleared,
-      nearTarget: trial.nearTarget,
-      atBasket: !!trial.aim.wrist && withinNet(trial.aim.wrist, shoulder),
-      neural,
-    };
+    const cameraHold =
+      trial || cameraStroke
+        ? {
+            time: frame?.time ?? null,
+            cleared:
+              trial?.cleared ??
+              (movement !== null &&
+                movement < round.activationThreshold * 0.65),
+            nearTarget: trial?.nearTarget ?? reached,
+            atBasket: !!aim?.wrist && withinNet(aim.wrist, shoulder),
+            neural,
+          }
+        : null;
     if (source === "camera")
-      return { level: movement, aim, onTarget, cameraStar };
+      return { level: movement, aim, onTarget, cameraHold };
     round.inputSampleMs =
       neural !== null && (source !== "blended" || movement !== null)
         ? eeg.sampleMs()
@@ -231,7 +252,7 @@ export function SensorSession({
           ? null
           : 0.6 * neural + 0.4 * movement
         : neural;
-    return { level, aim, onTarget, cameraStar };
+    return { level, aim, onTarget, cameraHold };
   };
   const status = [cameraNeeded && camera.status, eegNeeded && eeg.message]
     .filter(Boolean)

@@ -13,6 +13,9 @@ export function LinkedAdventure({
   store,
   stats,
   onEnd,
+  harborBase,
+  saveKeeper,
+  keeperError,
 }: {
   game: Game;
   side: Side;
@@ -20,11 +23,22 @@ export function LinkedAdventure({
   store: ScoreStore;
   stats: SessionStats;
   onEnd: () => void;
+  harborBase?: number;
+  saveKeeper: (total: number) => void;
+  keeperError: string;
 }) {
-  const [round] = useState(() => new PracticeRound(game, "eeg", true));
+  const [round] = useState(() => {
+    const r = new PracticeRound(game, "eeg", true);
+    if (game === "keeper") r.record.harborBase = harborBase ?? 0;
+    return r;
+  });
   const counted = useRef(0);
+  const wasResting = useRef(false);
   useEffect(() => {
-    round.setPaused(paused);
+    if (paused) {
+      wasResting.current = round.paused;
+      round.setPaused(true);
+    } else if (!wasResting.current) round.setPaused(false);
   }, [round, paused]);
   function updateStats(seconds: number, level: number | null) {
     stats.accumulate(
@@ -33,6 +47,8 @@ export function LinkedAdventure({
     );
     if (counted.current < round.record.rewards) {
       stats.incrementTrials();
+      if (game === "keeper" && harborBase !== undefined)
+        saveKeeper((round.record.harborBase ?? 0) + round.record.rewards);
       counted.current = round.record.rewards;
     }
   }
@@ -43,6 +59,14 @@ export function LinkedAdventure({
         side={side}
         lockedPause={paused}
         sourceLabel="Clinician signal"
+        status={
+          game === "keeper"
+            ? keeperError ||
+              (harborBase === undefined
+                ? "Story progress is available for this visit."
+                : undefined)
+            : undefined
+        }
         onTick={updateStats}
         onEnd={onEnd}
         observation={() => {
@@ -51,10 +75,20 @@ export function LinkedAdventure({
             level: frame ? frame.intentScore / 100 : null,
             aim: null,
             onTarget: true,
-            cameraStar: null,
+            cameraHold: null,
           };
         }}
-      />
+      >
+        {game === "keeper" && keeperError && (
+          <button
+            onClick={() =>
+              saveKeeper((round.record.harborBase ?? 0) + round.record.rewards)
+            }
+          >
+            Retry saving story
+          </button>
+        )}
+      </Play>
     </div>
   );
 }

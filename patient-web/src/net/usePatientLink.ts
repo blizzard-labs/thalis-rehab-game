@@ -8,6 +8,21 @@ import { config } from "../config";
 import type { SignalingMessage } from "./signaling";
 import type { PatientCheckpoint } from "./checkpoint";
 
+// Only one step is acknowledged at a time. Keep the latest target so dropped
+// acknowledgments can be replayed from the workstation's next pairing snapshot.
+function flushKeeper(
+  client: ReturnType<typeof createLanClient> | null,
+  saved?: number,
+  target?: number | null,
+) {
+  if (!client || saved === undefined || target == null || target <= saved) return;
+  try {
+    client.send(JSON.stringify({ type: "keeper-progress", total: saved + 1 }));
+  } catch {
+    // A closing socket retries from onPaired.
+  }
+}
+
 export type PatientLink = {
   store: ScoreStore;
   conn: ConnectionState;
@@ -18,6 +33,8 @@ export type PatientLink = {
   ended: boolean;
   wristTargets: Partial<Record<JointId,{x:number;y:number}>>;
   romTargets: Partial<Record<string, number>> | null;
+  saveKeeper: (total: number) => void;
+  keeperError: string;
   notify: (checkpoint: PatientCheckpoint) => void;
   sendSignaling: (msg: SignalingMessage) => void;
   subscribeSignaling: (fn: (msg: SignalingMessage) => void) => void;
@@ -42,6 +59,8 @@ export function usePatientLink(
   const storeRef = useRef(new ScoreStore());
   const [conn, setConn] = useState<ConnectionState>("connecting");
   const [session, setSession] = useState<PairedSession | null>(null);
+  const pendingKeeper = useRef<number | null>(null);
+  const [keeperError, setKeeperError] = useState("");
   const [error, setError] = useState<string | null>(null);
   const endedRef = useRef(false);
   const [paused, setPaused] = useState(false);
@@ -55,6 +74,8 @@ export function usePatientLink(
   const signalingSubRef = useRef<((m: SignalingMessage) => void) | null>(null);
 
   useEffect(() => {
+    pendingKeeper.current = null;
+    setKeeperError("");
     let stopped = false;
     const storageKey = "neuroreach-pair-" + code;
     let resumeToken: string | null = null;
@@ -84,6 +105,11 @@ export function usePatientLink(
         onPaired: (s) => {
           attempt = 0;
           setSession(s);
+          if (s.harborBase !== undefined && pendingKeeper.current !== null && pendingKeeper.current <= s.harborBase) {
+            pendingKeeper.current = null;
+          }
+          flushKeeper(client, s.harborBase, pendingKeeper.current);
+          setKeeperError("");
           setError(null);
           setConn("open");
         },
@@ -103,6 +129,19 @@ export function usePatientLink(
             if (typeof td === "number" && Number.isFinite(td)) out[joint] = td;
           }
           setWristTargets(wrists); setRomTargets(out);
+        },
+        onKeeper: (total) => {
+          if (total === null) {
+            setKeeperError("The workstation could not save this story step.");
+            return;
+          }
+          setKeeperError("");
+          setSession(s => s ? { ...s, harborBase: total } : s);
+          if (pendingKeeper.current !== null && pendingKeeper.current > total) {
+            flushKeeper(client, total, pendingKeeper.current);
+          } else {
+            pendingKeeper.current = null;
+          }
         },
         onError: (reason) => setError(reason),
         onSignaling: (m) => signalingSubRef.current?.(m),
@@ -164,6 +203,11 @@ export function usePatientLink(
     paused, ended,
     wristTargets, romTargets,
     notify,
+    keeperError,
+    saveKeeper: (total: number) => {
+      pendingKeeper.current = total;
+      if (conn === "open") flushKeeper(clientRef.current, session?.harborBase, total);
+    },
     sendSignaling,
     subscribeSignaling,
   };

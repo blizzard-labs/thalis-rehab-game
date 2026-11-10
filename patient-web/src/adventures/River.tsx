@@ -1,3 +1,4 @@
+import { useLandscape } from "./useLandscape";
 import { useId, useRef } from "react";
 import type { Side } from "../practice/session";
 
@@ -24,9 +25,69 @@ function Heron() {
   );
 }
 
+function RiverSighting({ channel, leg }: { channel: Channel; leg: number }) {
+  if (channel === "stone") {
+    if (leg === 1)
+      return (
+        <g fill="#8d7662">
+          <path d="M-64 8v-37l128-5V8H33v-10a29 29 0 0 0-58 0V8Z" />
+          <path d="m-69-31 139-6v6l-139 6Z" fill="#c5ac84" />
+        </g>
+      );
+    if (leg === 3)
+      return (
+        <g>
+          <path d="m-43 6 19-15 22 4 20-11 29 15Z" fill="#7f8d84" />
+          <path d="M-8-9q15-24 25-11 5 10-9 13Z" fill="#765747" />
+          <circle cx="19" cy="-20" r="6" fill="#8c6d58" />
+        </g>
+      );
+    return (
+      <g fill={leg === 2 ? "#ab7758" : "#828479"}>
+        <path d="m-36 5 11-24 25-3L16 5Z" />
+        <path d="m-22-20 9-17 19 2 4 13Z" />
+        <path d="m-10-37 8-11 12 11Z" />
+      </g>
+    );
+  }
+  if (leg === 1) return <Heron />;
+  if (leg === 2)
+    return (
+      <g stroke="#77573d" strokeWidth="4" fill="none">
+        <circle r="22" />
+        {[0, 45, 90, 135].map((a) => (
+          <path key={a} d="M-20 0h40" transform={`rotate(${a})`} />
+        ))}
+      </g>
+    );
+  if (leg === 3)
+    return (
+      <g>
+        <path d="m-31 4 52-10" stroke="#72583e" strokeWidth="4" />
+        <path d="m-19-4 14-15 19 4 8 9-23 5Z" fill="#437689" />
+        <circle cx="14" cy="-17" r="8" fill="#457c8e" />
+        <path d="m21-18 15 4-15 1Z" fill="#a97642" />
+      </g>
+    );
+  return (
+    <g>
+      {[0, 1, 2].map((i) => (
+        <g
+          key={i}
+          transform={`translate(${i * 20} ${(i % 2) * 3}) scale(${i === 0 ? 1 : 0.64})`}
+        >
+          <path d="M-18 0q9-11 23-4l4-10 5 2-1 14Q0 13-18 0Z" fill="#dbd6b8" />
+          <path d="m13-12 8 3-8 2Z" fill="#c7954a" />
+        </g>
+      ))}
+    </g>
+  );
+}
+
 export function RiverArt({
   strokes = 0,
   phase = 0,
+  distance = strokes,
   side = "right",
   paired = false,
   channel = "reed",
@@ -34,20 +95,22 @@ export function RiverArt({
 }: {
   strokes?: number;
   phase?: number;
+  distance?: number;
   side?: Side;
   paired?: boolean;
   channel?: Channel;
   onPull?: () => void;
 }) {
+  const landscape = useLandscape(480, 465);
   const id = useId(),
     start = useRef<{ id: number; y: number } | null>(null);
   const stone = channel === "stone";
-  const travel = (strokes + phase) * 18;
+  const travel = distance * 38;
   const bankX = -(travel % 960);
   return (
     <svg
       className="adventure-art river-art"
-      viewBox="0 0 960 460"
+      {...landscape}
       role="img"
       aria-label={`Rowboat at ${landingName(channel, strokes)}`}
       onPointerDown={(e) => {
@@ -71,11 +134,25 @@ export function RiverArt({
       }}
     >
       <defs>
-        <linearGradient id={id + "sky"} x2="0" y2="1">
+        <linearGradient
+          id={id + "sky"}
+          gradientUnits="userSpaceOnUse"
+          x1="0"
+          y1="0"
+          x2="0"
+          y2="265"
+        >
           <stop stopColor="#edc89a" />
           <stop offset="1" stopColor="#fff0c7" />
         </linearGradient>
-        <linearGradient id={id + "water"} x2="0.2" y2="1">
+        <linearGradient
+          id={id + "water"}
+          gradientUnits="userSpaceOnUse"
+          x1="0"
+          y1="215"
+          x2="25"
+          y2="540"
+        >
           <stop stopColor="#8cbaa7" />
           <stop offset=".6" stopColor="#408a89" />
           <stop offset="1" stopColor="#27666e" />
@@ -140,7 +217,7 @@ export function RiverArt({
           />
         </g>
       </defs>
-      <rect width="960" height="460" fill={`url(#${id}sky)`} />
+      <rect y="-1400" width="960" height="3000" fill={`url(#${id}sky)`} />
       <circle cx="706" cy="88" r="42" fill="#fff1bb" />
       <path
         d="m0 169 109-57 88 35 134-76 114 84 140-72 89 47 101-66 185 101v65H0Z"
@@ -150,7 +227,7 @@ export function RiverArt({
         d="m0 181 121-45 132 47 176-71 125 61 130-53 150 47 126-38v90H0Z"
         fill="#869e8e"
       />
-      <rect y="216" width="960" height="244" fill={`url(#${id}water)`} />
+      <rect y="216" width="960" height="1500" fill={`url(#${id}water)`} />
       <g transform={`translate(${bankX} 0)`}>
         <use href={"#" + id + "bank"} />
         <use x="960" href={"#" + id + "bank"} />
@@ -165,9 +242,8 @@ export function RiverArt({
           opacity=".55"
         />
       ))}
-      <g transform={`translate(${120 - (travel % 140) * 0.3} 252)`}>
-        <path d="m-48 3 32-9 42 4 16 8Z" fill="#7f8972" />
-        <Heron />
+      <g transform={`translate(${650 - (distance % 4) * 65} 234)`}>
+        <RiverSighting channel={channel} leg={Math.floor(strokes / 4) % 4} />
       </g>
       <g transform={`translate(475 ${307 + phase * 4})`}>
         <ellipse cx="0" cy="58" rx="126" ry="10" fill="#245e64" opacity=".5" />

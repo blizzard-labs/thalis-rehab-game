@@ -355,7 +355,7 @@ WebRTC** to the sidecar for paired sessions (transport only — no `kinematic_sc
 - **PixiJS deferred** — all scenes are React + SVG/CSS.
 - **No adaptive difficulty in Garden** — `engagementThreshold` is a fixed prop (spec §9.4 staircase not
   wired); `SessionStats.incrementTrials` unwired (no trial counting in free-form garden play).
-- **River Rowing** and **Lighthouse story mode** not built (menu placeholders).
+- **River Rowing, Fruit Picking and Lighthouse Keeper** are playable in the patient app and paired game selector. See the localhost verification guide for input and story-progress coverage.
 - **Remote gameplay** — scenes read `localhost:8765`; not yet driven by the paired LAN socket.
 
 ### 🔜 Tests still lined up

@@ -6,6 +6,8 @@ import {
   type Side,
 } from "../practice/session";
 import type { CameraAim } from "../practice/StarPlay";
+import { LighthouseArt } from "./Lighthouse";
+import { keeperStory } from "./keeperStory";
 import { OrchardArt, fruitName } from "./Orchard";
 import { RiverArt, landingName } from "./River";
 import "./adventures.css";
@@ -67,6 +69,25 @@ export function AdventurePlay({
           ? "Imagine reaching for the ripe fruit, then relax."
           : "Guide your hand to the ripe fruit and hold briefly.";
   }
+  const keeper = game === "keeper";
+  const work = (round.record.harborBase ?? 0) + rewards;
+  const story = keeperStory(work);
+  if (keeper)
+    cue = manual
+      ? story.cue
+      : round.needsRest
+        ? "Relax before the next task."
+        : round.source === "eeg"
+          ? "Imagine moving your hand to help the keeper."
+          : "Reach to help the keeper, then rest.";
+  if (round.celebrating) {
+    if (game === "river" && rewards % 4 === 0)
+      cue = `Landfall at ${landingName(channel, rewards)}!`;
+    if (fruit && !round.carryingFruit && rewards % 6 === 0)
+      cue = `Harvest basket ${rewards / 6} is full!`;
+    if (keeper && work > 12 && work % 3 === 0)
+      cue = `${keeperStory(work - 1).ship} is safely home.`;
+  }
   return (
     <section className="live-game adventure" data-paused={round.paused}>
       <header className="game-heading">
@@ -84,7 +105,18 @@ export function AdventurePlay({
       <p className="game-cue" role="status">
         {round.paused ? "Paused" : cue}
       </p>
-      {fruit ? (
+      {keeper ? (
+        <div className="adventure-scene keeper-stage">
+          <LighthouseArt
+            work={work}
+            effort={phase}
+            onWork={manual && !round.paused ? pull : undefined}
+          />
+          <span className="scene-caption">
+            {story.title} · {story.step + 1} of 3
+          </span>
+        </div>
+      ) : fruit ? (
         <div className="adventure-scene orchard-stage">
           <OrchardArt
             count={rewards}
@@ -107,6 +139,7 @@ export function AdventurePlay({
       ) : (
         <div className="adventure-scene river-stage">
           <RiverArt
+            distance={round.rowDistance}
             strokes={rewards}
             phase={phase}
             side={side}
@@ -121,7 +154,7 @@ export function AdventurePlay({
         </div>
       )}
       <footer className="game-dock adventure-dock">
-        {!fruit && (
+        {game === "river" && (
           <fieldset className="route-choices" disabled={round.paused}>
             <legend>Choose your channel</legend>
             {(["reed", "stone"] as const).map((c) => (
@@ -138,6 +171,12 @@ export function AdventurePlay({
             ))}
           </fieldset>
         )}
+        {keeper && (
+          <div className="keeper-log" aria-live="polite">
+            <strong>Keeper’s log</strong> · {story.built}/12 repairs ·{" "}
+            {story.shipsHome} {story.shipsHome === 1 ? "boat" : "boats"} home
+          </div>
+        )}
         <div className="button-row">
           {manual && (
             <button
@@ -149,11 +188,25 @@ export function AdventurePlay({
               }}
               onClick={pull}
             >
-              {fruit
-                ? round.carryingFruit
-                  ? "Place in basket"
-                  : "Pick"
-                : "Row"}
+              {!keeper && (
+                <span aria-hidden="true">
+                  {fruit ? (round.carryingFruit ? "🧺 " : "🍎 ") : "🚣 "}
+                </span>
+              )}
+              {keeper ? (
+                <>
+                  <span aria-hidden="true">{story.icon} </span>
+                  {story.action}
+                </>
+              ) : fruit ? (
+                round.carryingFruit ? (
+                  "Place in basket"
+                ) : (
+                  "Pick"
+                )
+              ) : (
+                "Row"
+              )}
             </button>
           )}
           <button

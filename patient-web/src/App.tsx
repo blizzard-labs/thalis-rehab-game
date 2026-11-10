@@ -94,10 +94,22 @@ function ClinicApp() {
             onEnd={() => setView("summary")}
           />
         );
+      case "keeper":
       case "fruit":
       case "river":
-        return <LinkedAdventure game={view} side={identity.affectedSide} paused={link.paused || link.conn !== "open"}
-          store={link.store} stats={stats} onEnd={()=>setView("summary")}/>;
+        return (
+          <LinkedAdventure
+            game={view}
+            side={identity.affectedSide}
+            paused={link.paused || link.conn !== "open"}
+            harborBase={paired?.harborBase}
+            saveKeeper={link.saveKeeper}
+            keeperError={link.keeperError}
+            store={link.store}
+            stats={stats}
+            onEnd={() => setView("summary")}
+          />
+        );
       case "summary":
         return <SummaryScene stats={stats} onRestart={link.ended ? undefined : quit} />;
     }

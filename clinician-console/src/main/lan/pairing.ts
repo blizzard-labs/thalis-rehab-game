@@ -3,6 +3,7 @@ export const CODE_ALPHABET = "23456789ABCDEFGHJKMNPQRSTVWXYZ";
 const CODE_LENGTH = 6;
 
 export type SessionInfo = {
+  harborBase?: number;
   patientFirstName: string;
   affectedSide: "left" | "right";
   mode: string;

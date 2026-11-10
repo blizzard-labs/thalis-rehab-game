@@ -9,7 +9,16 @@ from uuid import uuid4
 from aiohttp import web
 
 
-GAMES = {"garden": "Garden Grow", "stars": "Star Catcher", "river": "River Rowing", "fruit": "Fruit Picking"}
+GAMES = {"garden": "Garden Grow", "stars": "Star Catcher", "river": "River Rowing", "fruit": "Fruit Picking", "keeper": "Lighthouse Keeper"}
+
+
+def keeper_work(db, participant):
+    records = db.execute("SELECT record FROM sessions WHERE participant=? AND status='complete'", (participant,))
+    total = 0
+    for row in records:
+        r = json.loads(row["record"])
+        total += r["rewards"] if r["game"] == "keeper" else min(3, r["rewards"])
+    return total
 
 
 @dataclass
@@ -29,6 +38,7 @@ class Display:
     record: dict | None = None
     revision: int = 0
     patient_paused: bool = False
+    harbor_base: int = 0
 
 
 class DisplayPairing:
@@ -90,6 +100,7 @@ class DisplayPairing:
             str(uuid4()),
             secrets.token_urlsafe(24),
             time.monotonic() + 600,
+            harbor_base=keeper_work(db, p["id"]) if b["game"] == "keeper" else 0,
         )
         return web.json_response(self.status())
 
@@ -196,6 +207,7 @@ class DisplayPairing:
                 "side": d.side,
                 "easy": d.easy,
                 "schedule": d.schedule,
+                "harborBase": d.harbor_base,
                 "source": d.source,
                 "record": d.record,
             }

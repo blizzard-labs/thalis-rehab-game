@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { games, gameDetails } from "./catalog";
+import { LighthouseArt } from "../adventures/Lighthouse";
+import { keeperStory, keeperWork } from "../adventures/keeperStory";
 import { OrchardArt } from "../adventures/Orchard";
 import { RiverArt } from "../adventures/River";
 import { duration, Garden, NightSky } from "./GameView";
@@ -117,6 +119,13 @@ function Summary({
           {record.rewards >= record.garden.goal ? " · Reached" : ""}
         </p>
       )}
+      {record.game === "keeper" && (
+        <p>
+          Keeper’s log ·{" "}
+          {keeperStory((record.harborBase ?? 0) + record.rewards).title}. Save
+          this session to continue your story on this browser.
+        </p>
+      )}
       <div className="button-row">
         <button className="primary" onClick={onBack}>
           Back to games
@@ -138,16 +147,49 @@ function GameSetup({
 }: {
   game: Game;
   onBack: () => void;
-  onStart: (source: Source, easy: boolean, side: Side) => void;
+  onStart: (
+    source: Source,
+    easy: boolean,
+    side: Side,
+    harborBase: number,
+  ) => void;
 }) {
   const [easy, setEasy] = useState(true);
   const [source, setSource] = useState<Source>("button");
   const [side, setSide] = useState<Side>("right");
+  const [base, setBase] = useState<number | null>(null);
+  const [historyError, setHistoryError] = useState(false);
+  useEffect(() => {
+    if (game !== "keeper") return;
+    let active = true;
+    historyStore<PracticeRecord[]>("readonly", (s) => s.getAll())
+      .then((records) => {
+        if (active) setBase(keeperWork(records));
+      })
+      .catch(() => {
+        if (active) {
+          setHistoryError(true);
+          setBase(0);
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, [game]);
   return (
     <section className="practice-panel">
       <button onClick={onBack}>← Games</button>
       <h1>{gameNames[game]}</h1>
       <p>{gameDetails[game].description}</p>
+      {game === "keeper" && (
+        <p role="status">
+          {base === null
+            ? "Opening your keeper’s log…"
+            : historyError
+              ? "Saved progress is unavailable. You can play a new harbor story."
+              : `${keeperStory(base).title} · ${base} saved tasks and supplies. Each saved outing brings up to three supplies, and every saved keeper task carries forward.`}
+        </p>
+      )}
       <fieldset>
         <legend>Input</legend>
         {(["button", "camera", "eeg", "blended"] as const).map((input) => (
@@ -206,7 +248,11 @@ function GameSetup({
           </label>
         ))}
       </fieldset>
-      <button className="primary" onClick={() => onStart(source, easy, side)}>
+      <button
+        className="primary"
+        disabled={game === "keeper" && base === null}
+        onClick={() => onStart(source, easy, side, base ?? 0)}
+      >
         Start game
       </button>
     </section>
@@ -261,8 +307,10 @@ export function PracticeApp() {
                       <NightSky target={1} />
                     ) : id === "river" ? (
                       <RiverArt />
-                    ) : (
+                    ) : id === "fruit" ? (
                       <OrchardArt />
+                    ) : (
+                      <LighthouseArt />
                     )}
                   </div>
                   <div className="card-copy">
@@ -281,9 +329,11 @@ export function PracticeApp() {
           <GameSetup
             game={game}
             onBack={back}
-            onStart={(source, easy, arm) => {
+            onStart={(source, easy, arm, harborBase) => {
               setSide(arm);
-              setRound(new PracticeRound(game, source, easy));
+              const next = new PracticeRound(game, source, easy);
+              if (game === "keeper") next.record.harborBase = harborBase;
+              setRound(next);
               setPage("play");
             }}
           />

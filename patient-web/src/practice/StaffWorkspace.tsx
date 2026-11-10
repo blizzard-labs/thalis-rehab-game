@@ -446,11 +446,12 @@ export function StaffWorkspace({ onExit }: { onExit: () => void }) {
                         participant.protocol.easy,
                         participant.protocol.schedule ?? "short",
                       );
-                      await api("sessions", "PUT", {
+                      const started=await api<{harborBase?:number}>("sessions", "PUT", {
                         participant: selected,
                         record: session.record,
                         status: "playing",
                       });
+                      if (game==="keeper") session.record.harborBase=started.harborBase ?? 0;
                       setRound(session);
                       setFinishing(false);
                     })

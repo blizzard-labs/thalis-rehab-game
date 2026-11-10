@@ -232,34 +232,97 @@ test("completed constellations stay in the sky through a second Kite and pause",
   await expect(page.getByText("26 stars", { exact: true })).toBeVisible();
 });
 
-test("a rower can pull a stroke, switch channels, reach a landing and save a correctly labeled summary", async ({page}) => {
+test("a rower can pull a stroke, switch channels, reach a landing and save a correctly labeled summary", async ({
+  page,
+}) => {
   await page.goto("/");
-  await page.getByRole("button",{name:/River Rowing/}).click();
-  await page.getByRole("button",{name:"Start game"}).click();
-  await page.getByRole("button",{name:"Stone narrows"}).click();
-  const boat=page.getByRole("img",{name:/Rowboat at/});
-  const box=(await boat.boundingBox())!;
-  await page.mouse.move(box.x+box.width*.5,box.y+box.height*.45);
-  await page.mouse.down(); await page.mouse.move(box.x+box.width*.5,box.y+box.height*.8); await page.mouse.up();
-  await expect(page.getByText("1 stroke",{exact:true})).toBeVisible();
-  for(let i=0;i<3;i++) await page.getByRole("button",{name:"Row",exact:true}).click();
-  await expect(page.getByRole("img",{name:"Rowboat at The Old Bridge"})).toBeVisible();
-  await page.getByRole("button",{name:"Pause",exact:true}).click();
-  await expect(page.getByRole("button",{name:"Row",exact:true})).toBeDisabled();
-  await page.getByRole("button",{name:"End session"}).click();
-  await expect(page.getByText("Strokes",{exact:true})).toBeVisible();
+  await page.getByRole("button", { name: /River Rowing/ }).click();
+  await page.getByRole("button", { name: "Start game" }).click();
+  await page.getByRole("button", { name: "Stone narrows" }).click();
+  const boat = page.getByRole("img", { name: /Rowboat at/ });
+  const box = (await boat.boundingBox())!;
+  await page.mouse.move(box.x + box.width * 0.5, box.y + box.height * 0.45);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width * 0.5, box.y + box.height * 0.8);
+  await page.mouse.up();
+  await expect(page.getByText("1 stroke", { exact: true })).toBeVisible();
+  for (let i = 0; i < 3; i++)
+    await page.getByRole("button", { name: "Row", exact: true }).click();
+  await expect(
+    page.getByRole("img", { name: "Rowboat at The Old Bridge" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Pause", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "Row", exact: true }),
+  ).toBeDisabled();
+  await page.getByRole("button", { name: "End session" }).click();
+  await expect(page.getByText("Strokes", { exact: true })).toBeVisible();
 });
 
-test("orchard fruit must be picked and delivered, including with a single switch",async({page})=>{
-  await page.goto("/"); await page.getByRole("button",{name:/Fruit Picking/}).click();
-  await page.getByRole("button",{name:"Start game"}).click();
+test("orchard fruit must be picked and delivered, including with a single switch", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: /Fruit Picking/ }).click();
+  await page.getByRole("button", { name: "Start game" }).click();
   await page.getByTestId("ripe-fruit").click();
-  await expect(page.getByText("0 fruit",{exact:true})).toBeVisible();
+  await expect(page.getByText("0 fruit", { exact: true })).toBeVisible();
   await page.getByTestId("fruit-basket").click();
-  await expect(page.getByText("1 fruit",{exact:true})).toBeVisible();
-  await page.getByRole("button",{name:"Pick",exact:true}).focus();
-  await page.keyboard.press("Space"); await page.keyboard.press("Space");
-  await expect(page.getByText("2 fruit",{exact:true})).toBeVisible();
-  await page.getByRole("button",{name:"End session"}).click();
-  await expect(page.getByText("Fruit",{exact:true})).toBeVisible();
+  await expect(page.getByText("1 fruit", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Pick", exact: true }).focus();
+  await page.keyboard.press("Space");
+  await page.keyboard.press("Space");
+  await expect(page.getByText("2 fruit", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "End session" }).click();
+  await expect(page.getByText("Fruit", { exact: true })).toBeVisible();
+});
+
+test("saved outings supply the keeper and the lamp stays repaired across visits", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: /River Rowing/ }).click();
+  await page.getByRole("button", { name: "Start game" }).click();
+  for (let i = 0; i < 5; i++)
+    await page.getByRole("button", { name: "Row", exact: true }).click();
+  const save = async () => {
+    await page.getByRole("button", { name: "End session" }).click();
+    await page.getByRole("button", { name: "Save on this device" }).click();
+    await expect(
+      page.getByRole("button", { name: "Saved on this device" }),
+    ).toBeVisible();
+    await page.reload();
+  };
+  await save();
+  const open = async () => {
+    await page.getByRole("button", { name: /Lighthouse Keeper/ }).click();
+    await page.getByRole("button", { name: "Start game" }).click();
+  };
+  await open();
+  await expect(
+    page.getByRole("img", {
+      name: "Lighthouse with 3 of 12 repairs and 0 boats home",
+    }),
+  ).toBeVisible();
+  for (let i = 0; i < 3; i++)
+    await page.getByRole("button", { name: /Fix step/ }).click();
+  for (let i = 0; i < 3; i++) await page.getByTestId("keeper-task").click();
+  for (let i = 0; i < 3; i++)
+    await page.getByRole("button", { name: /Wind lamp/ }).click();
+  await expect(page.getByText(/Wren returns/)).toBeVisible();
+  await save();
+  await open();
+  await expect(
+    page.getByRole("img", {
+      name: "Lighthouse with 12 of 12 repairs and 0 boats home",
+    }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: /Sight sail/ }).click();
+  await page.getByRole("button", { name: /Aim lantern/ }).click();
+  await page.getByRole("button", { name: /Ring bell/ }).click();
+  await expect(
+    page.getByRole("img", {
+      name: "Lighthouse with 12 of 12 repairs and 1 boat home",
+    }),
+  ).toBeVisible();
 });

@@ -3,7 +3,7 @@ import { scanningWrist, withinNet } from "../reach/starGeometry";
 import { constellationAt } from "./constellations";
 import { StarPlay, StarChart, type CameraAim } from "./StarPlay";
 import type { ReactNode } from "react";
-import type { CameraStarFrame, Side } from "./session";
+import type { CameraHoldFrame, Side } from "./session";
 import { BloomGoal } from "./BloomGoal";
 import { beeCount, GardenPlay, SeedTray } from "./GardenPlay";
 import { CameraFeed } from "../scenes/CameraFeed";
@@ -104,7 +104,7 @@ export function Play({
     level: number | null;
     aim: CameraAim | null;
     onTarget: boolean;
-    cameraStar: CameraStarFrame | null;
+    cameraHold: CameraHoldFrame | null;
   };
   status?: string;
   lockedPause?: boolean;
@@ -136,7 +136,7 @@ export function Play({
           observation.level,
           observation.onTarget &&
             (round.record.game !== "stars" || !round.celebrating),
-          observation.cameraStar,
+          observation.cameraHold,
         );
         tickObserver.current?.(
           round.record.elapsed - before,

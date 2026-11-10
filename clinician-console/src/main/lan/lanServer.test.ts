@@ -137,6 +137,25 @@ describe("LanServer", () => {
     p.ws.close();
   });
 
+  it("checkpoints only the paired keeper’s next step and resumes it on reconnect", async()=>{
+    sidecar=await fakeSidecar();
+    const saved:number[]=[];
+    server=new LanServer({...baseOpts(),saveKeeper:work=>saved.push(work)});
+    await server.start(); const code=server.startSession({...SESSION,harborBase:5}).code;
+    const patient=connectPatient(server); await patient.open();
+    patient.send({type:"pair",code,secureResume:true});
+    const paired=await patient.waitFor("paired"); expect(paired.session.harborBase).toBe(5);
+    patient.send({type:"keeper-progress",total:10});
+    patient.send({type:"keeper-progress",total:6});
+    expect((await patient.waitFor("keeper-saved")).total).toBe(6);
+    expect(saved).toEqual([6]);
+    const disconnected=new Promise(resolve=>server!.once("patient-disconnected",resolve));
+    patient.ws.close();await disconnected;
+    const again=connectPatient(server);await again.open();
+    again.send({type:"pair",code,secureResume:true,resumeToken:paired.resumeToken});
+    expect((await again.waitFor("paired")).session.harborBase).toBe(6);again.ws.close();
+  });
+
   it("never forwards eeg_quality to the patient", async () => {
     sidecar = await fakeSidecar();
     server = new LanServer(baseOpts());

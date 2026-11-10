@@ -6,6 +6,7 @@ import type { Game, Side, Source, PracticeRecord } from "./session";
 
 type Snapshot = {
   session: string;
+  harborBase?: number;
   state: string;
   revision: number;
   patientPaused: boolean;
@@ -92,6 +93,8 @@ export function PairedDisplay() {
           const r = d.record
             ? PracticeRound.restore(d.record, d.easy)
             : new PracticeRound(d.game, d.source, d.easy, d.schedule);
+          if (!d.record && d.game === "keeper")
+            r.record.harborBase = d.harborBase ?? 0;
           r.record.id = d.session;
           live.current = r;
           setRound(r);

@@ -3,6 +3,7 @@ import { join } from "node:path";
 import WebSocket from "ws";
 import { SidecarSupervisor, type SidecarStatus } from "./sidecar";
 import { sidecarOptions, lanServerOptions, SIDECAR_WS_URL } from "./config";
+import { keeperJournal } from "./keeperJournal";
 import { LanServer } from "./lan/lanServer";
 import type { RelaySocket } from "./lan/scoreRelay";
 import type { SessionInfo } from "./lan/pairing";
@@ -63,9 +64,11 @@ function sendControl(raw: string) {
 }
 
 function startLan() {
+  let journal: ReturnType<typeof keeperJournal> | null = null;
   lan = new LanServer({
     ...lanServerOptions(REPO_ROOT, app.getPath("userData")),
     createSidecarSocket: nodeSidecarSocket,
+    saveKeeper: total => journal?.save(total),
   });
   lan.on("patient-connected", () => win?.webContents.send("patient-connected"));
   lan.on("patient-disconnected", () => win?.webContents.send("patient-disconnected"));
@@ -76,7 +79,12 @@ function startLan() {
   // Decoupled session lifecycle: open() mints the pairing code only; begin()
   // arms the dev simulator (sim source only); end() disarms + closes pairing.
   ipcMain.handle("session:get-source", () => process.env.EEG_SOURCE === "live" ? "live" : "sim");
-  ipcMain.handle("session:open", (_e, session: SessionInfo) => lan!.startSession(session));
+  ipcMain.handle("session:open", (_e, {keeperProfile, ...session}: SessionInfo & {keeperProfile?:string}) => {
+    const next = keeperProfile ? keeperJournal(app.getPath("userData"), keeperProfile, session.source) : null;
+    const result = lan!.startSession({...session,harborBase:next?.read()});
+    journal = next;
+    return result;
+  });
   ipcMain.handle("session:begin", (_e, source: SessionInfo["source"]) => {
     const cmd = sessionControlCommand(source, "start");
     if (cmd) sendControl(cmd);

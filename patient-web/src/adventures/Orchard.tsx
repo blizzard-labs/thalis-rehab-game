@@ -1,3 +1,4 @@
+import { useLandscape } from "./useLandscape";
 import { useId, useState } from "react";
 import { armAt, shoulder, type Point } from "../reach/starGeometry";
 import type { CameraAim } from "../practice/StarPlay";
@@ -67,6 +68,7 @@ export function OrchardArt({
   onPick?: () => void;
   onDeposit?: () => void;
 }) {
+  const landscape = useLandscape(480, 490);
   const id = useId(),
     [hand, setHand] = useState<Point | null>(null);
   const goal = aim?.goal ?? orchardGoal(count, side);
@@ -75,8 +77,12 @@ export function OrchardArt({
     : (onPick || onDeposit) && hand
       ? hand
       : {
-          x: shoulder.x + (goal.x - shoulder.x) * (held && onDeposit ? 1 : effort),
-          y: shoulder.y + (goal.y - shoulder.y) * (held && onDeposit ? 1 : effort),
+          x:
+            shoulder.x +
+            (goal.x - shoulder.x) * (held && onDeposit ? 1 : effort),
+          y:
+            shoulder.y +
+            (goal.y - shoulder.y) * (held && onDeposit ? 1 : effort),
         };
   const { wrist, elbow } = armAt(target, side);
   const screen = (p: Point) => ({
@@ -90,7 +96,7 @@ export function OrchardArt({
   return (
     <svg
       className="adventure-art orchard-art"
-      viewBox="0 0 960 460"
+      {...landscape}
       role="img"
       aria-label={`Orchard with ${count} fruit gathered`}
       onPointerMove={(e) => {
@@ -108,11 +114,25 @@ export function OrchardArt({
       onPointerLeave={() => setHand(null)}
     >
       <defs>
-        <linearGradient id={id + "sky"} x2="0" y2="1">
+        <linearGradient
+          id={id + "sky"}
+          gradientUnits="userSpaceOnUse"
+          x1="0"
+          y1="0"
+          x2="0"
+          y2="265"
+        >
           <stop stopColor="#c4d8c4" />
           <stop offset="1" stopColor="#fff1cc" />
         </linearGradient>
-        <linearGradient id={id + "grass"} x2="0" y2="1">
+        <linearGradient
+          id={id + "grass"}
+          gradientUnits="userSpaceOnUse"
+          x1="0"
+          y1="250"
+          x2="0"
+          y2="510"
+        >
           <stop stopColor="#b6bd76" />
           <stop offset="1" stopColor="#738453" />
         </linearGradient>
@@ -132,14 +152,14 @@ export function OrchardArt({
           <path d="m1-1 24-11" stroke="#83915c" fill="none" />
         </g>
       </defs>
-      <rect width="960" height="460" fill={`url(#${id}sky)`} />
+      <rect y="-1400" width="960" height="3000" fill={`url(#${id}sky)`} />
       <circle cx="710" cy="85" r="43" fill="#fff1c5" />
       <path
         d="M0 263Q130 135 265 209T534 197q204-112 426 35v100H0Z"
         fill="#a1b69a"
       />
       <path
-        d="M0 264q188-69 372 0t330-19q125-43 258 9v206H0Z"
+        d="M0 264q188-69 372 0t330-19q125-43 258 9v1500H0Z"
         fill={`url(#${id}grass)`}
       />
       {[32, 104, 195, 290, 690, 764, 842, 934].map((x, i) => (
@@ -149,7 +169,10 @@ export function OrchardArt({
           transform={`translate(${x} ${282 + (i % 3) * 17}) scale(${0.39 + (i % 3) * 0.13})`}
         />
       ))}
-      <path d="M330 460q173-101 353-157-116 66-198 157" fill="#cfb587" />
+      <path
+        d="M-800 1200 330 460q173-101 353-157-116 66-198 157L150 1200Z"
+        fill="#cfb587"
+      />
       <path
         d="M83 406Q128 300 107 163L78 66l21-11 43 83q63-48 123-59l6 12q-80 31-106 80 25 95-29 239Z"
         fill="#876249"
@@ -166,11 +189,11 @@ export function OrchardArt({
         fill="#73533e"
       />
       <path
-        d="M0 0h367q-16 27-42 28-4 34-45 36-24 36-77 26-10 35-65 26-39 23-74-2-39 11-64-16Z"
+        d="M0-1200h367V0q-16 27-42 28-4 34-45 36-24 36-77 26-10 35-65 26-39 23-74-2-39 11-64-16Z"
         fill="#577950"
       />
       <path
-        d="M960 0H651q13 37 54 36 24 28 62 16 28 25 60 8 38 19 68 0 42 17 65-7Z"
+        d="M960-1200H651V0q13 37 54 36 24 28 62 16 28 25 60 8 38 19 68 0 42 17 65-7Z"
         fill="#55794d"
       />
       {[28, 87, 139, 195, 244, 271, 735, 790, 837, 902].map((x, i) => (

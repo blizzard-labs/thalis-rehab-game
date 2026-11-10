@@ -18,6 +18,7 @@ export type LanServerOptions = {
   sidecarWsUrl: string;
   createSidecarSocket: (url: string) => RelaySocket;
   pairing?: SessionPairing;
+  saveKeeper?: (total:number)=>void;
 };
 
 const MIME: Record<string, string> = {
@@ -95,6 +96,19 @@ export class LanServer extends EventEmitter {
         return;
       }
       if (this.pairing.boundSocketId() !== id) return; // only the paired socket may proceed
+      if (msg.type === "keeper-progress") {
+        const session = this.pairing.session();
+        const total = msg.total;
+        if (session?.harborBase === undefined || !Number.isSafeInteger(total) || total < session.harborBase || total > session.harborBase+1) return;
+        try {
+          this.opts.saveKeeper?.(total);
+          session.harborBase=total;
+          ws.send(JSON.stringify({type:"keeper-saved",total}));
+        } catch {
+          ws.send(JSON.stringify({type:"keeper-save-error"}));
+        }
+        return;
+      }
       if (isSignalingMessage(msg)) {
         this.signalingRelay?.sendToSidecar(data.toString());
         return;

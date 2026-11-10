@@ -3,6 +3,7 @@ import { isSignalingMessage, type SignalingMessage } from "./signaling";
 import { isClinicianCheckpoint, type CheckpointMessage } from "./checkpoint";
 
 export type PairedSession = {
+  harborBase?:number;
   patientFirstName: string;
   source?: "sim" | "live";
   affectedSide: "left" | "right";
@@ -19,6 +20,7 @@ export type LanClientOptions = {
   onScoreFrame: (raw: string) => void;
   onRomTargets?: (targets: unknown) => void;
   onPaired: (session: PairedSession) => void;
+  onKeeper?: (total:number|null)=>void;
   onError: (reason: string) => void;
   onSignaling?: (msg: SignalingMessage) => void;
   onCheckpoint?: (msg: CheckpointMessage) => void;
@@ -52,6 +54,8 @@ export function createLanClient(opts: LanClientOptions) {
         if (typeof msg.resumeToken === "string") opts.onResumeToken?.(msg.resumeToken);
         opts.onPaired(msg.session as PairedSession);
       }
+      else if (msg.type === "keeper-saved" && Number.isSafeInteger(msg.total)) opts.onKeeper?.(msg.total);
+      else if (msg.type === "keeper-save-error") opts.onKeeper?.(null);
       else if (msg.type === "error") opts.onError(msg.reason);
       else if (msg.type === "intent_score") opts.onScoreFrame(raw);
       else if (msg.type === "rom_targets") opts.onRomTargets?.(msg.targets);

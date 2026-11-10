@@ -108,4 +108,29 @@
     gap: 6px;
   }
 }
-.orchard-stage,.fruit-preview {background:linear-gradient(#c4d8c4,#fff1cc 50%,#aebe83 63%,#738453);}
+.orchard-stage,
+.fruit-preview {
+  background: linear-gradient(#c4d8c4, #fff1cc 50%, #aebe83 63%, #738453);
+}
+.keeper-stage,
+.keeper-preview {
+  background: linear-gradient(#586a83, #f3cb9b 56%, #96acb2 57%, #405e71);
+}
+.keeper-log {
+  font-size: clamp(14px, 2vw, 17px);
+}
+
+.adventure .adventure-scene > .adventure-art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-height: none;
+  min-height: 0;
+}
+.adventure .game-heading {
+  flex-shrink: 0;
+}
+.adventure .scene-caption {
+  pointer-events: none;
+}

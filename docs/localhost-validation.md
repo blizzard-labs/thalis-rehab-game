@@ -8,7 +8,7 @@ For the full browser suite, set `NEUROREACH_TEST_PYTHON` to the Python executabl
 
 | Check | Evidence |
 |---|---|
-| No sensors | Both games complete with a keyboard or pointer. Pausing prevents actions. Guest history survives reload and can be cleared. |
+| No sensors | All five games have a headset-free path. Browser tests exercise rowing and channel changes, orchard pickup and delivery, and resuming a restored lighthouse from saved outings. Pausing prevents actions. Guest history survives reload and can be cleared. |
 | Webcam | The real browser model processes the fixture. The player sets rest and reach, returns to rest, catches a star, and releases the camera on exit. Permission denial offers button play. |
 | EEG and blended | A synthetic 17-channel, 250 Hz LSL outlet enters through production discovery and acquisition. The browser waits for the full clean baseline. Both a stream-only star catch and a blended garden action are exercised. Removing the outlet stops measured progress. |
 | Calibration | Clean epochs, finite fit probabilities, held-out folds, affected-hand selection and profile-isolated model reload have numerical tests. The synthetic unit tests do not establish on-head decoding reliability. |

@@ -76,6 +76,7 @@ export function SessionFlow(props: Props) {
           connected={s.connected}
           bridgeReady={s.bridgeReady}
           onOpen={() => s.open({
+            keeperProfile: patient.id,
             patientFirstName: patient.name.split(" ")[0],
             affectedSide: patient.affectedSide.toLowerCase() as "left" | "right",
             mode: patient.mode,

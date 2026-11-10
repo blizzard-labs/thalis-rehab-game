@@ -18,7 +18,7 @@ from datetime import datetime, timezone
 from xml.sax.saxutils import escape
 
 from aiohttp import web
-from server.display_pairing import DisplayPairing, GAMES
+from server.display_pairing import DisplayPairing, GAMES, keeper_work
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table
 
@@ -427,6 +427,8 @@ def register_clinic(app, root=None, display_origin="http://localhost:8766"):
                     # Finalize the most recent acknowledged events even if a retry
                     # carries an earlier snapshot of this same session.
                     r = old
+            if r["game"] == "keeper":
+                r["harborBase"] = old.get("harborBase", 0) if prev else keeper_work(db, pid)
             db.execute(
                 """INSERT INTO sessions(id,participant,record,status,updated) VALUES(?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET
                 record=excluded.record,status=excluded.status,updated=excluded.updated""",
@@ -437,8 +439,11 @@ def register_clinic(app, root=None, display_origin="http://localhost:8766"):
     async def session(request):
         db = staff(request)
         b = await request.json()
-        save_session(db, b.get("record"), b.get("participant"), b.get("status"))
-        return web.json_response({"ok": True})
+        saved = save_session(db, b.get("record"), b.get("participant"), b.get("status"))
+        result = {"ok": True}
+        if saved["game"] == "keeper":
+            result["harborBase"] = saved.get("harborBase", 0)
+        return web.json_response(result)
 
     async def feedback(request):
         db = staff(request)
