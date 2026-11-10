@@ -2,9 +2,9 @@ import { readFile } from "node:fs/promises";
 import { spawn } from "node:child_process";
 import { expect, test } from "@playwright/test";
 
-for (const [title, reward] of [
-  ["Star Catcher", "1 star"],
-  ["Fruit Picking", "1 fruit"],
+for (const [title, reward, port, streamName] of [
+  ["Star Catcher", "1 star", "18768", "UN-validation-fixture"],
+  ["Fruit Picking", "1 fruit", "18771", "UN-validation-orchard"],
 ]) {
   test(`EEG-only ${title} uses the selected LSL stream and a complete resting baseline`, async ({
     page,
@@ -17,16 +17,16 @@ for (const [title, reward] of [
     test.setTimeout(180000);
     const executable = process.env.NEUROREACH_COMPANION_EXE;
     const service = executable
-      ? spawn(executable, ["--port", "18768"], { stdio: "inherit" })
+      ? spawn(executable, ["--port", port], { stdio: "inherit" })
       : spawn(
           python!,
-          ["../signal-engine/local_companion.py", "--port", "18768"],
+          ["../signal-engine/local_companion.py", "--port", port],
           { stdio: "ignore" },
         );
-    const host = "http://127.0.0.1:18768";
+    const host = `http://127.0.0.1:${port}`;
     const fixture = spawn(
       python!,
-      ["../signal-engine/tests/practice_stream.py"],
+      ["../signal-engine/tests/practice_stream.py", streamName],
       { stdio: ["pipe", "ignore", "ignore"] },
     );
     try {
@@ -51,7 +51,7 @@ for (const [title, reward] of [
         exact: true,
       });
       await expect(select).toBeVisible({ timeout: 25000 });
-      await select.selectOption({ label: "UN-validation-fixture" });
+      await select.selectOption({ label: streamName });
       await page
         .getByRole("button", { name: "Begin resting calibration" })
         .click();

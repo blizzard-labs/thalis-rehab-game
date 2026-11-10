@@ -117,25 +117,37 @@ test("dragging moves the wrist into the hoop before releasing a catch", async ({
   await expect(page.getByText("1 star", { exact: true })).toBeVisible();
 });
 
-test("camera denial can continue the same session using a switch", async ({
-  page,
-}) => {
-  await page.addInitScript(() => {
-    Object.defineProperty(navigator.mediaDevices, "getUserMedia", {
-      value: () =>
-        Promise.reject(new DOMException("Denied", "NotAllowedError")),
-    });
+for (const [scenario, expected] of [
+  ["camera denial", /permission was declined/],
+  ["missing camera API", /browser cannot open a camera/],
+] as const) {
+  test(`${scenario} can continue the same session using a switch`, async ({
+    page,
+  }) => {
+    await page.addInitScript((denied) => {
+      // Replace the navigator property itself. WebKit can recreate its native
+      // MediaDevices wrapper during navigation and lose per-instance overrides.
+      Object.defineProperty(navigator, "mediaDevices", {
+        configurable: true,
+        value: denied
+          ? {
+              getUserMedia: () =>
+                Promise.reject(new DOMException("Denied", "NotAllowedError")),
+            }
+          : undefined,
+      });
+    }, scenario === "camera denial");
+    await page.goto("/");
+    await page.getByRole("button", { name: /Garden Grow/ }).click();
+    await page.getByLabel("Camera", { exact: true }).check();
+    await page.getByRole("button", { name: "Start game" }).click();
+    await expect(page.getByText(expected)).toBeVisible();
+    await page.getByRole("button", { name: "Use one button" }).click();
+    await page.getByRole("button", { name: "Water" }).click();
+    await page.getByRole("button", { name: "End session" }).click();
+    await expect(page.getByText("Camera → One button")).toBeVisible();
   });
-  await page.goto("/");
-  await page.getByRole("button", { name: /Garden Grow/ }).click();
-  await page.getByLabel("Camera", { exact: true }).check();
-  await page.getByRole("button", { name: "Start game" }).click();
-  await expect(page.getByText(/permission was declined/)).toBeVisible();
-  await page.getByRole("button", { name: "Use one button" }).click();
-  await page.getByRole("button", { name: "Water" }).click();
-  await page.getByRole("button", { name: "End session" }).click();
-  await expect(page.getByText("Camera → One button")).toBeVisible();
-});
+}
 
 test("bundled pose worker processes a real image frame with no person", async ({
   page,

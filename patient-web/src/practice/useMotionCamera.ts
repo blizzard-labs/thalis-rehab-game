@@ -36,8 +36,12 @@ export function useMotionCamera(enabled: boolean, side: Side, both = false) {
     };
     async function start() {
       setStatus("Opening camera…");
-      if (!navigator.mediaDevices?.getUserMedia)
-        throw new Error("Camera access needs localhost or HTTPS.");
+      if (!navigator.mediaDevices?.getUserMedia) {
+        fail(
+          "This browser cannot open a camera. Open on localhost or HTTPS, or continue with one button.",
+        );
+        return;
+      }
       media = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: "user", width: 640, height: 480 },
         audio: false,
