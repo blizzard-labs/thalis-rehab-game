@@ -49,6 +49,8 @@ export type DisplayState = {
   connected: boolean;
   patientPaused: boolean;
   url: string | null;
+  localUrl: string | null;
+  stationCertificate: boolean;
   record: PracticeRecord | null;
   telemetry: LiveInput | null;
   trace: { age: number; camera: number | null; eeg: number | null }[];
@@ -105,14 +107,4 @@ export const duration = (seconds: number) =>
 export async function checkReportAccess() {
   if (!(await api<Auth>("state")).authenticated)
     throw new Error("Station locked");
-}
-export function playerToken(session: string, token?: string | null): string {
-  const key = "nr-workstation-" + session;
-  try {
-    if (token === null) sessionStorage.removeItem(key);
-    else if (token) sessionStorage.setItem(key, token);
-    return sessionStorage.getItem(key) ?? "";
-  } catch {
-    return token ?? "";
-  }
 }

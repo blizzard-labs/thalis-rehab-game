@@ -34,7 +34,11 @@ conda run -n eeg python -m pip install -r signal-engine/requirements-companion.t
 
 ### Supervised sessions
 
-Open **Staff workspace** on localhost with the companion running. Set the station password, add a participant label with consent, choose an arm and session settings, and start any of the five games. Choose **Start supervised session** to play on the staff computer with the live clinical dashboard alongside the game. One station owns one active run. Refreshing the staff page restores the patient and last checkpoint in a paused state; if the original window closes, **Recover patient game here** restores control after the station detects the disconnect. Staff can pause, resume, finish, or switch a sensor run to one-button play. The monitor shows measured input from the last minute, active time, game outcomes, coverage and recent events. Locking a running workstation pauses the game. The station checkpoints progress, records pauses, and produces CSV and PDF reports. Select a five-minute round or two nine-minute blocks separated by a rest. Staff can save participant feedback with a completed session. Locking the workspace protects record access; an OS account with encrypted storage protects the files on disk. The roster supports assessments, deletion, and exporting or restoring a station backup. Restore requires an empty roster. Browser guest history is independent.
+Open **Staff workspace** from the home screen with the companion running. Set the station password, add a participant label with consent, and choose the game, arm, input, pace and session length. **Start supervised session** creates a session-specific link and QR code. The patient opens the link on a device connected to the same network, selects **Pair this display**, and waits for staff to start the game. Independent players can continue choosing games directly from the home screen.
+
+The clinician console shows a live, read-only mirror of the patient's game, including setup, animations and the camera preview when enabled. It also shows measured input, active time, outcomes, coverage and recent events. Screen frames are relayed in memory and excluded from saved reports and backups. Staff can pause, resume, finish, or switch a sensor run to one-button play. Refreshing the clinician console restores monitoring while the patient continues playing. Locking it pauses the patient's game. If a patient loses the original browser tab, **Reconnect patient device** issues a new link for the same paused visit once the old connection has timed out.
+
+One station owns one active supervised run. The station checkpoints progress, records pauses and produces CSV and PDF reports. Select a five-minute round or two nine-minute blocks separated by a rest. Staff can save participant feedback and assessments, remove participants, and export or restore a station backup. Restore requires an empty roster. Locking the workspace protects record access; an OS account with encrypted storage protects the files on disk. Browser guest history is independent.
 
 The default SQLite database is `~/.neuroreach/clinic.sqlite3`. Set `NEUROREACH_DATA_DIR` to use another local directory. Back up the database or export a backup from the workspace before moving stations.
 
@@ -98,12 +102,14 @@ thalis-rehab-game/
 
 ### Pair a separate supervised display
 
-In the localhost staff workspace, select a participant and game, then **Pair a patient display**. The invitation expires in ten minutes and can be claimed once. Open it in a second browser window, press **Pair this display**, then start play from the workstation. Staff can pause, resume, or end the game. The patient screen can also end the session. Its access is scoped to the current game.
+The companion opens a patient-only HTTPS listener when staff create a supervised session. The invitation uses this computer's network address on port 8443, and expires in ten minutes until claimed. Connect both devices to the same network and allow the companion through the computer's firewall if prompted. Staff records and controls remain available through the loopback clinician console. The patient's link grants access to the selected visit.
 
-By default the invitation points to a second window on the same computer. To host a tablet on the clinic LAN, first provision a TLS certificate trusted by that tablet for the station hostname. Build the web app, then start the companion directly with the LAN listener explicitly enabled:
+The default listener creates a station certificate under the local NeuroReach data directory. A first-time device may need to trust that certificate before opening the game or using its camera. **First-time device connection** in the invitation panel provides the certificate download. Once installed and trusted on the patient device, the same station authority works across later sessions. **Open on this computer** opens a separate patient page for trying the two-screen workflow locally.
+
+A clinic can provide its own trusted certificate and hostname:
 
 ```sh
 conda run --no-capture-output -n eeg python signal-engine/local_companion.py --display-host station.clinic.example --display-port 8443 --cert station-chain.pem --key station-key.pem
 ```
 
-Substitute the station's real DNS name and certificate files. Open staff tools at the loopback URL and scan the resulting QR code on the tablet. The LAN listener serves the patient app and authorized session controls. Access to staff records stays on loopback.
+Substitute the station's real DNS name and certificate files. The QR code and link use that address. Use `--local-only` when intentionally testing only separate windows on the same computer. That option produces loopback links and leaves the network listener closed.

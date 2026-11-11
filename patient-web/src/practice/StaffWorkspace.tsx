@@ -6,7 +6,6 @@ import { DisplayMonitor } from "./DisplayMonitor";
 import {
   api,
   errorText,
-  playerToken,
   StationError,
   type Auth,
   type Participant,
@@ -27,7 +26,6 @@ export function StaffWorkspace({ onExit }: { onExit: () => void }) {
   const [search, setSearch] = useState("");
   const [admin, setAdmin] = useState<"patient" | "backup">("patient");
   const working = useRef(false);
-  const [localToken, setLocalToken] = useState("");
   const [display, setDisplay] = useState<DisplayState | null>(null);
 
   const [savedVisits, setVisits] = useState<Visit[]>([]);
@@ -53,7 +51,6 @@ export function StaffWorkspace({ onExit }: { onExit: () => void }) {
           return;
         }
         setSelected(active.participant);
-        setLocalToken(playerToken(active.session));
         setDisplay(active);
       }
     }
@@ -105,7 +102,7 @@ export function StaffWorkspace({ onExit }: { onExit: () => void }) {
       current = false;
     };
   }, [selected, display]);
-  async function launch(target: "workstation" | "display") {
+  async function launch() {
     if (!participant) return;
     await act(async () => {
       try {
@@ -114,29 +111,17 @@ export function StaffWorkspace({ onExit }: { onExit: () => void }) {
           cache: "no-store",
           signal: AbortSignal.timeout(5000),
         });
-        if (!health.ok || (await health.json()).staffRuns !== 2)
+        if (!health.ok || (await health.json()).staffRuns !== 3)
           throw new Error(
             "Restart the local NeuroReach companion to load supervised session controls, then retry.",
           );
-        if (target === "workstation") {
-          const result = await api<{ display: DisplayState; token: string }>(
-            "display",
-            "POST",
-            { participant: participant.id, game, target },
-          );
-          playerToken(result.display.session, result.token);
-          setLocalToken(result.token);
-          setDisplay(result.display);
-        } else {
-          setLocalToken("");
-          setDisplay(
-            await api<DisplayState>("display", "POST", {
-              participant: participant.id,
-              game,
-              target,
-            }),
-          );
-        }
+        setDisplay(
+          await api<DisplayState>("display", "POST", {
+            participant: participant.id,
+            game,
+            target: "display",
+          }),
+        );
       } catch (err) {
         if (err instanceof StationError && err.status === 409) await load();
         throw err;
@@ -149,18 +134,11 @@ export function StaffWorkspace({ onExit }: { onExit: () => void }) {
         key={display.session}
         initial={display}
         participant={participant}
-        localToken={localToken}
-        onToken={(token) => {
-          playerToken(display.session, token || null);
-          setLocalToken(token);
-        }}
         onClose={() => {
-          setLocalToken("");
           setDisplay(null);
         }}
         onLock={() => {
           setSelected("");
-          setLocalToken("");
           setError("");
           setDisplay(null);
           setPeople([]);

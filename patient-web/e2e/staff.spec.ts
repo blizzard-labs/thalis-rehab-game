@@ -6,13 +6,14 @@ import path from "node:path";
 
 test("isolated staff station records actions, exports reports and locks the roster", async ({
   page,
+  browser,
 }) => {
   const python = process.env.NEUROREACH_TEST_PYTHON;
   test.skip(!python, "Requires the local Python companion and built web app");
   const root = await mkdtemp(path.join(os.tmpdir(), "neuroreach-staff-test-"));
   const service = spawn(
     python!,
-    ["../signal-engine/local_companion.py", "--port", "18766"],
+    ["../signal-engine/local_companion.py", "--local-only", "--port", "18766"],
     { env: { ...process.env, NEUROREACH_DATA_DIR: root }, stdio: "ignore" },
   );
   try {
@@ -38,10 +39,21 @@ test("isolated staff station records actions, exports reports and locks the rost
     await page
       .getByRole("button", { name: "Start supervised session" })
       .click();
+    const patient = await browser.newContext();
+    const player = await patient.newPage();
+    await player.goto(
+      (await page
+        .getByRole("link", { name: "Open patient display" })
+        .getAttribute("href"))!,
+    );
+    await player.getByRole("button", { name: "Pair this display" }).click();
+    await page.getByRole("button", { name: "Start patient game" }).click();
     for (let i = 0; i < 4; i++)
-      await page.getByRole("button", { name: "Water" }).click();
-    await page.getByRole("button", { name: "Pause", exact: true }).click();
-    await page.getByRole("button", { name: "End session" }).click();
+      await player.getByRole("button", { name: "Water" }).click();
+    await player.getByRole("button", { name: "Pause", exact: true }).click();
+    await player.getByRole("button", { name: "End session" }).click();
+    await page.getByRole("button", { name: "Return to roster" }).click();
+    await patient.close();
     await expect(page.getByText(/4 actions/)).toBeVisible();
     await page
       .getByRole("button", { name: "Session report", exact: true })
@@ -88,7 +100,7 @@ test("staff controls a separate patient screen and receives its final trial coun
   const root = await mkdtemp(path.join(os.tmpdir(), "neuroreach-pair-test-"));
   const service = spawn(
     python!,
-    ["../signal-engine/local_companion.py", "--port", "18767"],
+    ["../signal-engine/local_companion.py", "--local-only", "--port", "18767"],
     { env: { ...process.env, NEUROREACH_DATA_DIR: root }, stdio: "ignore" },
   );
   const patient = await browser.newContext();
@@ -113,7 +125,9 @@ test("staff controls a separate patient screen and receives its final trial coun
     await page.getByLabel("Participant label").fill("Local fixture");
     await page.getByLabel(/Participant agreed/).check();
     await page.getByRole("button", { name: "Add participant" }).click();
-    await page.getByRole("button", { name: "Pair a patient display" }).click();
+    await page
+      .getByRole("button", { name: "Start supervised session" })
+      .click();
     const url = await page
       .getByRole("link", { name: "Open patient display" })
       .getAttribute("href");
@@ -160,7 +174,7 @@ test("staff controls a separate patient screen and receives its final trial coun
         .filter({ has: page.getByText("blooms", { exact: true }) })
         .locator("dd > span"),
     ).toHaveText("1");
-    await page.getByRole("button", { name: "End display session" }).click();
+    await page.getByRole("button", { name: "End supervised run" }).click();
     await expect(
       player.getByRole("heading", { name: "Session complete" }),
     ).toBeVisible();

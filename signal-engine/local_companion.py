@@ -20,33 +20,35 @@ DIST = (
 )
 
 
-def create_app(port=8766, display_origin=None):
+def create_app(port=8766, display_origin=None, patient_network=None):
     active = asyncio.Lock()
     allowed = {f"{host}:{p}" for host in ["localhost", "127.0.0.1"] for p in [port, 5173]}
 
-    display_host = urlparse(display_origin).netloc if display_origin else None
+    def patient_origin():
+        return (patient_network.origin if patient_network else None) or display_origin
 
     @web.middleware
     async def local_only(request, handler):
-        remote_display = request.host == display_host
+        origin = patient_origin()
+        remote_display = bool(origin and request.host == urlparse(origin).netloc)
         peer = request.remote
         if request.host not in allowed and not remote_display:
             raise web.HTTPForbidden()
         if peer not in {"127.0.0.1", "::1"} and not remote_display:
             raise web.HTTPForbidden()
         if request.path.startswith("/api/"):
-            origin = request.headers.get("Origin")
+            sent_origin = request.headers.get("Origin")
             if remote_display and (not request.secure or request.path.startswith("/api/staff")):
                 raise web.HTTPForbidden()
             if (
-                origin
-                and origin != display_origin
-                and (urlparse(origin).netloc not in allowed or urlparse(origin).scheme != "http")
+                sent_origin
+                and sent_origin != origin
+                and (urlparse(sent_origin).netloc not in allowed or urlparse(sent_origin).scheme != "http")
             ):
                 raise web.HTTPForbidden()
-            if origin == display_origin and display_origin and not remote_display:
+            if sent_origin == origin and origin and not remote_display:
                 raise web.HTTPForbidden()
-            if request.headers.get("Upgrade", "").lower() == "websocket" and not origin:
+            if request.headers.get("Upgrade", "").lower() == "websocket" and not sent_origin:
                 raise web.HTTPForbidden()
         response = await handler(request)
         if request.path.startswith("/api/"):
@@ -58,7 +60,8 @@ def create_app(port=8766, display_origin=None):
     async def eeg(request):
         display = None
         ticket = request.cookies.get("nr_display")
-        if display_host and request.host == display_host and request.path != "/api/display/eeg":
+        origin = patient_origin()
+        if origin and request.host == urlparse(origin).netloc and request.path != "/api/display/eeg":
             raise web.HTTPForbidden()
         if request.path == "/api/display/eeg":
             display = pairing.authorize(ticket or "")
@@ -119,7 +122,7 @@ def create_app(port=8766, display_origin=None):
 
                 def emit(event):
                     if display and (
-                        display is not pairing.current or display.state in ("ending", "complete")
+                        display is not pairing.current or display.token != ticket or display.state in ("ending", "complete")
                     ):
                         stop.set()
                     if not stop.is_set():
@@ -153,10 +156,11 @@ def create_app(port=8766, display_origin=None):
         return web.FileResponse(DIST / "index.html")
 
     async def health(request):
-        return web.json_response({"app": "NeuroReach", "version": 1, "staffRuns": 2, "clockMs": time.time() * 1000})
+        return web.json_response({"app": "NeuroReach", "version": 1, "staffRuns": 3, "clockMs": time.time() * 1000})
 
     app.router.add_get("/api/health", health)
     pairing = register_clinic(app, display_origin=display_origin or f"http://localhost:{port}")
+    pairing.network = patient_network
     app.router.add_get("/api/eeg", eeg)
     app.router.add_get("/api/display/eeg", eeg)
     app.router.add_get("/", index)
@@ -175,11 +179,13 @@ if __name__ == "__main__":
     parser.add_argument("--display-port", type=int, default=8443)
     parser.add_argument("--cert")
     parser.add_argument("--key")
+    parser.add_argument("--local-only", action="store_true", help="Use same-computer patient links without opening a LAN listener")
     args = parser.parse_args()
-    if args.display_host and not (args.cert and args.key):
-        parser.error("--display-host requires a trusted --cert and --key")
-    origin = f"https://{args.display_host}:{args.display_port}" if args.display_host else None
-    app = create_app(args.port, origin)
+    if bool(args.cert) != bool(args.key):
+        parser.error("--cert and --key must be supplied together")
+    from server.patient_network import PatientNetwork
+    network = None if args.local_only else PatientNetwork(args.display_port, args.display_host, args.cert, args.key)
+    app = create_app(args.port, patient_network=network)
     if args.open_browser:
 
         async def open_browser(app):
@@ -192,18 +198,13 @@ if __name__ == "__main__":
     async def serve():
         runner = web.AppRunner(app)
         await runner.setup()
+        if network:
+            network.runner = runner
         try:
             await web.TCPSite(runner, "127.0.0.1", args.port).start()
             print(f"NeuroReach ready at http://127.0.0.1:{args.port}", flush=True)
-            if origin:
-                import ssl
-
-                tls = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-                tls.load_cert_chain(args.cert, args.key)
-                await web.TCPSite(
-                    runner, args.display_host, args.display_port, ssl_context=tls
-                ).start()
-                print(f"Paired displays enabled at {origin}", flush=True)
+            if args.display_host and network:
+                print(f"Paired displays enabled at {await network.ensure()}", flush=True)
             await asyncio.Event().wait()
         finally:
             await runner.cleanup()

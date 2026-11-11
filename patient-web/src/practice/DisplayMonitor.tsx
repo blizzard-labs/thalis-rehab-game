@@ -1,71 +1,24 @@
 import { useEffect, useRef, useState } from "react";
 import QRCode from "qrcode";
 import { StationHeader, RunPerformance } from "./ClinicalPanels";
-import { PairedDisplay } from "./PairedDisplay";
+import { PatientMirror } from "./PatientMirror";
 import {
   api,
   errorText,
-  playerToken,
   StationError,
   type DisplayState,
   type Participant,
 } from "./station";
 import { gameNames, sourceNames } from "./session";
 
-function WorkstationPlayer({
-  session,
-  token,
-  onExpired,
-}: {
-  session: string;
-  token: string;
-  onExpired: () => void;
-}) {
-  const [owner, setOwner] = useState(!navigator.locks);
-  useEffect(() => {
-    if (!navigator.locks) return;
-    const abort = new AbortController();
-    let release = () => {};
-    void navigator.locks
-      .request(
-        "neuroreach-player-" + session,
-        { signal: abort.signal },
-        async () => {
-          if (abort.signal.aborted) return;
-          setOwner(true);
-          await new Promise<void>((resolve) => {
-            release = resolve;
-          });
-        },
-      )
-      .catch(() => {});
-    return () => {
-      abort.abort();
-      release();
-    };
-  }, [session]);
-  return owner ? (
-    <PairedDisplay local={{ session, token }} onExpired={onExpired} />
-  ) : (
-    <p className="cl-notice">
-      Waiting for the patient game window. Only one window plays this visit at a
-      time.
-    </p>
-  );
-}
-
 export function DisplayMonitor({
   initial,
   participant,
-  localToken,
-  onToken,
   onClose,
   onLock,
 }: {
   initial: DisplayState;
   participant?: Participant;
-  localToken: string;
-  onToken: (token: string) => void;
   onClose: () => void;
   onLock: () => void;
 }) {
@@ -73,6 +26,7 @@ export function DisplayMonitor({
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
     [qr, setQr] = useState("");
+  const [copied, setCopied] = useState(false);
   const [networkError, setNetworkError] = useState(""),
     [expanded, setExpanded] = useState(false);
   const sending = useRef(false),
@@ -81,11 +35,11 @@ export function DisplayMonitor({
     lock = useRef(onLock);
   close.current = onClose;
   lock.current = onLock;
-  const local = display.target === "workstation";
   useEffect(() => {
     let current = true;
     setQr("");
-    if (display.url?.startsWith("https://"))
+    setCopied(false);
+    if (display.url)
       void QRCode.toDataURL(display.url, { width: 160 })
         .then((img) => {
           if (current) setQr(img);
@@ -110,11 +64,6 @@ export function DisplayMonitor({
         if (!sending.current && epoch === requestEpoch.current) {
           setDisplay(next);
           setNetworkError("");
-          if (next.state === "complete" && local) {
-            playerToken(next.session, null);
-            close.current();
-            return;
-          }
         }
       } catch (err) {
         if (!current) return;
@@ -131,7 +80,7 @@ export function DisplayMonitor({
       current = false;
       clearTimeout(timer);
     };
-  }, [initial.session, local]);
+  }, [initial.session]);
   async function control(command: string) {
     if (sending.current) return;
     sending.current = true;
@@ -149,19 +98,12 @@ export function DisplayMonitor({
         onLock();
         return;
       }
-      if (command === "recover") {
-        const r = await api<{ token: string }>("display/recover", "POST", {
+      setDisplay(
+        await api<DisplayState>("display/control", "POST", {
           session: display.session,
-        });
-        onToken(r.token);
-      } else {
-        setDisplay(
-          await api<DisplayState>("display/control", "POST", {
-            session: display.session,
-            command,
-          }),
-        );
-      }
+          command,
+        }),
+      );
     } catch (err) {
       if (err instanceof StationError && err.status === 401) lock.current();
       else setError(errorText(err));
@@ -213,9 +155,7 @@ export function DisplayMonitor({
       <div className="cl-monitor-content">
         <div className="cl-patient-heading">
           <div>
-            <p className="cl-overline">
-              {local ? "Workstation run" : "Patient display"}
-            </p>
+            <p className="cl-overline">Supervised session</p>
             <h1>{participant?.name ?? "Supervised session"}</h1>
             <p className="cl-meta">
               {gameNames[display.game]} <span>·</span> {sourceNames[source]}{" "}
@@ -248,7 +188,7 @@ export function DisplayMonitor({
                 Start patient game
               </button>
             )}
-            {display.expired && waiting && (
+            {display.expired && !display.paired && (
               <button
                 className="cl-primary"
                 disabled={busy}
@@ -291,14 +231,12 @@ export function DisplayMonitor({
                   ? "Finish with last saved record"
                   : waiting
                     ? "Cancel invitation"
-                    : local
-                      ? "End supervised run"
-                      : "End display session"}
+                    : "End supervised run"}
               </button>
             )}
-            {local && !localToken && !display.connected && !done && !ending && (
-              <button disabled={busy} onClick={() => control("recover")}>
-                Recover patient game here
+            {!display.connected && display.paired && !done && !ending && (
+              <button disabled={busy} onClick={() => control("reinvite")}>
+                Reconnect patient device
               </button>
             )}
             {done && <button onClick={onClose}>Return to roster</button>}
@@ -310,24 +248,61 @@ export function DisplayMonitor({
             <div>
               <h2>Connect the patient screen</h2>
               <p>
-                {display.url.startsWith("https://")
-                  ? "Scan on the patient device using the clinic network."
-                  : "Open a second window on this computer and select Pair this display."}
+                Scan the QR code on the patient's device using the same Wi-Fi,
+                or send the session link.
               </p>
-              <a href={display.url} target="_blank" rel="noreferrer">
-                Open patient display
-              </a>
+              <label className="cl-session-link">
+                Patient session link
+                <input
+                  readOnly
+                  value={display.url}
+                  onFocus={(event) => event.target.select()}
+                />
+              </label>
+              <div className="cl-actions">
+                <button
+                  onClick={async () => {
+                    try {
+                      await navigator.clipboard.writeText(display.url!);
+                      setCopied(true);
+                    } catch {
+                      setError(
+                        "Select the session link and copy it from the text field.",
+                      );
+                    }
+                  }}
+                >
+                  {copied ? "Link copied" : "Copy session link"}
+                </button>
+                <a href={display.url} target="_blank" rel="noreferrer">
+                  Open patient display
+                </a>
+                {display.localUrl && display.url.startsWith("https://") && (
+                  <a href={display.localUrl} target="_blank" rel="noreferrer">
+                    Open on this computer
+                  </a>
+                )}
+              </div>
+              {display.stationCertificate && (
+                <details className="cl-device-help">
+                  <summary>First-time device connection</summary>
+                  <p>
+                    This local station uses its own certificate. Trust the
+                    station certificate on the patient device when prompted.
+                    Camera access may require installing it in the device's
+                    trusted certificates.
+                  </p>
+                  <a href="/api/staff/display/certificate" download>
+                    Download station certificate
+                  </a>
+                </details>
+              )}
             </div>
           </section>
         )}
-        {!local && waiting && display.paired && (
+        {waiting && display.paired && (
           <p className="cl-notice">
             Patient screen connected. Start the game when the patient is ready.
-          </p>
-        )}
-        {local && !localToken && display.connected && (
-          <p className="cl-notice">
-            The patient game is open in another workstation window.
           </p>
         )}
         <RunPerformance
@@ -337,25 +312,12 @@ export function DisplayMonitor({
               : display
           }
           player={
-            local && localToken && !done ? (
-              <section className="cl-patient-screen">
-                <div className="cl-screen-heading">
-                  <h2>Patient game</h2>
-                  <button
-                    aria-expanded={expanded}
-                    onClick={() => setExpanded((v) => !v)}
-                  >
-                    {expanded ? "Return to monitor" : "Expand patient game"}
-                  </button>
-                </div>
-                <WorkstationPlayer
-                  key={localToken}
-                  session={display.session}
-                  token={localToken}
-                  onExpired={() => onToken("")}
-                />
-              </section>
-            ) : undefined
+            <PatientMirror
+              session={display.session}
+              done={done}
+              expanded={expanded}
+              expand={() => setExpanded((value) => !value)}
+            />
           }
         />
       </div>

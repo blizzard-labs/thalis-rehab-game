@@ -12,7 +12,7 @@ test("blended Garden Grow records both inputs and recovers from signal loss", as
   test.setTimeout(170000);
   const service = spawn(
     python!,
-    ["../signal-engine/local_companion.py", "--port", "18769"],
+    ["../signal-engine/local_companion.py", "--local-only", "--port", "18769"],
     { stdio: "ignore" },
   );
   const fixture = spawn(

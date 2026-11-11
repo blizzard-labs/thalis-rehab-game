@@ -30,7 +30,7 @@ export function PatientOverview({
   game: Game;
   setGame: (g: Game) => void;
   protocol: (p: Participant["protocol"]) => void;
-  launch: (target: "workstation" | "display") => void;
+  launch: () => void;
   note: (visit: Visit, value: string) => void;
   assessment: (fma: number, arat: number) => void;
   remove: () => void;
@@ -138,24 +138,14 @@ export function PatientOverview({
             </div>
             <div className="cl-launch">
               <div>
-                <b>On this computer</b>
-                <small>Play here with the staff monitor open.</small>
+                <b>Patient device</b>
+                <small>
+                  Create a private link and QR code. Monitor the patient's
+                  screen here.
+                </small>
               </div>
-              <button
-                className="cl-primary"
-                disabled={busy}
-                onClick={() => launch("workstation")}
-              >
+              <button className="cl-primary" disabled={busy} onClick={launch}>
                 Start supervised session
-              </button>
-            </div>
-            <div className="cl-launch">
-              <div>
-                <b>Separate patient screen</b>
-                <small>Control a paired window or clinic device.</small>
-              </div>
-              <button disabled={busy} onClick={() => launch("display")}>
-                Pair a patient display
               </button>
             </div>
           </section>

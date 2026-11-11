@@ -9,6 +9,7 @@ import time
 from uuid import uuid4
 
 from aiohttp import web
+from server.screen_mirror import ScreenMirror
 
 
 GAMES = {"garden": "Garden Grow", "stars": "Star Catcher", "river": "River Rowing", "fruit": "Fruit Picking", "keeper": "Lighthouse Keeper"}
@@ -58,6 +59,8 @@ class DisplayPairing:
         self.save = save
         self.origin = origin
         self.current = None
+        self.network = None
+        self.screen = ScreenMirror(self, staff)
 
     def authorize(self, token):
         d = self.current
@@ -81,12 +84,21 @@ class DisplayPairing:
         return response
 
     def register(self, app):
+        self.screen.register(app)
         app.router.add_post("/api/staff/display", self.create)
         app.router.add_get("/api/staff/display", self.monitor)
         app.router.add_post("/api/staff/display/control", self.control)
         app.router.add_post("/api/staff/display/recover", self.recover)
         app.router.add_post("/api/display/claim", self.claim)
         app.router.add_post("/api/display/sync", self.sync)
+        app.router.add_get("/api/staff/display/certificate", self.certificate)
+
+    async def certificate(self, request):
+        self.staff(request)
+        if not self.network or not self.network.authority:
+            raise web.HTTPNotFound(text="This station uses an externally supplied certificate.")
+        return web.Response(body=self.network.authority.read_bytes(), content_type="application/x-x509-ca-cert",
+                            headers={"Content-Disposition": 'attachment; filename="NeuroReach-station.crt"'})
 
     def status(self):
         d = self.current
@@ -114,6 +126,10 @@ class DisplayPairing:
                 if d.target == "display" and not d.token and d.state != "complete" and time.monotonic() < d.expires
                 else None
             ),
+            "localUrl": (
+                "/#display=" + d.code if not d.token and d.state != "complete" and time.monotonic() < d.expires else None
+            ),
+            "stationCertificate": bool(self.network and self.network.authority),
             "record": d.record,
         }
 
@@ -129,6 +145,12 @@ class DisplayPairing:
         target = b.get("target", "display")
         if target not in ("display", "workstation"):
             raise web.HTTPBadRequest(text="Choose a patient screen.")
+        if target == "display" and self.network:
+            self.origin = await self.network.ensure()
+            # Starting the listener can yield while another staff window opens a run.
+            d = self.current
+            if d and d.state != "complete" and (d.token or time.monotonic() < d.expires):
+                raise web.HTTPConflict(text="End the other display session on this station first.")
         protocol = json.loads(p["protocol"])
         self.current = Display(
             p["id"],
@@ -215,7 +237,22 @@ class DisplayPairing:
             if self.connected(d) and time.monotonic() - d.ending_at <= 8:
                 raise web.HTTPConflict(text="Waiting for the final patient checkpoint.")
             self.end("interrupted")
-        elif command == "renew" and d.state == "waiting" and not d.token:
+        elif command == "reinvite" and d.state in ("waiting", "playing", "paused") and not self.connected(d):
+            if self.network:
+                origin = await self.network.ensure()
+                if d is not self.current or self.connected(d):
+                    raise web.HTTPConflict(text="The patient connection changed.")
+                d.invite_origin = origin
+            d.target = "display"
+            d.token = ""
+            d.code = secrets.token_urlsafe(24)
+            d.expires = time.monotonic() + 600
+            d.last_seen = 0
+            if d.started:
+                d.state = "paused"
+            d.revision += 1
+            return web.json_response(self.status())
+        elif command == "renew" and d.state in ("waiting", "paused") and not d.token:
             d.code = secrets.token_urlsafe(24)
             d.expires = time.monotonic() + 600
             return web.json_response(self.status())

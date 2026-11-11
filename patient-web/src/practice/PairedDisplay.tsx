@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import "./practice.css";
 import type { LiveInput } from "./station";
 import { SensorSession } from "./SensorSession";
+import { useScreenPublisher } from "./screenMirror";
 import { gameNames, PracticeRound } from "./session";
 import type { Game, Side, Source, PracticeRecord } from "./session";
 
@@ -61,6 +62,7 @@ export function PairedDisplay({
     }
   });
   const [expired, setExpired] = useState(false);
+  const screen = useRef<HTMLDivElement>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
@@ -69,8 +71,31 @@ export function PairedDisplay({
   const ending = useRef(false);
   const [finishing, setFinishing] = useState(false);
   const revision = useRef<number | null>(null);
+  const [owner, setOwner] = useState(!navigator.locks);
   useEffect(() => {
-    if (!token) return;
+    if (!token || !navigator.locks) return;
+    const abort = new AbortController();
+    let release = () => {};
+    void navigator.locks
+      .request(
+        "neuroreach-patient-" + key,
+        { signal: abort.signal },
+        async () => {
+          if (abort.signal.aborted) return;
+          setOwner(true);
+          await new Promise<void>((resolve) => {
+            release = resolve;
+          });
+        },
+      )
+      .catch(() => {});
+    return () => {
+      abort.abort();
+      release();
+    };
+  }, [token, key]);
+  useEffect(() => {
+    if (!token || !owner) return;
     let closed = false,
       timer = 0;
     async function sync() {
@@ -178,7 +203,7 @@ export function PairedDisplay({
       closed = true;
       clearTimeout(timer);
     };
-  }, [token, key]);
+  }, [token, key, owner]);
   async function pair() {
     setBusy(true);
     try {
@@ -203,12 +228,13 @@ export function PairedDisplay({
     setFinishing(true);
   };
   const done = snapshot?.state === "complete";
+  useScreenPublisher(screen, token, owner && !expired && !done);
   return (
-    <div className={local ? "station-player" : "practice-app"}>
+    <div ref={screen} className={local ? "station-player" : "practice-app"}>
       {!local && (
         <header className="practice-nav">
           <span className="brand">NeuroReach</span>
-          <span>Patient display</span>
+          <span>Shared with your clinician</span>
         </header>
       )}
       <div className={local ? "station-game-body" : "practice-main"}>
@@ -224,9 +250,18 @@ export function PairedDisplay({
           <section className="practice-panel">
             <h1>Join your session</h1>
             <p>Pair this screen with the staff workstation.</p>
+            <p>
+              Your game screen, including its camera preview when enabled, will
+              be visible to your clinician during this session.
+            </p>
             <button className="primary" disabled={busy} onClick={pair}>
               Pair this display
             </button>
+          </section>
+        ) : !owner ? (
+          <section className="practice-panel">
+            <h1>Game open in another tab</h1>
+            <p>Close the other patient tab to continue this session here.</p>
           </section>
         ) : done ? (
           <section className="practice-panel">

@@ -1,5 +1,6 @@
 # Python 3.10. Includes the local staff workspace and Unicorn signal pipeline.
 aiohttp==3.13.3
+cryptography==49.0.0
 joblib==1.5.2
 mne==1.10.2
 numpy==2.2.6

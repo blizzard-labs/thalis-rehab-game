@@ -17,10 +17,10 @@ for (const [title, reward, port, streamName] of [
     test.setTimeout(180000);
     const executable = process.env.NEUROREACH_COMPANION_EXE;
     const service = executable
-      ? spawn(executable, ["--port", port], { stdio: "inherit" })
+      ? spawn(executable, ["--local-only", "--port", port], { stdio: "inherit" })
       : spawn(
           python!,
-          ["../signal-engine/local_companion.py", "--port", port],
+          ["../signal-engine/local_companion.py", "--local-only", "--port", port],
           { stdio: "ignore" },
         );
     const host = `http://127.0.0.1:${port}`;
