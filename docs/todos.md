@@ -1,6 +1,6 @@
 # NeuroReach — Development Status & TODOs
 
-_Paired-prototype inventory dated 2026-07-10. Reference spec: [`docs/specs.md`](specs.md). Game design docs:
+_Localhost status reviewed 2026-11-10. Paired Electron inventory dated 2026-07-10. Reference spec: [`docs/specs.md`](specs.md). Game design docs:
 [`gardengrow.md`](gardengrow.md), [`reachcollect.md`](reachcollect.md)._
 
 ## Localhost prototype
@@ -8,10 +8,12 @@ _Paired-prototype inventory dated 2026-07-10. Reference spec: [`docs/specs.md`](
 | Entry | Current behavior |
 |---|---|
 | Root `npm start` | Starts the browser player on loopback and attempts to start the optional Python companion. |
-| Standalone play | All five games support one-button, camera, Unicorn EEG and blended input. Guest history is optional and exportable. Next guest resets saved rounds, lighthouse progress and the guest calibration link. Camera calibration sets the player's reach. |
+| Standalone play | All five games support one-button, camera, Unicorn EEG and blended input. Garden Grow retains every bloom and attracts bees. Star Catcher varies targets across up to four calibrated directions and keeps completed constellations. Rowing, fruit pickup and delivery, and the persistent lighthouse have game-specific interactions. Guest history is optional and exportable. Next guest resets saved rounds, lighthouse progress and the guest calibration link. |
 | EEG companion | Discovers supported Unicorn streams, checks continuity and contact, collects 60 clean seconds of rest, optionally trains and reuses a personal CSP/LDA model, and stops scoring on missing data. |
-| Staff workspace | Local password, consent, assessments, timed session protocols, SQLite sessions, source-labeled events, qualitative notes, PDF/CSV, and backup and restore. An optional authenticated patient display supports clinician start, pause, resume, and end. |
-| Browser coverage | End-to-end tests exercise button play, a real pose model on a fixture, permission denial, offline reload and synthetic Unicorn-format acquisition. On-head validation and field pilots remain open. |
+| Staff workspace | Patient roster, recent practice charts, assessments, game outcomes, reports, protocol controls, and a live session monitor. Staff can play all five games on the workstation or pair a second screen. Refresh, lock, and window recovery retain the patient and checkpoint in a paused visit. Pause, resume, source fallback and session end are connected to the player. SQLite records, feedback, backup, restore and deletion remain authenticated. |
+| Reports | Session and longitudinal readers, PDF and CSV exports, reference-style clinical formatting, 30-second sensor summaries, event timelines, comparable weekly trends, staff assessments and notes. Synthetic EEG and interrupted visits remain identifiable and are excluded from completed-performance comparisons. |
+| Verified software | At `b3dc7575`, 147 patient unit tests, 146 signal tests and 34 full browser scenarios passed locally. The signal suite skips six hardware checks and the opt-in cued-training check; the latter also passed when explicitly enabled. Three additional WebKit checks cover workstation launch, refresh and lock recovery. Remote verification passed the web and signal suites, the packaged Windows staff workflows, and installer upgrade, rollback and saved-record recovery. See [acceptance coverage](localhost-validation.md). |
+| Open validation | Physical Unicorn acquisition, on-head calibration and feedback, representative device and assistive-technology walkthroughs, measured camera-angle accuracy, and participant usability remain unverified. The available camera evidence uses a recorded pose fixture and the EEG evidence uses synthetic streams. |
 
 The inventory below documents the earlier paired Electron prototype and its subsystem test history. The current localhost launch and verification commands are in the [README](../README.md).
 
