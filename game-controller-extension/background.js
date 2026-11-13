@@ -32,9 +32,9 @@ const supported = (url) => {
 function status(port) {
   return {
     type: "status",
-    connected: !!target,
+    connected: !!target?.rect,
     canControl: !!port && owner === port,
-    connectionId: target ? `${target.tabId}:${target.url}` : "",
+    connectionId: target?.rect ? `${target.tabId}:${target.url}` : "",
     armed: port ? owner === port && armed : armed,
     held,
     reason:
@@ -88,9 +88,15 @@ async function stop(
   armed = false;
   reason = message;
   await release();
-  if (detach && target) {
+  if ((detach || (target && !target.rect)) && target) {
     const old = target;
     target = null;
+    try {
+      await chrome.scripting.executeScript({
+        target: { tabId: old.tabId },
+        func: () => window.__neuroreachAreaCleanup?.(),
+      });
+    } catch {}
     try {
       await chrome.debugger.detach({ tabId: old.tabId });
     } catch {}
@@ -106,10 +112,30 @@ function enqueue(task) {
 }
 
 // Runs in an isolated extension world after the player clicks the toolbar button.
-function chooseArea() {
+async function chooseArea() {
   window.__neuroreachAreaCleanup?.();
+  // Chrome's debugger notice resizes the viewport. Let that settle before the
+  // player measures the game area, otherwise the new connection invalidates itself.
+  await new Promise((resolve) => {
+    let quiet;
+    const finish = () => {
+      clearTimeout(quiet);
+      clearTimeout(limit);
+      window.removeEventListener("resize", resized);
+      resolve();
+    };
+    const resized = () => {
+      clearTimeout(quiet);
+      quiet = setTimeout(finish, 200);
+    };
+    const limit = setTimeout(finish, 1500);
+    quiet = setTimeout(finish, 300);
+    window.addEventListener("resize", resized);
+  });
   const cover = document.createElement("div");
   cover.dataset.neuroreachArea = "true";
+  cover.tabIndex = -1;
+  const previousFocus = document.activeElement;
   cover.style.cssText =
     "position:fixed;inset:0;z-index:2147483647;background:#142d3944;cursor:crosshair;touch-action:none";
   const help = document.createElement("div");
@@ -122,16 +148,34 @@ function chooseArea() {
     "position:absolute;border:3px solid #9df3c0;background:#234e4022;pointer-events:none;box-sizing:border-box";
   cover.append(help, box);
   document.documentElement.append(cover);
+  cover.focus({ preventScroll: true });
   let start = null;
-  const clean = () => {
+  const removePicker = () => {
+    const restoreFocus = document.activeElement === cover;
     cover.remove();
     document.removeEventListener("keydown", escape, true);
+    if (
+      restoreFocus &&
+      previousFocus instanceof HTMLElement &&
+      previousFocus.isConnected
+    )
+      previousFocus.focus({ preventScroll: true });
+  };
+  const layoutChanged = () => {
+    chrome.runtime.sendMessage({ type: "layout-changed" }).catch(() => {});
+  };
+  const clean = () => {
+    removePicker();
+    window.removeEventListener("resize", layoutChanged);
+    window.removeEventListener("scroll", layoutChanged);
     delete window.__neuroreachAreaCleanup;
   };
   const escape = (event) => {
     if (event.key === "Escape") {
       event.preventDefault();
+      event.stopPropagation();
       clean();
+      chrome.runtime.sendMessage({ type: "cancel-area" }).catch(() => {});
     }
   };
   window.__neuroreachAreaCleanup = clean;
@@ -170,19 +214,47 @@ function chooseArea() {
         "Select a larger area inside this window, or press Escape to cancel.";
       return;
     }
-    clean();
+    removePicker();
     chrome.runtime.sendMessage({ type: "area", rect }).catch(() => {});
-    const layoutChanged = () => {
-      chrome.runtime.sendMessage({ type: "layout-changed" }).catch(() => {});
-    };
     window.addEventListener("resize", layoutChanged, { once: true });
     window.addEventListener("scroll", layoutChanged, { once: true });
   };
 }
 
-async function connectGame(tabId, rect) {
+async function beginSelection(tabId) {
   const tab = await chrome.tabs.get(tabId);
   if (!supported(tab.url) || !tab.active)
+    throw new Error("Open a supported game in the active tab first.");
+  await stop("Choose a new game area.", true);
+  await chrome.debugger.attach({ tabId }, "1.3");
+  const selection = {
+    tabId,
+    url: tab.url,
+    title: tab.title,
+    windowId: tab.windowId,
+    rect: null,
+  };
+  target = selection;
+  tell();
+  await chrome.scripting.executeScript({ target: { tabId }, func: chooseArea });
+  if (target !== selection) {
+    await chrome.scripting.executeScript({
+      target: { tabId },
+      func: () => window.__neuroreachAreaCleanup?.(),
+    });
+    throw new Error("Game connection changed. Choose its area again.");
+  }
+}
+
+async function connectGame(tabId, rect) {
+  const tab = await chrome.tabs.get(tabId);
+  if (
+    !supported(tab.url) ||
+    !tab.active ||
+    target?.tabId !== tabId ||
+    target.url !== tab.url ||
+    target.rect
+  )
     throw new Error("Open a supported game in the active tab first.");
   if (
     !rect ||
@@ -197,15 +269,7 @@ async function connectGame(tabId, rect) {
     rect.y + rect.height > rect.viewportHeight
   )
     throw new Error("Select a valid game area.");
-  await stop("Connecting the selected game…", true);
-  await chrome.debugger.attach({ tabId }, "1.3");
-  target = {
-    tabId,
-    url: tab.url,
-    title: tab.title,
-    windowId: tab.windowId,
-    rect,
-  };
+  target.rect = rect;
   point = { x: 0.5, y: 0.5 };
   reason = "Game connected. Set up your input, then enable controls.";
   tell();
@@ -226,16 +290,15 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
       return;
     }
     if (message.type === "choose-area" && !sender.tab) {
-      const tab = await chrome.tabs.get(message.tabId);
-      if (!supported(tab.url))
-        throw new Error("Open a game on one of the supported websites first.");
-      await stop("Choose a new game area.", true);
-      await chrome.scripting.executeScript({
-        target: { tabId: tab.id },
-        func: chooseArea,
-      });
+      await beginSelection(message.tabId);
     } else if (message.type === "area" && sender.tab)
       await connectGame(sender.tab.id, message.rect);
+    else if (
+      message.type === "cancel-area" &&
+      sender.tab?.id === target?.tabId &&
+      !target?.rect
+    )
+      await stop("Game selection cancelled.", true);
     else if (
       message.type === "layout-changed" &&
       sender.tab?.id === target?.tabId
@@ -292,7 +355,7 @@ chrome.runtime.onConnect.addListener((port) => {
     }
     if (message.type === "arm") {
       void enqueue(async () => {
-        if (!target) return;
+        if (!target?.rect) return;
         const tab = await chrome.tabs.get(target.tabId);
         if (!tab.active || tab.url !== target.url) {
           await stop("Return to the selected game, then reconnect.", true);
@@ -396,6 +459,12 @@ chrome.debugger.onDetach.addListener(({ tabId }) => {
     target = null;
     armed = held = false;
     reason = "Game disconnected. Choose its area again.";
+    void chrome.scripting
+      .executeScript({
+        target: { tabId },
+        func: () => window.__neuroreachAreaCleanup?.(),
+      })
+      .catch(() => {});
     tell();
   }
 });

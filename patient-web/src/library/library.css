@@ -259,12 +259,15 @@
 .controller-setup fieldset label {
   display: flex;
 }
-.controller-setup > label,
+.practice-app.game-controller .controller-setup > label,
 .controller-live > label {
   display: block;
   margin: 16px 0;
+  padding-right: 0;
+  min-width: 0;
 }
 .game-controller select {
+  box-sizing: border-box;
   font: inherit;
   padding: 8px;
   border: 1px solid #8caa94;

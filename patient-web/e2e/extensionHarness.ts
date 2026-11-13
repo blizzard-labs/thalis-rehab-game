@@ -9,10 +9,12 @@ import os from "node:os";
 import path from "node:path";
 
 declare const chrome: any;
-declare function chooseArea(): void;
+declare function beginSelection(tabId: number): Promise<void>;
+declare function enqueue(task: () => Promise<void>): Promise<void>;
 export async function controllerHarness(
   origin = "http://127.0.0.1:5173",
   prepare?: (context: BrowserContext) => Promise<void>,
+  nativeWindow = false,
 ) {
   const root = await mkdtemp(path.join(os.tmpdir(), "nr-game-controller-"));
   const extension = path.join(root, "extension");
@@ -32,7 +34,11 @@ export async function controllerHarness(
     {
       channel: "chromium",
       headless: true,
+      ...(nativeWindow ? { viewport: null } : {}),
       args: [
+        ...(nativeWindow
+          ? ["--screen-info={1920x1080}", "--window-size=1280,900"]
+          : []),
         `--disable-extensions-except=${extension}`,
         `--load-extension=${extension}`,
       ],
@@ -67,10 +73,7 @@ export async function controllerHarness(
       const [tab] = await chrome.tabs.query({
         url: "https://poki.com/neuroreach-test",
       });
-      await chrome.scripting.executeScript({
-        target: { tabId: tab.id },
-        func: chooseArea,
-      });
+      await enqueue(() => beginSelection(tab.id));
     });
     const opened = context.waitForEvent("page", { timeout: 10000 });
     const overlay = game.locator("[data-neuroreach-area]");
@@ -87,18 +90,16 @@ export async function controllerHarness(
       controller,
       worker,
       events: () =>
-        game
-          .frames()[1]
-          .evaluate(
-            () =>
-              (window as any).events as {
-                type: string;
-                key?: string;
-                x: number;
-                y: number;
-                trusted: boolean;
-              }[],
-          ),
+        game.frames()[1].evaluate(
+          () =>
+            (window as any).events as {
+              type: string;
+              key?: string;
+              x: number;
+              y: number;
+              trusted: boolean;
+            }[],
+        ),
       close: async () => {
         await context.close();
         await rm(root, { recursive: true, force: true });

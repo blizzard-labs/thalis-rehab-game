@@ -7,7 +7,7 @@ Use camera movement, an EEG switch, or on-screen controls with an existing web g
 1. Start NeuroReach and open its **Play familiar games** library in desktop Chrome or Edge (version 125 or later).
 2. Download the extension from that page and unzip it. Open `chrome://extensions` or `edge://extensions`, enable **Developer mode**, and choose **Load unpacked**. Select the `neuroreach-game-controller` folder containing `manifest.json`. Pin the extension to the toolbar.
 3. **Reload the NeuroReach library after installing.** It should say **Game Controller extension connected**. Keep the local NeuroReach server running.
-4. Open a game from the library. Let it finish loading and use its ordinary controls to dismiss menus or advertisements. Click the NeuroReach toolbar button, choose **Choose game area**, and drag a rectangle around the playable game, excluding advertisements and site navigation.
+4. Open a game from the library. Let it finish loading and use its ordinary controls to dismiss menus or advertisements. Click the NeuroReach toolbar button, choose **Choose game area**, wait for the selection overlay after Chrome’s notice appears, and drag a rectangle around the playable game, excluding advertisements and site navigation. Press Escape to cancel selection.
 5. The controller opens in a separate window. Keep it visible beside the game. Choose a preset and input, complete any camera/EEG setup, then choose **Enable controls**.
 6. Use **Stop controls**, Escape in the controller, or **Alt+Shift+S** to stop. Stop before using game menus or changing the page layout. Reconnect the area after scrolling, resizing or navigating.
 

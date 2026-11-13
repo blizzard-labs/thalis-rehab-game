@@ -1,49 +1,5 @@
-import {
-  chromium,
-  expect,
-  test,
-  type Locator,
-  type Page,
-} from "@playwright/test";
-import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
-import os from "node:os";
-import path from "node:path";
-
-declare const chrome: any;
-
-// Reach controls by Tab, without programmatic focus or pointer clicks.
-async function tabTo(page: Page, target: Locator) {
-  await expect(target).toBeVisible();
-  for (let i = 0; i < 40; i++) {
-    if (await target.evaluate((node) => node === document.activeElement)) break;
-    await page.keyboard.press("Tab");
-  }
-  await expect(target).toBeFocused();
-  await expect(target).toBeInViewport();
-  expect(
-    await target.evaluate((node) => {
-      const box = node.getBoundingClientRect();
-      const hit = document.elementFromPoint(
-        box.left + box.width / 2,
-        box.top + box.height / 2,
-      );
-      return hit !== null && node.contains(hit);
-    }),
-  ).toBe(true);
-}
-
-async function activate(page: Page, target: Locator) {
-  await tabTo(page, target);
-  await page.keyboard.press("Enter");
-}
-
-async function fits(page: Page) {
-  expect(
-    await page.evaluate(
-      () => document.documentElement.scrollWidth <= innerWidth,
-    ),
-  ).toBe(true);
-}
+import { activate, fits, tabTo, zoomHarness } from "./keyboardHarness";
+import { expect, test } from "@playwright/test";
 
 for (const zoom of [2, 4]) {
   test(`keyboard play and reports remain reachable at ${zoom * 100}% browser zoom`, async ({
@@ -54,58 +10,10 @@ for (const zoom of [2, 4]) {
       "Uses Chromium's native tab zoom API",
     );
     test.setTimeout(60000);
-    const root = await mkdtemp(path.join(os.tmpdir(), "nr-keyboard-zoom-"));
-    const extension = path.join(root, "extension");
-    await mkdir(extension);
-    // A test-only helper changes actual browser zoom, not CSS zoom or emulated
-    // viewport width. It is unrelated to the distributed game controller.
-    await writeFile(
-      path.join(extension, "manifest.json"),
-      JSON.stringify({
-        manifest_version: 3,
-        name: "Browser zoom verification",
-        version: "1.0",
-        permissions: ["tabs"],
-        background: { service_worker: "background.js" },
-      }),
-    );
-    await writeFile(
-      path.join(extension, "background.js"),
-      "chrome.runtime.onInstalled.addListener(() => {});",
-    );
-    const context = await chromium.launchPersistentContext(
-      path.join(root, "profile"),
-      {
-        channel: "chromium",
-        headless: true,
-        viewport: null,
-        args: [
-          "--window-size=1280,900",
-          `--disable-extensions-except=${extension}`,
-          `--load-extension=${extension}`,
-        ],
-      },
-    );
+    const run = await zoomHarness(zoom);
+    const { page } = run;
     try {
-      const worker =
-        context.serviceWorkers()[0] ??
-        (await context.waitForEvent("serviceworker"));
-      const page = await context.newPage();
-      await page.goto("http://127.0.0.1:5173/");
       await page.getByRole("heading", { name: "Choose a game" }).waitFor();
-      const originalWidth = await page.evaluate(() => innerWidth);
-      const factor = await worker.evaluate(async (value) => {
-        const [tab] = await chrome.tabs.query({
-          url: "http://127.0.0.1:5173/*",
-        });
-        await chrome.tabs.setZoom(tab.id, value);
-        return chrome.tabs.getZoom(tab.id);
-      }, zoom);
-      expect(factor).toBeCloseTo(zoom);
-      await expect
-        .poll(() => page.evaluate(() => innerWidth))
-        .toBeLessThanOrEqual(Math.ceil(originalWidth / zoom));
-
       for (const game of [
         "Garden Grow",
         "Star Catcher",
@@ -221,8 +129,7 @@ for (const zoom of [2, 4]) {
       await expect(progress).toBeHidden();
       await expect(progressButton).toBeFocused();
     } finally {
-      await context.close();
-      await rm(root, { recursive: true, force: true });
+      await run.close();
     }
   });
 }
