@@ -13,6 +13,13 @@ export function HeadsetSetup({
   const [train, setTrain] = useState(false);
   const [remember, setRemember] = useState(false);
   const [chosen, setChosen] = useState("");
+  // A restarted LSL bridge has a new stream ID. Use the same current choice
+  // for the visible select and the calibration command, never a stale ID.
+  const selected = eeg.devices.some((device) => device.id === chosen)
+    ? chosen
+    : eeg.devices.length === 1
+      ? eeg.devices[0].id
+      : "";
   return (
     <section className="practice-panel">
       <h1>Connect your EEG</h1>
@@ -29,9 +36,12 @@ export function HeadsetSetup({
             Headset{" "}
             <select
               aria-label="Headset"
-              value={chosen || eeg.devices[0]?.id}
+              value={selected}
               onChange={(e) => setChosen(e.target.value)}
             >
+              <option value="" disabled>
+                Choose your headset
+              </option>
               {eeg.devices.map((d) => (
                 <option value={d.id} key={d.id}>
                   {d.name}
@@ -64,9 +74,8 @@ export function HeadsetSetup({
           </fieldset>
           <button
             className="primary"
-            onClick={() =>
-              eeg.start(chosen || eeg.devices[0].id, train, remember)
-            }
+            disabled={!selected}
+            onClick={() => eeg.start(selected, train, remember)}
           >
             Begin resting calibration
           </button>
