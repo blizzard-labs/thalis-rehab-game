@@ -343,3 +343,9 @@
     padding: 16px;
   }
 }
+@media (max-width: 280px) {
+  .controller-stop,
+  .controller-keys {
+    grid-template-columns: 1fr;
+  }
+}
