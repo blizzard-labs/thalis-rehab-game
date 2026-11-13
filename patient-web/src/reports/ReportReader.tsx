@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { games, gameNames, type Game } from "../practice/catalog";
 import {
   progressReport,
@@ -19,6 +19,7 @@ type Props = {
   loadVisits?: () => Promise<Visit[]>;
 };
 export function ReportButton(props: Props) {
+  const opener = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false),
     [error, setError] = useState("");
   const [loaded, setLoaded] = useState<Visit[]>();
@@ -36,13 +37,14 @@ export function ReportButton(props: Props) {
   }
   return (
     <>
-      <button onClick={view}>
+      <button ref={opener} onClick={view}>
         {props.visit ? "Session report" : "Progress report"}
       </button>
       {error && <span role="alert">{error}</span>}
       {open && (
         <ReportReader
           {...props}
+          opener={opener}
           visits={loaded ?? props.visits}
           close={() => {
             setOpen(false);
@@ -59,7 +61,8 @@ function ReportReader({
   visits,
   authorize,
   close,
-}: Props & { close: () => void }) {
+  opener,
+}: Props & { close: () => void; opener: RefObject<HTMLButtonElement> }) {
   const dialog = useRef<HTMLDialogElement>(null),
     mounted = useRef(false);
   const [weeks, setWeeks] = useState(4),
@@ -88,8 +91,11 @@ function ReportReader({
     return () => {
       mounted.current = false;
       node.close();
+      // React removes the dialog before passive cleanup. Restore focus explicitly
+      // because native dialog restoration cannot reliably find its opener then.
+      opener.current?.focus();
     };
-  }, []);
+  }, [opener]);
   useEffect(() => {
     const check = () => {
       if (document.visibilityState === "visible") authorize?.().catch(close);

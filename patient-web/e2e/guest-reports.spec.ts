@@ -33,6 +33,9 @@ test("a guest can review the current visit alongside a previous week without sav
       .nth(4),
   ).toHaveText("1");
   await reader.getByRole("button", { name: "Close report" }).click();
+  await expect(
+    page.getByRole("button", { name: "Session report", exact: true }),
+  ).toBeFocused();
   await page.getByRole("button", { name: "Back to games" }).click();
   await page.getByRole("button", { name: "Saved sessions" }).click();
   await expect(page.getByRole("listitem")).toHaveCount(1);
