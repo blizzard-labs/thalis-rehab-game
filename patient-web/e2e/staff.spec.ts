@@ -36,6 +36,12 @@ test("isolated staff station records actions, exports reports and locks the rost
     await page.getByLabel("Participant label").fill("Station test user");
     await page.getByLabel(/Participant agreed/).check();
     await page.getByRole("button", { name: "Add participant" }).click();
+    await expect(
+      page.getByRole("button", { name: /Play familiar games/ }),
+    ).toHaveCount(0);
+    await expect(
+      page.getByLabel("Game", { exact: true }).locator("option"),
+    ).toHaveCount(5);
     await page
       .getByRole("button", { name: "Start supervised session" })
       .click();
@@ -46,6 +52,9 @@ test("isolated staff station records actions, exports reports and locks the rost
         .getByRole("link", { name: "Open patient display" })
         .getAttribute("href"))!,
     );
+    await expect(
+      player.getByRole("button", { name: /Play familiar games/ }),
+    ).toHaveCount(0);
     await player.getByRole("button", { name: "Pair this display" }).click();
     await page.getByRole("button", { name: "Start patient game" }).click();
     for (let i = 0; i < 4; i++)

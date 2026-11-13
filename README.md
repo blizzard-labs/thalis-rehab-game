@@ -45,6 +45,12 @@ The default SQLite database is `~/.neuroreach/clinic.sqlite3`. Set `NEUROREACH_D
 The bundled model is Google's [MediaPipe Pose Landmarker Lite, float16, version 1](https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task), SHA-256 `59929e1d1ee95287735ddd833b19cf4ac46d29bc7afddbbf6753c459690d574a`. The build copies the pinned MediaPipe WebAssembly runtime locally.
 
 
+## Existing games with camera or EEG
+
+Choose **Play familiar games** on the independent home screen to open complete game libraries and favorites such as the original Fruit Ninja, Angry Birds Friends and 2048. Games run on their providers’ websites. For camera/EEG controls, install the downloadable **NeuroReach Game Controller** extension in desktop Chrome or Edge, reload the library, and use its toolbar button to select a game's playable area. A separate controller provides arrow, pointer, drag, slice and hold presets. Keep it visible beside the game. **Alt+Shift+S** stops forwarding.
+
+External games need internet; compatibility varies by title. They are independent play only and do not produce clinical reports. Ordinary touch/keyboard play remains available without the extension. See [setup, controls and research](docs/game-library.md) for permissions, limitations and verification.
+
 ## Run the paired-screen Electron prototype
 
 The Electron console hosts a separate HTTPS LAN workflow for a patient display. It includes the original developer roster, signal monitor, WebRTC camera processing, and an explicitly simulated signal source by default. The localhost **Staff workspace** above holds the real participant records and automatic reports.

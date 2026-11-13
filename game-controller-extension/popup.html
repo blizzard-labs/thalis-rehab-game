@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>NeuroReach controller</title>
+    <style>
+      body {
+        width: 310px;
+        margin: 0;
+        padding: 22px;
+        font: 15px/1.5 system-ui;
+        background: #f8f8f0;
+        color: #24392f;
+      }
+      h1 {
+        font: 28px Georgia;
+        margin: 0 0 12px;
+      }
+      button {
+        width: 100%;
+        font: 600 15px system-ui;
+        padding: 12px;
+        border: 1px solid #52765f;
+        border-radius: 8px;
+        background: #234e40;
+        color: white;
+        cursor: pointer;
+        margin: 5px 0;
+      }
+      p {
+        margin: 12px 0;
+      }
+      a {
+        color: #234e40;
+      }
+      button:disabled {
+        opacity: 0.6;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>NeuroReach</h1>
+    <p>
+      Open a game, then select just its playable area. Camera and EEG controls
+      will stay inside that area.
+    </p>
+    <button id="connect">Choose game area</button
+    ><button id="stop">Stop controls</button>
+    <p id="status" role="status"></p>
+    <p>
+      Use on Poki, Coolmath Games, Playgama, GamePix, CrazyGames, 2048 or Angry
+      Birds Friends.
+    </p>
+    <script src="popup.js"></script>
+  </body>
+</html>

@@ -29,3 +29,6 @@ archive/
 /patient-web/public/vision-wasm/
 /patient-web/test-results/
 /patient-web/playwright-report/
+
+# Generated downloadable controller, rebuilt by predev/prebuild
+patient-web/public/game-controller-extension.zip

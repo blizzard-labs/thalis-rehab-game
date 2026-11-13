@@ -11,8 +11,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:integration": "vitest run --config vitest.integration.config.ts",
-    "predev": "node scripts/prepare-camera.mjs",
-    "prebuild": "node scripts/prepare-camera.mjs",
+    "predev": "node scripts/prepare-camera.mjs && node scripts/package-controller.mjs",
+    "prebuild": "node scripts/prepare-camera.mjs && node scripts/package-controller.mjs",
     "test:e2e": "playwright test",
     "postbuild": "node scripts/build-offline.mjs"
   },

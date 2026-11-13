@@ -1,0 +1,81 @@
+// Official game pages, not copied games or unlicensed embedded builds.
+export const services = [
+  {
+    name: "Poki",
+    url: "https://poki.com/",
+    detail: "Familiar favorites, skill games and quick arcade rounds.",
+    icon: "✳",
+    color: "blue",
+  },
+  {
+    name: "Coolmath Games",
+    url: "https://www.coolmathgames.com/",
+    detail: "Puzzles, strategy, number games and patient-paced challenges.",
+    icon: "▦",
+    color: "peach",
+  },
+  {
+    name: "Playgama",
+    url: "https://playgama.com/",
+    detail: "A broad library of arcade, puzzle, racing and casual games.",
+    icon: "▷",
+    color: "purple",
+  },
+  {
+    name: "CrazyGames",
+    url: "https://www.crazygames.com/",
+    detail: "Explore action, sports, driving and browser classics.",
+    icon: "✦",
+    color: "mint",
+  },
+] as const;
+export const familiarGames = [
+  {
+    name: "Fruit Ninja",
+    url: "https://poki.com/en/g/fruit-ninja",
+    provider: "Poki",
+    controls: "Pointer · slice",
+    icon: "🍉",
+    description: "Slice flying fruit and avoid the bombs.",
+  },
+  {
+    name: "Angry Birds Friends",
+    url: "https://redsclub.com/ab-friends/play/",
+    provider: "Rovio · desktop web",
+    controls: "Pointer · drag",
+    icon: "◉",
+    description: "Aim the slingshot, pull back and release.",
+  },
+  {
+    name: "2048",
+    url: "https://play2048.co/",
+    provider: "Original game",
+    controls: "Arrow keys",
+    icon: "2048",
+    description: "Merge matching tiles into bigger numbers.",
+  },
+  {
+    name: "Subway Surfers",
+    url: "https://poki.com/en/g/subway-surfers",
+    provider: "Poki",
+    controls: "Arrow keys",
+    icon: "↟",
+    description: "Dodge obstacles, change lanes and collect coins.",
+  },
+  {
+    name: "Crossy Road",
+    url: "https://poki.com/en/g/crossy-road",
+    provider: "Poki",
+    controls: "Arrow keys",
+    icon: "▧",
+    description: "Time each step through traffic and across rivers.",
+  },
+  {
+    name: "Jetpack Joyride",
+    url: "https://poki.com/en/g/jetpack-joyride",
+    provider: "Poki",
+    controls: "Pointer · hold",
+    icon: "↗",
+    description: "Lift off and weave through a side-scrolling adventure.",
+  },
+] as const;

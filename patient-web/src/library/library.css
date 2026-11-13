@@ -1,0 +1,342 @@
+.practice-app .library-entry {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  width: 100%;
+  text-align: left;
+  padding: 20px 24px;
+  margin: 0 0 28px;
+  background: #e9efe4;
+  border-color: #bcc8b5;
+}
+.library-entry > span:first-child {
+  font-size: 38px;
+  color: #506442;
+}
+.library-entry > span:last-child {
+  margin-left: auto;
+  font-size: 26px;
+}
+.library-entry strong {
+  display: block;
+  font-size: 21px;
+}
+.library-entry small {
+  display: block;
+  font-weight: 400;
+  margin-top: 4px;
+}
+.library-hero {
+  display: grid;
+  grid-template-columns: 1fr 200px;
+  gap: 36px;
+  align-items: center;
+  padding: 35px 0 25px;
+}
+.library-hero p {
+  max-width: 700px;
+}
+.library-eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  font-size: 12px;
+  font-weight: 700;
+  color: #536748;
+}
+.library-emblem {
+  aspect-ratio: 1;
+  border: 1px solid #aebba8;
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  font: 70px Georgia;
+  background: #e8eddc;
+}
+.library-emblem span {
+  text-align: center;
+  font: 600 13px/1.5 system-ui;
+  letter-spacing: 0.12em;
+}
+.library-status {
+  padding: 16px 20px;
+  background: #e7eee7;
+  border-radius: 10px;
+}
+.library-status > span {
+  margin-right: 8px;
+}
+.library-help {
+  margin: 14px 0 32px;
+  padding: 16px 20px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.library-help summary {
+  cursor: pointer;
+  font-weight: 650;
+  min-height: 30px;
+}
+.library-help li {
+  margin: 12px 0;
+}
+.game-library a,
+.game-controller a {
+  color: #234e40;
+}
+.game-library a:focus-visible,
+.game-controller a:focus-visible,
+.game-library summary:focus-visible,
+.game-controller summary:focus-visible {
+  outline: 3px solid #1c6687;
+  outline-offset: 4px;
+}
+.library-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 34px 0 20px;
+}
+.library-heading p {
+  color: #526256;
+  margin: 10px 0 0;
+}
+.library-heading input {
+  display: block;
+  border: 1px solid #8caa94;
+  border-radius: 8px;
+  font: inherit;
+  padding: 10px;
+  margin-top: 4px;
+  width: 100%;
+  box-sizing: border-box;
+}
+.library-services {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+.library-services a {
+  display: flex;
+  flex-direction: column;
+  color: #24392f;
+  text-decoration: none;
+  border: 1px solid #ccd4c4;
+  border-radius: 13px;
+  padding: 22px;
+  background: #fffef8;
+}
+.library-service .library-icon {
+  font-size: 42px;
+  width: 65px;
+  height: 65px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  margin-bottom: 20px;
+}
+.library-service.blue .library-icon {
+  background: #dceaf1;
+}
+.library-service.peach .library-icon {
+  background: #f3dfc8;
+}
+.library-service.purple .library-icon {
+  background: #e6dff0;
+}
+.library-service.mint .library-icon {
+  background: #dce9d7;
+}
+.library-services h3,
+.library-favorites h3 {
+  font: 600 21px/1.3 system-ui;
+  margin: 0;
+}
+.library-services p {
+  font-size: 15px;
+  flex: 1;
+}
+.library-services b {
+  font-size: 14px;
+}
+.library-favorites {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+.library-favorites a {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 24px;
+  border: 1px solid #ccd4c4;
+  border-radius: 12px;
+  text-decoration: none;
+  background: #fffef8;
+}
+.library-favorites p {
+  margin: 8px 0 12px;
+  font-size: 15px;
+}
+.library-favorites small {
+  color: #526256;
+  display: block;
+  margin-bottom: 7px;
+}
+.library-game-icon {
+  width: 86px;
+  height: 86px;
+  flex-shrink: 0;
+  border-radius: 14px;
+  background: #f0e7d6;
+  display: grid;
+  place-items: center;
+  font-size: 30px;
+  font-weight: 700;
+}
+.library-control-tag {
+  display: inline-block;
+  padding: 4px 9px;
+  border-radius: 4px;
+  background: #e9efe4;
+  font-size: 13px;
+}
+.library-note {
+  color: #526256;
+  font-size: 14px;
+  padding: 20px 0;
+}
+.controller-main {
+  width: min(640px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 20px 0;
+}
+.practice-app.game-controller h1 {
+  font-size: 40px;
+}
+.practice-app.game-controller h2 {
+  font-size: 30px;
+  margin: 16px 0;
+}
+.game-controller .practice-panel h1 {
+  font-size: 30px;
+  margin-top: 24px;
+}
+.controller-game {
+  border: 1px solid #cad4c6;
+  padding: 14px;
+  border-radius: 10px;
+  margin: 18px 0;
+  overflow-wrap: anywhere;
+  background: #fffef8;
+}
+.controller-game p {
+  margin: 8px 0 0;
+  font-size: 14px;
+}
+.controller-stop {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  position: sticky;
+  top: 0;
+  padding: 8px 0;
+  background: var(--paper);
+  z-index: 2;
+}
+.controller-stop button:last-child {
+  color: #862c25;
+  border-color: #ba8b80;
+}
+.controller-indicator {
+  margin: 4px 0 14px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.controller-setup fieldset label {
+  display: flex;
+}
+.controller-setup > label,
+.controller-live > label {
+  display: block;
+  margin: 16px 0;
+}
+.game-controller select {
+  font: inherit;
+  padding: 8px;
+  border: 1px solid #8caa94;
+  border-radius: 7px;
+  background: white;
+  max-width: 100%;
+  display: block;
+  margin-top: 5px;
+}
+.controller-live video {
+  width: 180px;
+  margin: 16px auto;
+}
+.controller-meter meter {
+  width: 100%;
+  height: 22px;
+}
+.controller-keys {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  margin: 16px 0;
+}
+.controller-keys .is-scanning {
+  background: #e7d5ae;
+  border: 3px solid #755723;
+}
+.controller-select {
+  width: 100%;
+}
+.controller-map {
+  height: 110px;
+  border: 1px solid #a0b598;
+  background: #e6eede;
+  border-radius: 8px;
+  position: relative;
+  margin-top: 14px;
+}
+.controller-map span {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  font: 700 26px system-ui;
+}
+@media (max-width: 850px) {
+  .library-services {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (max-width: 600px) {
+  .library-hero {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+  .library-emblem {
+    display: none;
+  }
+  .library-favorites {
+    grid-template-columns: 1fr;
+  }
+  .library-favorites a {
+    padding: 18px;
+    gap: 14px;
+  }
+  .library-game-icon {
+    width: 64px;
+    height: 64px;
+    font-size: 25px;
+  }
+  .library-services a {
+    padding: 16px;
+  }
+  .practice-app .library-entry {
+    padding: 16px;
+  }
+}

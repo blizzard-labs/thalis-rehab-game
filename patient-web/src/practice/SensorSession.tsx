@@ -2,6 +2,7 @@ import type { LiveInput } from "./station";
 import { useEffect, useState, type MutableRefObject } from "react";
 import { shoulder, withinNet } from "../reach/starGeometry";
 import { Play } from "./GameView";
+import { HeadsetSetup } from "./HeadsetSetup";
 import { ReachSetup, type ReachCalibration } from "./ReachSetup";
 import { cameraStarTrial, reachProgress } from "./motion";
 import { useHeadset, type ModelProfile } from "./useHeadset";
@@ -36,9 +37,6 @@ export function SensorSession({
     round.record.game === "stars" || round.record.game === "fruit";
   const cameraNeeded = source === "camera" || source === "blended";
   const eegNeeded = source === "eeg" || source === "blended";
-  const [train, setTrain] = useState(false);
-  const [remember, setRemember] = useState(false);
-  const [chosen, setChosen] = useState("");
   const [played, setPlayed] = useState(false);
   const eeg = useHeadset(
     eegNeeded &&
@@ -150,83 +148,15 @@ export function SensorSession({
     );
   if (eegNeeded && !played)
     return (
-      <section className="practice-panel">
-        <h1>Connect your EEG</h1>
-        <p>
-          Open the Unicorn Suite LSL bridge on this computer and start
-          streaming.
-        </p>
-        <p role="status">{eeg.message}</p>
-        {eeg.calibration && eeg.phase === "ready" && (
-          <p>Scoring with {eeg.calibration.method}.</p>
+      <HeadsetSetup eeg={eeg} begin={() => setPlayed(true)}>
+        {source === "blended" && (
+          <button onClick={() => switchInput("camera")}>
+            Continue with camera
+          </button>
         )}
-        {eeg.phase === "choose" && eeg.devices.length > 0 && (
-          <>
-            <label>
-              Headset{" "}
-              <select
-                aria-label="Headset"
-                value={chosen || eeg.devices[0]?.id}
-                onChange={(e) => setChosen(e.target.value)}
-              >
-                {eeg.devices.map((d) => (
-                  <option value={d.id} key={d.id}>
-                    {d.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <p>
-              First, rest quietly for 60 seconds of clean signal. You can also
-              train an imagery classifier with 20 cued trials.
-            </p>
-            <fieldset>
-              <legend>Calibration</legend>
-              <label>
-                <input
-                  type="checkbox"
-                  checked={train}
-                  onChange={(e) => setTrain(e.target.checked)}
-                />{" "}
-                Train imagery classifier
-              </label>
-              <label>
-                <input
-                  type="checkbox"
-                  checked={remember}
-                  onChange={(e) => setRemember(e.target.checked)}
-                />{" "}
-                Save or reuse my model on this computer
-              </label>
-            </fieldset>
-            <button
-              className="primary"
-              onClick={() =>
-                eeg.start(chosen || eeg.devices[0].id, train, remember)
-              }
-            >
-              Begin resting calibration
-            </button>
-          </>
-        )}
-        <div className="button-row">
-          {eeg.phase === "ready" && (
-            <button className="primary" onClick={() => setPlayed(true)}>
-              Begin play
-            </button>
-          )}
-          {(eeg.phase === "error" || eeg.phase === "choose") && (
-            <button onClick={eeg.retry}>Scan again</button>
-          )}
-          {source === "blended" && (
-            <button onClick={() => switchInput("camera")}>
-              Continue with camera
-            </button>
-          )}
-          <button onClick={() => switchInput("button")}>Use one button</button>
-          <button onClick={end}>End session</button>
-        </div>
-      </section>
+        <button onClick={() => switchInput("button")}>Use one button</button>
+        <button onClick={end}>End session</button>
+      </HeadsetSetup>
     );
   const observation = () => {
     const rest = calibration?.rest;

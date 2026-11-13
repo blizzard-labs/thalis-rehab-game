@@ -36,6 +36,7 @@ process.on("SIGINT", () => stop(0));
 process.on("SIGTERM", () => stop(0));
 
 await import("../patient-web/scripts/prepare-camera.mjs");
+await import("../patient-web/scripts/package-controller.mjs");
 let companionRunning = false;
 try {
   const response = await fetch("http://127.0.0.1:8766/api/health", {

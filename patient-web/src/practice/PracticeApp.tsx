@@ -23,6 +23,7 @@ import {
 } from "./guestHistory";
 import { StaffWorkspace } from "./StaffWorkspace";
 import { SensorSession } from "./SensorSession";
+import { GameLibrary } from "../library/GameLibrary";
 import "./practice.css";
 
 function History({
@@ -351,12 +352,21 @@ function GameSetup({
 
 export function PracticeApp() {
   const [page, setPage] = useState<
-    "home" | "history" | "setup" | "play" | "summary" | "staff" | "handoff"
+    | "home"
+    | "history"
+    | "setup"
+    | "play"
+    | "summary"
+    | "staff"
+    | "handoff"
+    | "library"
   >(() =>
     location.hash === "#staff" &&
     ["localhost", "127.0.0.1"].includes(location.hostname)
       ? "staff"
-      : "home",
+      : location.hash === "#library"
+        ? "library"
+        : "home",
   );
   const [game, setGame] = useState<Game>("garden");
   const [side, setSide] = useState<Side>("right");
@@ -418,7 +428,7 @@ export function PracticeApp() {
     }
   }
   const back = () => {
-    if (location.hash === "#staff")
+    if (location.hash === "#staff" || location.hash === "#library")
       history.replaceState(null, "", location.pathname + location.search);
     setRound(null);
     setPage("home");
@@ -444,6 +454,22 @@ export function PracticeApp() {
             <p className="intro">
               Practice at your own pace. You can pause or finish at any time.
             </p>
+            <button
+              className="library-entry"
+              onClick={() => {
+                history.replaceState(null, "", "#library");
+                setPage("library");
+              }}
+            >
+              <span aria-hidden="true">✦</span>
+              <span>
+                <strong>Play familiar games</strong>
+                <small>
+                  Fruit Ninja, 2048 and full game libraries · independent play
+                </small>
+              </span>
+              <span aria-hidden="true">↗</span>
+            </button>
             <div className="game-cards">
               {games.map((id) => (
                 <button
@@ -479,6 +505,7 @@ export function PracticeApp() {
           </>
         )}
         {page === "staff" && <StaffWorkspace onExit={back} />}
+        {page === "library" && <GameLibrary back={back} />}
         {page === "history" && <History guest={guest} onBack={back} />}
         {page === "handoff" && (
           <section className="practice-panel">
