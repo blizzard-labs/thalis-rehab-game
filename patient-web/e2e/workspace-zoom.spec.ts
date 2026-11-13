@@ -15,7 +15,11 @@ test.beforeEach(({ browserName }) => {
 });
 
 test("external-game controller works with keyboard controls at 200% and 400% zoom", async () => {
-  const run = await controllerHarness(undefined, undefined, true);
+  const run = await test.step(
+    "Open the native controller window",
+    () => controllerHarness(undefined, undefined, true),
+    { timeout: 10000 },
+  );
   try {
     const { controller, worker } = run;
     await expect
@@ -46,7 +50,7 @@ test("external-game controller works with keyboard controls at 200% and 400% zoo
       expect(factor).toBeCloseTo(zoom);
       await expect
         .poll(() => controller.evaluate(() => innerWidth))
-        .toBeLessThanOrEqual(width / zoom);
+        .toBe(width / zoom);
       await fits(controller);
       await activate(
         controller,
@@ -89,57 +93,91 @@ test("external-game controller works with keyboard controls at 200% and 400% zoo
     }
     // A real game-window resize must still invalidate the area. Escape must
     // release the pre-selection attachment, and another selection must recover.
-    const gameTab = await worker.evaluate(async () => {
-      const [tab] = await chrome.tabs.query({
-        url: "https://poki.com/neuroreach-test",
-      });
-      await chrome.windows.update(tab.windowId, {
-        left: 0,
-        top: 0,
-        width: 1150,
-        height: 900,
-      });
-      return tab.id;
-    });
+    const gameTab = await test.step(
+      "Resize the native game window",
+      () =>
+        worker.evaluate(async () => {
+          const [tab] = await chrome.tabs.query({
+            url: "https://poki.com/neuroreach-test",
+          });
+          await chrome.windows.update(tab.windowId, {
+            left: 0,
+            top: 0,
+            width: 1150,
+            height: 900,
+          });
+          return tab.id;
+        }),
+      { timeout: 7000 },
+    );
     await expect
       .poll(() => worker.evaluate(() => (globalThis as any).status().connected))
       .toBe(false);
-    await run.game.bringToFront();
-    await worker.evaluate(
-      (tabId) => enqueue(() => beginSelection(tabId)),
-      gameTab,
+    await test.step(
+      "Focus the resized game window",
+      () => run.game.bringToFront(),
+      { timeout: 7000 },
     );
-    await run.game.locator("[data-neuroreach-area]").waitFor();
+    await test.step(
+      "Select an area after resizing the game",
+      () =>
+        worker.evaluate(
+          (tabId) => enqueue(() => beginSelection(tabId)),
+          gameTab,
+        ),
+      { timeout: 10000 },
+    );
+    await run.game.locator("[data-neuroreach-area]").waitFor({ timeout: 7000 });
     await run.game.keyboard.press("Escape");
     await expect(run.game.locator("[data-neuroreach-area]")).toHaveCount(0);
-    await expect
-      .poll(() =>
-        worker.evaluate(async (tabId) => {
-          // getTargets().attached also includes Playwright's own connection.
-          try {
-            await chrome.debugger.sendCommand({ tabId }, "Runtime.evaluate", {
-              expression: "true",
-            });
-            return true;
-          } catch {
-            return false;
-          }
-        }, gameTab),
-      )
-      .toBe(false);
-    await worker.evaluate(
-      (tabId) => enqueue(() => beginSelection(tabId)),
-      gameTab,
+    await test.step(
+      "Confirm cancellation releases the extension attachment",
+      async () => {
+        await expect
+          .poll(() =>
+            worker.evaluate(async (tabId) => {
+              // getTargets().attached also includes Playwright's own connection.
+              try {
+                await chrome.debugger.sendCommand(
+                  { tabId },
+                  "Runtime.evaluate",
+                  {
+                    expression: "true",
+                  },
+                );
+                return true;
+              } catch {
+                return false;
+              }
+            }, gameTab),
+          )
+          .toBe(false);
+      },
+      { timeout: 7000 },
+    );
+    await test.step(
+      "Select an area again after cancellation",
+      () =>
+        worker.evaluate(
+          (tabId) => enqueue(() => beginSelection(tabId)),
+          gameTab,
+        ),
+      { timeout: 10000 },
     );
     const overlay = run.game.locator("[data-neuroreach-area]");
     await overlay.dragTo(overlay, {
+      timeout: 7000,
       sourcePosition: { x: 120, y: 60 },
       targetPosition: { x: 720, y: 560 },
     });
     await expect
       .poll(() => worker.evaluate(() => (globalThis as any).status().connected))
       .toBe(true);
-    await controller.bringToFront();
+    await test.step(
+      "Return to the controller window",
+      () => controller.bringToFront(),
+      { timeout: 7000 },
+    );
     await activate(
       controller,
       controller.getByRole("button", { name: "Set up input" }),
@@ -158,7 +196,11 @@ test("external-game controller works with keyboard controls at 200% and 400% zoo
       controller.getByRole("button", { name: "Stop controls", exact: true }),
     );
   } finally {
-    await run.close();
+    await test.step(
+      "Close the isolated controller browser",
+      () => run.close(),
+      { timeout: 10000 },
+    );
   }
 });
 
