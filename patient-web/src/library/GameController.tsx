@@ -13,7 +13,7 @@ import {
   type PointerRange,
 } from "./PointerSetup";
 import { sendControl, useGameController } from "./bridge";
-import { suggestedPreset, type ControlPreset } from "./catalog";
+import { findFavorite, type ControlPreset } from "./catalog";
 import { ExtensionHelp } from "./GameLibrary";
 import "./library.css";
 import "../practice/practice.css";
@@ -34,6 +34,7 @@ const pointerLabels = [
 
 export function GameController() {
   const status = useGameController();
+  const favorite = findFavorite(status.gameUrl);
   const [source, setSource] = useState<Source>("button");
   const [side, setSide] = useState<Side>("right");
   const [preset, setPreset] = useState<ControlPreset>("arrows");
@@ -55,8 +56,8 @@ export function GameController() {
   const eegNeeded = configured && (source === "eeg" || source === "blended");
   // A new selected game gets its own mapping. A player can override it in setup.
   useEffect(() => {
-    if (status.connectionId) setPreset(suggestedPreset(status.gameUrl));
-  }, [status.connectionId, status.gameUrl]);
+    if (status.connectionId) setPreset(favorite?.preset ?? "arrows");
+  }, [status.connectionId, favorite]);
   const cameraTick = useRef<(() => void) | null>(null);
   const camera = useMotionCamera(cameraNeeded, side, false, {
     armed: status.armed,
@@ -260,7 +261,9 @@ export function GameController() {
       if (enabled && valid) {
         if (isCamera && !usesArrows(current.preset) && frame && current.range) {
           const p = pointerPosition(current.range, frame.point);
-          const precision = current.preset === "pointer" || current.preset === "drag";
+          const precision = ["pointer", "drag", "cast"].includes(
+            current.preset,
+          );
           const alpha = Math.min(1, (now - last) / (precision ? 220 : 100));
           point.current = {
             x: point.current.x + (p.x - point.current.x) * alpha,
@@ -274,18 +277,35 @@ export function GameController() {
               sendControl("hold");
             if (directed!.level < 0.3 && current.status.held)
               sendControl("release");
-          } else if (!isEeg && ["pointer", "drag"].includes(current.preset)) {
+          } else if (!isEeg && precision) {
             const width = current.status.area?.width ?? 800,
               height = current.status.area?.height ?? 600;
-            if (
+            // Scale the movement needed to rearm with the selected play area.
+            // A neighboring square on a small chessboard can be less than 36px away.
+            const radius = Math.min(24, Math.min(width, height) / 24);
+            // Tiny Fishing reads a click at the central Play button, then mouse
+            // drags underwater. A sideways reach holds the button to steer.
+            const offset = Math.abs(point.current.x - 0.5);
+            const steering =
+              current.preset === "cast" &&
+              offset > (current.status.held ? 0.08 : 0.14);
+            if (steering) {
+              if (!current.status.held) sendControl("hold");
+              gesture.current = null;
+            } else if (current.preset === "cast" && current.status.held) {
+              sendControl("release");
+              gesture.current = null;
+            } else if (
               !gesture.current ||
               Math.hypot(
                 (gesture.current.x - point.current.x) * width,
                 (gesture.current.y - point.current.y) * height,
-              ) > (gesture.current.fired ? 36 : 24)
+              ) >
+                radius * (gesture.current.fired ? 1.5 : 1)
             )
               gesture.current = { ...point.current, at: now, fired: false };
             if (
+              gesture.current &&
               !gesture.current.fired &&
               now - gesture.current.at >= current.dwellMs
             ) {
@@ -321,6 +341,7 @@ export function GameController() {
           if (fired)
             sendControl(
               current.preset === "drag" ||
+                current.preset === "cast" ||
                 current.preset === "hold" ||
                 current.preset === "slice"
                 ? current.status.held
@@ -391,6 +412,9 @@ export function GameController() {
         <div className="controller-game">
           <strong>{status.game || "No game connected"}</strong>
           <p role="status">{status.reason}</p>
+          {source === "camera" &&
+            preset === favorite?.preset &&
+            favorite.tip && <p>{favorite.tip}</p>}
         </div>
         {!status.installed && <ExtensionHelp />}
         <div className="controller-stop">
@@ -406,7 +430,11 @@ export function GameController() {
             }
             onClick={() => {
               gate.current.reset();
-              sendControl("arm", { focusGame: cameraNeeded });
+              sendControl("arm", {
+                focusGame: cameraNeeded,
+                showAim:
+                  cameraNeeded && !usesArrows(preset) && preset !== "hold",
+              });
             }}
           >
             Enable controls
@@ -468,6 +496,7 @@ export function GameController() {
                 </option>
                 <option value="pointer">Pointer + click · puzzles</option>
                 <option value="drag">Drag + release · Angry Birds</option>
+                <option value="cast">Cast and steer · Tiny Fishing</option>
                 <option value="slice">Slice · Fruit Ninja</option>
                 <option value="hold">Hold + release · Jetpack Joyride</option>
               </select>
@@ -540,8 +569,10 @@ export function GameController() {
                         : preset === "hold"
                           ? "Reach away from rest to hold. Return to rest to release."
                           : preset === "drag"
-                            ? "Hold still to grab. Move your hand, then hold still again to release."
-                            : "Move your hand to aim. Hold still to click; move away before another click."
+                            ? "Aim the ring and hold still to grab. Move it to the destination and hold still again to release."
+                            : preset === "cast"
+                              ? "Reach sideways to drag the hook. Return to the middle to release."
+                              : "Aim the ring and hold still to click. Move away before the next click."
                   : source === "eeg"
                     ? "Wait for the highlighted control. Imagine moving your hand to select it, then relax."
                     : "Use the buttons below, or press Space to choose the highlighted control."}
@@ -599,19 +630,22 @@ export function GameController() {
                   </select>
                 </label>
               )}
-              {source === "camera" && ["pointer", "drag"].includes(preset) && (
-                <label>
-                  Hold still to select{" "}
-                  <select
-                    value={dwellMs}
-                    onChange={(event) => setDwellMs(Number(event.target.value))}
-                  >
-                    <option value={900}>0.9 seconds</option>
-                    <option value={1200}>1.2 seconds</option>
-                    <option value={1800}>1.8 seconds</option>
-                  </select>
-                </label>
-              )}
+              {source === "camera" &&
+                ["pointer", "drag", "cast"].includes(preset) && (
+                  <label>
+                    Hold still to select{" "}
+                    <select
+                      value={dwellMs}
+                      onChange={(event) =>
+                        setDwellMs(Number(event.target.value))
+                      }
+                    >
+                      <option value={900}>0.9 seconds</option>
+                      <option value={1200}>1.2 seconds</option>
+                      <option value={1800}>1.8 seconds</option>
+                    </select>
+                  </label>
+                )}
               {!usesArrows(preset) && !cameraNeeded && (
                 <label>
                   Pointer step{" "}

@@ -1,6 +1,6 @@
 # Existing-game library and controller
 
-Reviewed 2026-11-12.
+Reviewed 2026-11-14.
 
 ## Product decision
 
@@ -17,7 +17,7 @@ A large catalog and universal adaptive controls are separate problems. Provider 
 | Arbitrary embedded websites | [Same-origin isolation](https://developer.mozilla.org/en-US/docs/Web/Security/Defenses/Same-origin_policy) prevents the app from controlling an unrelated iframe's DOM. | Do not pretend an iframe is a camera/EEG integration. |
 | Desktop extension | Chrome's documented [debugger API](https://developer.chrome.com/docs/extensions/reference/api/debugger) supports targeted [Input commands](https://chromedevtools.github.io/devtools-protocol/tot/Input/). | Use explicit tab selection, a bounded play area, one controller, and normal browser input. No per-game code rewriting is required. |
 
-Favorites currently link to Fruit Ninja, Angry Birds Friends, 2048, Subway Surfers, Crossy Road and Jetpack Joyride. The profiles shown are suggested mappings, not certification that every title/menu is fully accessible. Red’s Club uses `/ab-friends/play/`; its homepage is a storefront.
+Each of the sixteen favorites selects its preset by the game page’s origin and path. Players can change it in the controller. Doodle Jump opens the Play.Works guest game after CrazyGames retired its listing. Red’s Club uses `/ab-friends/play/`; its homepage is a storefront.
 
 ## Control pipeline
 
@@ -28,7 +28,7 @@ The library's extension status is read-only. Only the owning `#game-controller` 
 | Input | Arrow preset | Pointer presets |
 |---|---|---|
 | On-screen buttons / Space switch | Select a direction or the scanning choice | Pointer steps, click, hold/release or horizontal swipe |
-| Camera | Dominant direction relative to calibrated neutral; one arrow per reach/rest cycle | Aim across the selected area; dwell-click, dwell-drag, continuous slicing or effort-to-hold |
+| Camera | Tap an arrow per reach/rest cycle, or hold an arrow through a sustained reach for driving and steering | Aim across the selected area; dwell-click, dwell-drag, continuous slicing, effort-to-hold or cast and steer |
 | EEG | Scanning choice freezes during effort; sustained intent selects once until rest | Scanning pointer steps and actions; not free continuous two-axis aiming |
 | Camera + EEG | Hand chooses direction; EEG selects | Hand aims; EEG clicks or toggles the hold |
 
@@ -56,7 +56,31 @@ The library serves the card images locally from `patient-web/public/library-logo
 - Browser checks cover mobile library layout, official links, download availability, accessibility, missing extension, and camera-denial fallback.
 - An isolated installed extension drives a game in a cross-origin iframe with trusted keyboard and mouse events. Checks cover library-page command rejection, duplicate controllers, tab switches, held-button release and closing the controller. Native-window checks cover the browser debugging notice, 200%/400% zoom, keyboard access, resize invalidation, Escape cancellation from game-frame focus, attachment release and reselection. The area is measured after the browser notice settles.
 - Recorded pose input passes through MediaPipe and corner calibration. A covered-controller check pauses the preview and its polling timer, moves the pointer between opposite corners, and verifies that camera loss releases the held button. Protocol EEG fixtures test one selection per effort and stopping on loss. The optional synthetic LSL test exercises the full clean-rest calibration and companion-to-external-game path.
-- A separate public-site check played the current original 2048 at play2048.co with extension arrow commands: the canvas changed and the score increased. This used an isolated browser and the real provider page, without rewriting its controls. On Poki’s Crossy Road, enabling camera controls focused the nested game and three recorded reaches delivered arrow keys while the controller stayed behind it. Other named favorites have verified official links and suggested mappings; their complete gameplay has not been certified.
 - Existing staff and patient browser checks confirm the external library is unavailable in supervised screens. Existing clinical EEG checks exercise the shared headset setup.
 
-No physical headset or participant usability validation has been performed for this mode. The new external-game fixtures are deliberately separate from claims about provider-specific playability. Public game layouts and control behavior can change.
+## Live camera results for Familiar Favorites
+
+The November 2026 replay opened all fifteen remaining titles on their public game pages in desktop Chromium. Each run used a disposable browser profile, the installed extension and the controller’s normal camera calibration. A transformed pose image supplied repeatable camera movement through MediaPipe. Ordinary mouse or keyboard input opened publisher menus and started rounds where needed. The observations below describe what happened inside the game after the camera took over. Crossy Road is included from its earlier check. [Pose fixture and browser test setup](localhost-validation.md).
+
+| Game | Camera action | Observed in the published game |
+|---|---|---|
+| 2048 | Reach and return to rest for each arrow | Merged tiles, formed an 8 and scored 20. |
+| Angry Birds Friends | Dwell on the bird, pull the sling back and dwell to release | A guest shot hit the first Piggy Tower structure and scored 2,100. |
+| Blocky Blast Puzzle | Dwell to pick up the tray piece and again to drop it over the gap | The blue piece filled the horizontal gap and the tutorial advanced to a green piece. The game lifts a held piece above the pointer. |
+| Bubbleshooter | Aim and dwell to shoot | Four shots reached the board and added bubbles to the cluster. |
+| Crossy Road | Reach and return to rest | Three recorded reaches delivered arrows to the focused game while its controller was covered. |
+| Cut the Rope | Sweep across the rope | The first rope broke and its candy fell to Om Nom. |
+| Doodle Jump | Press Enter on Play, then hold left or right reaches | The jumper changed horizontal position, landed on a platform and reached a score of 18 on Play.Works. |
+| Drive Mad | Hold a rightward reach, then rest to release the accelerator | The truck completed level one. Short arrow taps had left it at the start. |
+| Fruit Ninja | Sweep through airborne fruit | Sliced fruit for a score of 3 in a live round. |
+| Jetpack Joyride | Reach to thrust and rest to drop | The jetpack lifted Barry above the floor. The game received repeated hold and release pairs. |
+| Master Chess | Dwell on a pawn, then its destination | White advanced a pawn and the computer replied. |
+| Moto X3M | Hold an upward reach to accelerate | The bike left the start and rode up the first ramp. |
+| Stickman Hook | Reach to hook and rest to release | Repeated swings cleared a level. |
+| Subway Surfers | Send separate directional reaches | The runner advanced through the tutorial to “You rock! Now GO!” with a score of 271. |
+| Temple Run 2 | Press Space to start, then use directional reaches | The focused game received up, right and down arrows during an active run. |
+| Tiny Fishing | Dwell on Play to cast, then steer sideways | The submerged hook moved across the water and caught a fish. |
+
+The on-game ring shows the camera’s aim over pointer games and fills while holding a drag or slice. For chess, select the board itself to give each square more of your comfortable reach. For Blocky Blast, include the tray in the rectangle. Players can adjust dwell time in the controller.
+
+These checks cover the listed actions in desktop Chromium with repeatable camera input. Comfortable movement ranges, fatigue and sustained play with patients still need hands-on testing. The public-site results do not measure EEG or Edge-specific behavior.

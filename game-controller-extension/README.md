@@ -15,10 +15,13 @@ Camera uses a comfortable neutral position and two opposite corners. Small movem
 
 ## Presets
 
+In camera pointer games, a ring in the game window follows your hand and fills while you hold a drag or slice. Adjust **Hold still to select** in the controller if you want more time to place a piece or a shot.
+
 - **Arrow keys:** four directions and Space; suitable for 2048 and some runners.
 - **Hold arrow keys** keeps an arrow down while the camera tracks a reach. Return to rest to release or reach another way to change direction. Use this for Moto X3M, Drive Mad and Doodle Jump.
 - **Pointer + click:** camera aim and dwell selection, or scanning pointer steps.
 - **Drag + release:** dwell to grab, move, dwell to release; EEG can toggle the hold.
+- **Cast and steer** clicks when you dwell in the middle of the play area. A sideways reach holds the mouse button underwater in Tiny Fishing.
 - **Slice:** camera movement with the mouse held; EEG-only offers a horizontal swipe.
 - **Hold + release:** camera effort holds, returning to rest releases; EEG can toggle.
 
@@ -28,7 +31,7 @@ These are input mappings, not a guarantee that every game works. Menus, embedded
 
 `activeTab` and `scripting` place the selection overlay only after clicking the toolbar. `debugger` sends browser keyboard/mouse events to the selected game tab, including an embedded game. Chrome displays its debugging permission warning. The extension does not capture screenshots, read game scores, request camera access, or collect EEG. NeuroReach computes input locally and sends only movement/key/click commands. No clinical records or sensor recordings are sent to game sites.
 
-Only localhost NeuroReach library/controller pages can connect to the bridge. Only one controller can send inputs. Commands target supported game sites and the selected rectangle. Navigation, layout changes, switching away from the game tab, closing the controller, lost input/heartbeat, or leaving the game/controller windows stops control. Stopping releases a held mouse button. Games themselves may continue running; use their pause button too.
+Only localhost NeuroReach library/controller pages can connect to the bridge. Only one controller can send inputs. Commands target supported game sites and the selected rectangle. Navigation, layout changes, switching away from the game tab, closing the controller, lost input/heartbeat, or leaving the game/controller windows stops control. Stopping releases the held mouse button or steering key and hides the aiming ring. Games themselves may continue running; use their pause button too.
 
 Supported sites: Poki, Coolmath Games, Playgama, GamePix, CrazyGames, play2048.co, Red’s Club and the Play.Works game service. This extension is not affiliated with those services or their game publishers. It does not bypass advertisements, paywalls, site restrictions, or game accounts.
 

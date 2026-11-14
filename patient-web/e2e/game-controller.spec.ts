@@ -341,6 +341,9 @@ test("camera reaches control a foreground game while its controller is hidden an
       )
       .toBe(true);
     const before = (await run.events()).length;
+    const aim = run.game.locator("[data-neuroreach-aim]");
+    await expect(aim).toBeVisible();
+    await expect(aim).toHaveCSS("pointer-events", "none");
     await controller.evaluate(() => {
       Object.defineProperty(document, "hidden", {
         configurable: true,
@@ -360,13 +363,20 @@ test("camera reaches control a foreground game while its controller is hidden an
             (left ? event.x < 150 : event.x > 450),
         );
     await expect.poll(() => pointerReached(before, true)).toBe(true);
+    await expect
+      .poll(async () => (await aim.boundingBox())?.x ?? 1000)
+      .toBeLessThan(270);
     // Move back after the extension's heartbeat deadline with timers suspended.
     await controller.waitForTimeout(1500);
     const atLeft = (await run.events()).length;
     await controller.evaluate(() => Object.assign(window, { armAngle: -0.2 }));
     await expect.poll(() => pointerReached(atLeft, false)).toBe(true);
+    await expect
+      .poll(async () => (await aim.boundingBox())?.x ?? 0)
+      .toBeGreaterThan(550);
     // A frozen last pose must not keep a held button alive.
     await controller.evaluate(() => (window as any).cameraTrack.stop());
+    await expect(aim).toHaveCount(0);
     await expect
       .poll(async () =>
         (await run.events()).some((e) => e.type === "mouseup" && e.trusted),

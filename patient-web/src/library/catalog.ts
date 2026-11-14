@@ -37,6 +37,7 @@ export const familiarGames = [
   },
   {
     name: "Angry Birds Friends",
+    tip: "Open a level first. Aim at the bird in the sling, hold still to grab it, then pull back and hold still to launch.",
     preset: "drag",
     url: "https://redsclub.com/ab-friends/play/",
     provider: "Rovio · desktop web",
@@ -82,6 +83,7 @@ export const familiarGames = [
   },
   {
     name: "Temple Run 2",
+    tip: "Press Space on the title screen to start. Reach up to jump or down to slide.",
     preset: "arrows",
     url: "https://poki.com/en/g/temple-run-2",
     provider: "Poki",
@@ -100,6 +102,7 @@ export const familiarGames = [
   },
   {
     name: "Doodle Jump",
+    tip: "Press Enter on Play, then steer left or right. The character jumps automatically.",
     preset: "steer",
     url: "https://service.play.works/service/apps/doodle_jump_old/index.html",
     provider: "Play.Works",
@@ -109,6 +112,7 @@ export const familiarGames = [
   },
   {
     name: "Master Chess",
+    tip: "Select just the chessboard as your game area. Hold still over a piece, then over a highlighted destination.",
     preset: "pointer",
     url: "https://poki.com/en/g/master-chess",
     provider: "Poki",
@@ -136,6 +140,7 @@ export const familiarGames = [
   },
   {
     name: "Moto X3M",
+    tip: "Hold an upward reach to accelerate. Left and right tilt the bike in the air.",
     preset: "steer",
     url: "https://poki.com/en/g/moto-x3m",
     provider: "Poki",
@@ -145,6 +150,7 @@ export const familiarGames = [
   },
   {
     name: "Blocky Blast Puzzle",
+    tip: "Include the board and the tray in your game area. The piece lifts above the ring. Release when the preview fills the squares you want.",
     preset: "drag",
     url: "https://poki.com/en/g/blocky-blast-puzzle",
     provider: "Poki",
@@ -154,6 +160,7 @@ export const familiarGames = [
   },
   {
     name: "Drive Mad",
+    tip: "Hold a rightward reach to drive forward. Return to rest to coast.",
     preset: "steer",
     url: "https://poki.com/en/g/drive-mad",
     provider: "Poki",
@@ -163,24 +170,26 @@ export const familiarGames = [
   },
   {
     name: "Tiny Fishing",
-    preset: "drag",
+    tip: "Select the whole game area. Hold the ring still on Play to cast, then steer the hook left and right.",
+    preset: "cast",
     url: "https://poki.com/en/g/tiny-fishing",
     provider: "Poki",
-    controls: "Pointer · drag",
+    controls: "Pointer · cast and steer",
     logo: "/library-logos/tiny-fishing.webp",
     description: "Cast your line, steer your hook toward fish and upgrade your rod between catches.",
   },
 ] as const;
 
 export type ControlPreset = (typeof familiarGames)[number]["preset"];
+type Favorite = (typeof familiarGames)[number] & { tip?: string };
 
-export function suggestedPreset(gameUrl?: string): ControlPreset {
-  if (!gameUrl) return "arrows";
+export function findFavorite(gameUrl?: string): Favorite | undefined {
+  if (!gameUrl) return;
   try {
     const page = new URL(gameUrl);
     const address = page.origin + page.pathname.replace(/\/$/, "");
-    return familiarGames.find((game) => game.url.replace(/\/$/, "") === address)?.preset ?? "arrows";
+    return familiarGames.find((game) => game.url.replace(/\/$/, "") === address);
   } catch {
-    return "arrows";
+    return;
   }
 }

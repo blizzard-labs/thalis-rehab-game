@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "NeuroReach Game Controller",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Use NeuroReach camera and EEG controls with a game you choose on supported game websites.",
   "minimum_chrome_version": "125",
   "permissions": ["activeTab", "scripting", "debugger"],

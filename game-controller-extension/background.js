@@ -12,6 +12,7 @@ const ports = new Set();
 let target = null,
   owner = null,
   armed = false,
+  showAim = false,
   heldKey = null,
   held = false,
   point = { x: 0.5, y: 0.5 },
@@ -71,6 +72,16 @@ function coordinates() {
     x: target.rect.x + point.x * target.rect.width,
     y: target.rect.y + point.y * target.rect.height,
   };
+}
+function paintAim(visible) {
+  if (!showAim || !target?.rect) return;
+  void chrome.tabs
+    .sendMessage(
+      target.tabId,
+      { type: "neuroreach-aim", visible, held, ...coordinates() },
+      { frameId: 0 },
+    )
+    .catch(() => {});
 }
 async function focusPlayArea(tabId, rect) {
   const tab = { tabId };
@@ -164,6 +175,8 @@ async function stop(
 ) {
   armed = false;
   reason = message;
+  paintAim(false);
+  showAim = false;
   await releaseKey().catch(() => {});
   await release();
   if (detach && target) {
@@ -242,8 +255,30 @@ async function chooseArea() {
   const layoutChanged = () => {
     chrome.runtime.sendMessage({ type: "layout-changed" }).catch(() => {});
   };
+  // Keep the game underneath the marker clickable, including nested game frames.
+  const aim = document.createElement("div");
+  aim.dataset.neuroreachAim = "true";
+  aim.setAttribute("aria-hidden", "true");
+  aim.style.cssText =
+    "all:initial;position:fixed;top:0;left:0;z-index:2147483647;pointer-events:none;" +
+    "width:18px;height:18px;box-sizing:border-box;border:2px solid white;" +
+    "border-radius:50%;box-shadow:0 0 0 2px #342844;display:none";
+  const drawAim = (message, sender) => {
+    if (sender.id !== chrome.runtime.id || message.type !== "neuroreach-aim")
+      return;
+    if (!message.visible) {
+      aim.remove();
+      return;
+    }
+    if (!aim.isConnected) document.documentElement.append(aim);
+    aim.style.display = "block";
+    aim.style.background = message.held ? "#ffbd4773" : "transparent";
+    aim.style.transform = `translate(${message.x - 9}px,${message.y - 9}px)`;
+  };
   const clean = () => {
     removePicker();
+    aim.remove();
+    chrome.runtime.onMessage.removeListener(drawAim);
     window.removeEventListener("resize", layoutChanged);
     window.removeEventListener("scroll", layoutChanged);
     delete window.__neuroreachAreaCleanup;
@@ -293,6 +328,7 @@ async function chooseArea() {
       return;
     }
     removePicker();
+    chrome.runtime.onMessage.addListener(drawAim);
     chrome.runtime.sendMessage({ type: "area", rect }).catch(() => {});
     window.addEventListener("resize", layoutChanged, { once: true });
     window.addEventListener("scroll", layoutChanged, { once: true });
@@ -453,6 +489,7 @@ chrome.runtime.onConnect.addListener((port) => {
         if (!target || owner !== port) return;
         lastBeat = Date.now();
         armed = true;
+        showAim = message.showAim === true;
         reason = "Controls enabled. Alt+Shift+S stops immediately.";
         tell();
       });
@@ -472,13 +509,15 @@ chrome.runtime.onConnect.addListener((port) => {
       pendingMotion = true;
       void enqueue(async () => {
         try {
-          if (armed && target)
+          if (armed && target) {
+            paintAim(true);
             await input("dispatchMouseEvent", {
               type: "mouseMoved",
               ...coordinates(),
               buttons: held ? 1 : 0,
               button: held ? "left" : "none",
             });
+          }
         } finally {
           pendingMotion = false;
         }
@@ -507,6 +546,7 @@ chrome.runtime.onConnect.addListener((port) => {
             await release();
           }
         }
+        paintAim(true);
         tell();
       });
     } else if (message.type === "key") {
@@ -544,6 +584,7 @@ chrome.debugger.onDetach.addListener(({ tabId }) => {
   if (target?.tabId === tabId) {
     target = null;
     armed = held = false;
+    showAim = false;
     heldKey = null;
     reason = "Game disconnected. Choose its area again.";
     void chrome.scripting
