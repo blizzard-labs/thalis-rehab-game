@@ -128,6 +128,16 @@ test("external-game controller works with keyboard controls at 200% and 400% zoo
       { timeout: 10000 },
     );
     await run.game.locator("[data-neuroreach-area]").waitFor({ timeout: 7000 });
+    // A late Stop controls from the popup must leave the replacement picker open.
+    await activate(
+      controller,
+      controller.getByRole("button", { name: "Stop controls", exact: true }),
+    );
+    await expect
+      .poll(() => worker.evaluate(() => (globalThis as any).status().reason))
+      .toContain("Controls stopped");
+    await expect(run.game.locator("[data-neuroreach-area]")).toBeVisible();
+    await run.game.bringToFront();
     await run.game.keyboard.press("Escape");
     await expect(run.game.locator("[data-neuroreach-area]")).toHaveCount(0);
     await test.step(

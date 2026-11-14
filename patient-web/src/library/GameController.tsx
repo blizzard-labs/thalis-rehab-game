@@ -51,7 +51,11 @@ export function GameController() {
   const cameraNeeded =
     configured && (source === "camera" || source === "blended");
   const eegNeeded = configured && (source === "eeg" || source === "blended");
-  const camera = useMotionCamera(cameraNeeded, side);
+  const cameraTick = useRef<(() => void) | null>(null);
+  const camera = useMotionCamera(cameraNeeded, side, false, {
+    armed: status.armed,
+    onSample: () => cameraTick.current?.(),
+  });
   const eeg = useHeadset(
     eegNeeded && (!cameraNeeded || !!range),
     side,
@@ -112,7 +116,9 @@ export function GameController() {
   }, [camera.stream, setup]);
   useEffect(() => {
     const visibility = () => {
-      if (document.hidden) stop();
+      const { source } = live.current;
+      if (document.hidden && source !== "camera" && source !== "blended")
+        stop();
     };
     const key = (event: KeyboardEvent) => {
       if (event.key === "Escape") stop();
@@ -213,7 +219,7 @@ export function GameController() {
     let last = performance.now(),
       scanAt = last,
       wasArmed = false;
-    const timer = window.setInterval(() => {
+    const tick = () => {
       const now = performance.now();
       const current = live.current;
       const isCamera =
@@ -228,14 +234,13 @@ export function GameController() {
       const level = isEeg ? neural : (directed?.level ?? null);
       const valid =
         (!isCamera || (!!frame && !!current.range)) &&
-        (!isEeg || neural !== null);
+        (!isEeg || (neural !== null && current.eeg.phase === "ready"));
       const enabled =
         current.status.armed &&
         current.configured &&
         !current.setup &&
-        !document.hidden;
-      if (enabled && (!valid || (isEeg && current.eeg.phase !== "ready")))
-        stop();
+        (isCamera || !document.hidden);
+      if (enabled && !valid) stop();
       if (enabled && valid) sendControl("heartbeat");
       if (enabled !== wasArmed) {
         gate.current.reset();
@@ -339,8 +344,15 @@ export function GameController() {
         point: { ...point.current },
       });
       last = now;
+    };
+    cameraTick.current = tick;
+    // Fresh pose results drive camera input. The timer serves scanning and
+    // detects missing samples when the camera stops delivering frames.
+    const timer = window.setInterval(() => {
+      if (performance.now() - last >= 75) tick();
     }, 80);
     return () => {
+      cameraTick.current = null;
       clearInterval(timer);
       stop();
     };
@@ -376,7 +388,7 @@ export function GameController() {
             }
             onClick={() => {
               gate.current.reset();
-              sendControl("arm");
+              sendControl("arm", { focusGame: cameraNeeded });
             }}
           >
             Enable controls
@@ -620,10 +632,11 @@ export function GameController() {
           </>
         )}
         <p className="library-note">
-          Keep this window visible beside the game. Controls stop if input is
-          lost, you change tabs, or the game area moves. To use the game’s
-          menus, stop controls first. Use its normal mouse or touch controls
-          whenever needed.
+          {cameraNeeded
+            ? "Enabling camera controls brings the game to the front. Leave this controller open behind it. If the game shows a pause screen, use its Resume button."
+            : "Keep the controller visible to use the buttons or follow the highlighted choice."}{" "}
+          Alt+Shift+S stops controls from the game. Controls also stop if input
+          is lost, you switch tabs, leave both windows, or the game area moves.
         </p>
       </main>
     </div>

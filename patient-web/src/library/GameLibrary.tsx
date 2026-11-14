@@ -26,7 +26,8 @@ export function ExtensionHelp() {
         </li>
         <li>
           Set up your camera or EEG, then choose{" "}
-          <strong>Enable controls</strong>. Keep both windows visible.
+          <strong>Enable controls</strong>. With camera input, the game comes
+          to the front. Leave the controller open while you play.
         </li>
       </ol>
       <p>

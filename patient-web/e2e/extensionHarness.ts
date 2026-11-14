@@ -49,7 +49,13 @@ export async function controllerHarness(
     await context.route("https://poki.com/neuroreach-test", (route) =>
       route.fulfill({
         contentType: "text/html",
-        body: '<title>External game fixture</title><iframe src="https://game-cdn.invalid/game" style="position:absolute;left:120px;top:60px;width:600px;height:500px;border:0"></iframe>',
+        body: '<title>External game fixture</title><iframe src="https://player.poki.com/wrapper" style="position:absolute;left:120px;top:60px;width:600px;height:500px;border:0"></iframe>',
+      }),
+    );
+    await context.route("https://player.poki.com/wrapper", (route) =>
+      route.fulfill({
+        contentType: "text/html",
+        body: '<iframe src="https://game-cdn.invalid/game" style="position:absolute;inset:0;width:100%;height:100%;border:0"></iframe>',
       }),
     );
     await context.route("https://game-cdn.invalid/game", (route) =>
@@ -90,7 +96,7 @@ export async function controllerHarness(
       controller,
       worker,
       events: () =>
-        game.frames()[1].evaluate(
+        game.frame({ url: "https://game-cdn.invalid/game" })!.evaluate(
           () =>
             (window as any).events as {
               type: string;

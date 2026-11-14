@@ -91,6 +91,21 @@ test("extension sends trusted keys and pointer events into a cross-origin game a
       )
       .toBe(1);
     await enable(controller);
+    const otherWindow = await run.worker.evaluate(async () => {
+      const browser = (globalThis as any).chrome;
+      return (
+        await browser.windows.create({ url: "about:blank", focused: true })
+      ).id;
+    });
+    await expect(
+      controller.getByText("○ Controls stopped", { exact: true }),
+    ).toBeVisible();
+    await run.worker.evaluate(
+      (id) => (globalThis as any).chrome.windows.remove(id),
+      otherWindow,
+    );
+    await controller.bringToFront();
+    await enable(controller);
     await library.bringToFront();
     await expect(
       controller.getByText("○ Controls stopped", { exact: true }),
@@ -220,7 +235,7 @@ test("fresh EEG bursts select a game control and signal loss disarms it", async 
   }
 });
 
-test("camera reaches control an external game and stopping releases a held slice", async () => {
+test("camera reaches control a foreground game while its controller is hidden and camera loss releases a held slice", async () => {
   const fixture = process.env.NEUROREACH_POSE_FIXTURE;
   test.skip(!fixture, "Requires the recorded pose fixture");
   test.setTimeout(60000);
@@ -228,6 +243,15 @@ test("camera reaches control an external game and stopping releases a held slice
   try {
     const { controller } = run;
     await attachPoseFixture(controller, fixture!);
+    // Headless windows don't occlude each other. Model a covered popup whose
+    // preview and control timers stop, but whose camera track is still live.
+    await controller.addInitScript(() => {
+      const interval = window.setInterval.bind(window);
+      window.setInterval = (callback, delay, ...args) =>
+        interval(() => {
+          if (delay !== 80 || !document.hidden) callback(...args);
+        }, delay);
+    });
     await controller.reload();
     await controller.getByLabel("Camera", { exact: true }).check();
     await controller.getByLabel("Control preset").selectOption("slice");
@@ -255,26 +279,51 @@ test("camera reaches control an external game and stopping releases a held slice
     await expect(
       controller.getByRole("button", { name: "Change controls" }),
     ).toBeVisible();
+    await controller.bringToFront();
     await enable(controller);
+    await expect
+      .poll(() =>
+        run.worker.evaluate(async () => {
+          const browser = (globalThis as any).chrome;
+          const [game] = await browser.tabs.query({
+            url: "https://poki.com/neuroreach-test",
+          });
+          return (await browser.windows.get(game.windowId)).focused;
+        }),
+      )
+      .toBe(true);
     await expect
       .poll(async () =>
         (await run.events()).some((e) => e.type === "mousedown" && e.trusted),
       )
       .toBe(true);
-    await controller.evaluate(() => Object.assign(window, { armAngle: 0.7 }));
-    await expect
-      .poll(
-        async () =>
-          new Set(
-            (await run.events())
-              .filter((e) => e.type === "mousemove")
-              .map((e) => Math.round(e.x)),
-          ).size,
-      )
-      .toBeGreaterThan(4);
-    await controller
-      .getByRole("button", { name: "Stop controls", exact: true })
-      .click();
+    const before = (await run.events()).length;
+    await controller.evaluate(() => {
+      Object.defineProperty(document, "hidden", {
+        configurable: true,
+        value: true,
+      });
+      document.dispatchEvent(new Event("visibilitychange"));
+      document.querySelectorAll("video").forEach((video) => video.pause());
+      Object.assign(window, { armAngle: 0.7 });
+    });
+    const pointerReached = async (offset: number, left: boolean) =>
+      (await run.events())
+        .slice(offset)
+        .some(
+          (event) =>
+            event.type === "mousemove" &&
+            event.trusted &&
+            (left ? event.x < 150 : event.x > 450),
+        );
+    await expect.poll(() => pointerReached(before, true)).toBe(true);
+    // Move back after the extension's heartbeat deadline with timers suspended.
+    await controller.waitForTimeout(1500);
+    const atLeft = (await run.events()).length;
+    await controller.evaluate(() => Object.assign(window, { armAngle: -0.2 }));
+    await expect.poll(() => pointerReached(atLeft, false)).toBe(true);
+    // A frozen last pose must not keep a held button alive.
+    await controller.evaluate(() => (window as any).cameraTrack.stop());
     await expect
       .poll(async () =>
         (await run.events()).some((e) => e.type === "mouseup" && e.trusted),

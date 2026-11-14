@@ -3,7 +3,21 @@ import { medianWrist, type MotionSample } from "./motion";
 import type { Readings } from "../reports/measurements";
 import type { Side } from "./session";
 
-export function useMotionCamera(enabled: boolean, side: Side, both = false) {
+type ControllerCapture = { armed: boolean; onSample: () => void };
+type TrackProcessor = new (init: {
+  track: MediaStreamTrack;
+  maxBufferSize: number;
+}) => { readable: ReadableStream<VideoFrame> };
+
+export function useMotionCamera(
+  enabled: boolean,
+  side: Side,
+  both = false,
+  controller?: ControllerCapture,
+) {
+  const controllerCapture = useRef(controller);
+  controllerCapture.current = controller;
+  const useCameraTrack = !!controller;
   const [status, setStatus] = useState("Opening camera…");
   const [stream, setStream] = useState<MediaStream | null>(null);
   const angles = useRef<{ time: number; values: Readings } | null>(null);
@@ -16,6 +30,7 @@ export function useMotionCamera(enabled: boolean, side: Side, both = false) {
     let stopped = false;
     let media: MediaStream | undefined;
     let worker: Worker | undefined;
+    let reader: ReadableStreamDefaultReader<VideoFrame> | undefined;
     let timer = 0;
     const video = document.createElement("video");
     video.muted = true;
@@ -23,6 +38,7 @@ export function useMotionCamera(enabled: boolean, side: Side, both = false) {
     const release = () => {
       stopped = true;
       window.clearInterval(timer);
+      void reader?.cancel().catch(() => {});
       worker?.terminate();
       media?.getTracks().forEach((track) => track.stop());
       video.srcObject = null;
@@ -53,10 +69,27 @@ export function useMotionCamera(enabled: boolean, side: Side, both = false) {
         media.getTracks().forEach((t) => t.stop());
         return;
       }
-      media.getVideoTracks()[0].onended = () =>
+      const track = media.getVideoTracks()[0];
+      track.onended = () =>
         fail("Camera disconnected. Reconnect it or continue with one button.");
-      video.srcObject = media;
-      await video.play();
+      if (useCameraTrack) {
+        const Processor = (
+          window as Window & { MediaStreamTrackProcessor?: TrackProcessor }
+        ).MediaStreamTrackProcessor;
+        if (!Processor) {
+          fail(
+            "Camera game controls require desktop Chrome or Edge. Use on-screen controls in this browser.",
+          );
+          return;
+        }
+        reader = new Processor({
+          track,
+          maxBufferSize: 1,
+        }).readable.getReader();
+      } else {
+        video.srcObject = media;
+        await video.play();
+      }
       if (stopped) return;
       setStream(media);
       setStatus("Loading local pose tracking…");
@@ -102,9 +135,55 @@ export function useMotionCamera(enabled: boolean, side: Side, both = false) {
                 ? "Arm in view"
                 : "Move your shoulder, wrist, and hip into view.",
           );
+          controllerCapture.current?.onSample();
         }
       };
       worker.postMessage({ kind: "open" });
+      if (reader) {
+        // A covered preview can stop advancing. Drive inference from camera frames
+        // so neither capture nor controls depend on the popup's paint/timer rate.
+        let offsetMs = Infinity,
+          lastFrameMs = -Infinity;
+        try {
+          while (!stopped) {
+            const { done, value: frame } = await reader.read();
+            if (done) break;
+            try {
+              const now = performance.now();
+              const captureMs = frame.timestamp / 1000;
+              offsetMs = Math.min(offsetMs, now - captureMs);
+              const time = captureMs + offsetMs;
+              if (
+                stopped ||
+                !ready ||
+                busy ||
+                time - lastFrameMs < 75 ||
+                now - time > 500 ||
+                (document.hidden && !controllerCapture.current?.armed)
+              )
+                continue;
+              lastFrameMs = time;
+              busy = true;
+              const bitmap = await createImageBitmap(frame);
+              if (stopped) bitmap.close();
+              else
+                worker.postMessage(
+                  { kind: "frame", frame: bitmap, time, side },
+                  [bitmap],
+                );
+            } finally {
+              frame.close();
+            }
+          }
+          fail("Camera disconnected. Reconnect it or use on-screen controls.");
+        } catch {
+          fail("Camera frames could not be read. Try on-screen controls.");
+        } finally {
+          reader.releaseLock();
+          reader = undefined;
+        }
+        return;
+      }
       timer = window.setInterval(async () => {
         if (
           !ready ||
@@ -140,7 +219,7 @@ export function useMotionCamera(enabled: boolean, side: Side, both = false) {
       release();
       setStream(null);
     };
-  }, [enabled, side]);
+  }, [enabled, side, useCameraTrack]);
   function latest() {
     const value = samples.current[samples.current.length - 1];
     return value && performance.now() - value.time < 650 ? value.point : null;

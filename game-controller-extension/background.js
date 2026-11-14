@@ -67,6 +67,56 @@ function coordinates() {
     y: target.rect.y + point.y * target.rect.height,
   };
 }
+async function focusPlayArea(tabId, rect) {
+  const tab = { tabId };
+  const x = Math.round(rect.x + rect.width / 2);
+  const y = Math.round(rect.y + rect.height / 2);
+  const { result } = await chrome.debugger.sendCommand(
+    tab,
+    "Runtime.evaluate",
+    {
+      expression: `(() => {
+        const element = document.elementFromPoint(${x}, ${y});
+        element?.focus({preventScroll:true});
+        return element?.matches("iframe,frame");
+      })()`,
+    },
+  );
+  if (!result.value) return;
+  // Some portals wrap the actual game in another frame. Focusing just the
+  // outer player sends arrows to the wrapper and leaves the game paused.
+  try {
+    const hit = await chrome.debugger.sendCommand(
+      tab,
+      "DOM.getNodeForLocation",
+      { x, y },
+    );
+    const { object } = await chrome.debugger.sendCommand(
+      tab,
+      "DOM.resolveNode",
+      {
+        backendNodeId: hit.backendNodeId,
+      },
+    );
+    try {
+      await chrome.debugger.sendCommand(tab, "Runtime.callFunctionOn", {
+        objectId: object.objectId,
+        functionDeclaration: `function () {
+          if (this.matches?.("iframe,frame")) this.contentWindow.focus();
+          else this.ownerDocument.defaultView.focus();
+        }`,
+        userGesture: true,
+      });
+    } finally {
+      await chrome.debugger.sendCommand(tab, "Runtime.releaseObject", {
+        objectId: object.objectId,
+      });
+    }
+  } catch {
+    // A process-isolated frame may expose only its outer player to this tab.
+    // The player can still give the game focus by clicking its play area.
+  }
+}
 async function release() {
   if (held && target) {
     held = false;
@@ -88,7 +138,7 @@ async function stop(
   armed = false;
   reason = message;
   await release();
-  if ((detach || (target && !target.rect)) && target) {
+  if (detach && target) {
     const old = target;
     target = null;
     try {
@@ -286,7 +336,7 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
   if (sender.id !== chrome.runtime.id) return;
   const run = async () => {
     if (message.type === "stop") {
-      await stop();
+      await stop(undefined, !target?.rect);
       return;
     }
     if (message.type === "choose-area" && !sender.tab) {
@@ -334,7 +384,9 @@ chrome.runtime.onConnect.addListener((port) => {
     ports.delete(port);
     if (owner === port) {
       owner = null;
-      void enqueue(() => stop("Controller closed. Controls stopped."));
+      void enqueue(() =>
+        stop("Controller closed. Controls stopped.", !target?.rect),
+      );
     }
   });
   port.onMessage.addListener((message) => {
@@ -350,28 +402,26 @@ chrome.runtime.onConnect.addListener((port) => {
     }
     if (message.type === "stop") {
       armed = false;
+      // The app also sends stop on configuration changes. It may arrive
+      // while the player is drawing a replacement area in the game.
       void enqueue(() => stop());
       return;
     }
     if (message.type === "arm") {
       void enqueue(async () => {
-        if (!target?.rect) return;
+        if (!target?.rect || owner !== port) return;
         const tab = await chrome.tabs.get(target.tabId);
         if (!tab.active || tab.url !== target.url) {
           await stop("Return to the selected game, then reconnect.", true);
           return;
         }
         await release();
-        const center = coordinates();
-        // Focus the selected canvas/frame without clicking or activating a menu.
-        await chrome.debugger.sendCommand(
-          { tabId: target.tabId },
-          "Runtime.evaluate",
-          {
-            expression: `document.elementFromPoint(${center.x}, ${center.y})?.focus({preventScroll:true})`,
-          },
-        );
-        if (!target) return;
+        // Games such as Crossy Road pause on window blur. Camera play can
+        // leave its controller behind the game once calibration is complete.
+        if (message.focusGame === true)
+          await chrome.windows.update(tab.windowId, { focused: true });
+        await focusPlayArea(tab.id, target.rect);
+        if (!target || owner !== port) return;
         lastBeat = Date.now();
         armed = true;
         reason = "Controls enabled. Alt+Shift+S stops immediately.";
@@ -478,14 +528,20 @@ chrome.tabs.onUpdated.addListener((id, change) => {
   }
 });
 chrome.tabs.onActivated.addListener(({ tabId, windowId }) => {
-  if (target && windowId === target.windowId && tabId !== target.tabId) {
+  const controllerTab = owner?.sender?.tab;
+  if (
+    (target && windowId === target.windowId && tabId !== target.tabId) ||
+    (armed &&
+      controllerTab?.windowId === windowId &&
+      tabId !== controllerTab.id)
+  ) {
     armed = false;
-    void enqueue(() => stop("Game tab switched. Controls stopped."));
+    void enqueue(() => stop("Tab switched. Controls stopped."));
   }
 });
 chrome.commands.onCommand.addListener(() => {
   armed = false;
-  void enqueue(() => stop());
+  void enqueue(() => stop(undefined, !target?.rect));
 });
 chrome.windows.onFocusChanged.addListener((windowId) => {
   if (
