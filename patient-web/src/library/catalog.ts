@@ -4,29 +4,25 @@ export const services = [
     name: "Poki",
     url: "https://poki.com/",
     detail: "Familiar favorites, skill games and quick arcade rounds.",
-    icon: "✳",
-    color: "blue",
+    logo: "/library-logos/poki.webp",
   },
   {
     name: "Coolmath Games",
     url: "https://www.coolmathgames.com/",
     detail: "Puzzles, strategy, number games and patient-paced challenges.",
-    icon: "▦",
-    color: "peach",
+    logo: "/library-logos/coolmath-games.webp",
   },
   {
     name: "Playgama",
     url: "https://playgama.com/",
     detail: "A broad library of arcade, puzzle, racing and casual games.",
-    icon: "▷",
-    color: "purple",
+    logo: "/library-logos/playgama.webp",
   },
   {
     name: "CrazyGames",
     url: "https://www.crazygames.com/",
     detail: "Explore action, sports, driving and browser classics.",
-    icon: "✦",
-    color: "mint",
+    logo: "/library-logos/crazygames.webp",
   },
 ] as const;
 export const familiarGames = [
@@ -35,7 +31,7 @@ export const familiarGames = [
     url: "https://poki.com/en/g/fruit-ninja",
     provider: "Poki",
     controls: "Pointer · slice",
-    icon: "🍉",
+    logo: "/library-logos/fruit-ninja.webp",
     description: "Slice flying fruit and avoid the bombs.",
   },
   {
@@ -43,7 +39,7 @@ export const familiarGames = [
     url: "https://redsclub.com/ab-friends/play/",
     provider: "Rovio · desktop web",
     controls: "Pointer · drag",
-    icon: "◉",
+    logo: "/library-logos/angry-birds-friends.webp",
     description: "Aim the slingshot, pull back and release.",
   },
   {
@@ -51,7 +47,7 @@ export const familiarGames = [
     url: "https://play2048.co/",
     provider: "Original game",
     controls: "Arrow keys",
-    icon: "2048",
+    logo: "/library-logos/2048.webp",
     description: "Merge matching tiles into bigger numbers.",
   },
   {
@@ -59,7 +55,7 @@ export const familiarGames = [
     url: "https://poki.com/en/g/subway-surfers",
     provider: "Poki",
     controls: "Arrow keys",
-    icon: "↟",
+    logo: "/library-logos/subway-surfers.webp",
     description: "Dodge obstacles, change lanes and collect coins.",
   },
   {
@@ -67,7 +63,7 @@ export const familiarGames = [
     url: "https://poki.com/en/g/crossy-road",
     provider: "Poki",
     controls: "Arrow keys",
-    icon: "▧",
+    logo: "/library-logos/crossy-road.webp",
     description: "Time each step through traffic and across rivers.",
   },
   {
@@ -75,7 +71,7 @@ export const familiarGames = [
     url: "https://poki.com/en/g/jetpack-joyride",
     provider: "Poki",
     controls: "Pointer · hold",
-    icon: "↗",
+    logo: "/library-logos/jetpack-joyride.webp",
     description: "Lift off and weave through a side-scrolling adventure.",
   },
 ] as const;

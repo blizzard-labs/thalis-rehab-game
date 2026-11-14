@@ -87,14 +87,17 @@ export function GameLibrary({ back }: { back: () => void }) {
         {services.map((service) => (
           <a
             key={service.name}
-            className={`library-service ${service.color}`}
             href={service.url}
             target="_blank"
             rel="noopener noreferrer"
           >
-            <span className="library-icon" aria-hidden="true">
-              {service.icon}
-            </span>
+            <img
+              className="library-icon"
+              src={service.logo}
+              alt=""
+              width={65}
+              height={65}
+            />
             <h3>{service.name}</h3>
             <p>{service.detail}</p>
             <b>Browse full library ↗</b>
@@ -122,9 +125,13 @@ export function GameLibrary({ back }: { back: () => void }) {
             target="_blank"
             rel="noopener noreferrer"
           >
-            <span className="library-game-icon" aria-hidden="true">
-              {game.icon}
-            </span>
+            <img
+              className="library-game-icon"
+              src={game.logo}
+              alt=""
+              width={86}
+              height={86}
+            />
             <div>
               <small>{game.provider}</small>
               <h3>

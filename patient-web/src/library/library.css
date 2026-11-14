@@ -129,26 +129,15 @@
   padding: 22px;
   background: #fffef8;
 }
-.library-service .library-icon {
-  font-size: 42px;
-  width: 65px;
-  height: 65px;
-  display: grid;
-  place-items: center;
+.library-icon,
+.library-game-icon {
+  display: block;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+.library-icon {
   border-radius: 12px;
   margin-bottom: 20px;
-}
-.library-service.blue .library-icon {
-  background: #dceaf1;
-}
-.library-service.peach .library-icon {
-  background: #f3dfc8;
-}
-.library-service.purple .library-icon {
-  background: #e6dff0;
-}
-.library-service.mint .library-icon {
-  background: #dce9d7;
 }
 .library-services h3,
 .library-favorites h3 {
@@ -187,15 +176,7 @@
   margin-bottom: 7px;
 }
 .library-game-icon {
-  width: 86px;
-  height: 86px;
-  flex-shrink: 0;
   border-radius: 14px;
-  background: #f0e7d6;
-  display: grid;
-  place-items: center;
-  font-size: 30px;
-  font-weight: 700;
 }
 .library-control-tag {
   display: inline-block;
@@ -334,7 +315,6 @@
   .library-game-icon {
     width: 64px;
     height: 64px;
-    font-size: 25px;
   }
   .library-services a {
     padding: 16px;

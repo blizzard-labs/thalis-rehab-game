@@ -42,6 +42,14 @@ The source manifest requests `activeTab`, `scripting` and `debugger`; it does no
 
 Phone/tablet visitors can open providers' ordinary touch games. Camera/EEG forwarding requires the desktop extension. Public external games are online-only; the offline player still supports the built-in games. Store publication, managed deployment and automatic extension updates are future work.
 
+## Catalog artwork
+
+The library serves the card images locally from `patient-web/public/library-logos/`. Each image uses the brand's original proportions and colors. The card title supplies the accessible name for the game or provider.
+
+- Provider marks come from the home-screen icons published by [Poki](https://poki.com/), [Coolmath Games](https://www.coolmathgames.com/), [Playgama](https://playgama.com/) and [CrazyGames](https://www.crazygames.com/).
+- Poki supplies the square game artwork for [Fruit Ninja](https://poki.com/en/g/fruit-ninja), [Subway Surfers](https://poki.com/en/g/subway-surfers), [Crossy Road](https://poki.com/en/g/crossy-road) and [Jetpack Joyride](https://poki.com/en/g/jetpack-joyride).
+- Angry Birds Friends uses Rovio's app icon. 2048 uses the original game's home-screen icon. [Angry Birds Friends on the App Store](https://apps.apple.com/us/app/angry-birds-friends/id555936735), [2048 icon](https://play2048.co/favicon180.png).
+
 ## Verification
 
 - Unit tests cover fresh-sample/rest/effort gating and mirrored pointer calibration with all four directions.
