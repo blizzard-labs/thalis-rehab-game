@@ -40,6 +40,24 @@ A separate supervised Garden Grow run used a moving 15 fps pose fixture. The cli
 
 The browser regression `moving patient screen updates in place at interactive speed` exercises the paired HTTPS workflow. The relay tests cover slow viewers, reconnecting to the latest scene, capture stopping when the last viewer leaves, and compatibility with older clients.
 
+#### Camera game and clinician reach reading
+
+On November 14, 2026, a supervised Garden Grow session on this Mac used a 15 fps moving pose fixture and the shipped pose tracker. Sixteen changes alternated between rest and reach. A frame number painted into the source image identified the camera pixels decoded on the clinician side. Both browsers sampled their actual game meter on animation frames. The staff browser also sampled its “Current reach” reading. All timing uses the same computer clock.
+
+| Measurement | Earlier build, separate browsers | Updated build, separate browsers | Updated “Open on this computer”, two windows in one browser |
+|---|---:|---:|---:|
+| Distinct clinician camera frames per second | 13.4 | 15.1 | 14.5 |
+| Source frame to clinician camera, median | 88 ms | 29 ms | 28 ms |
+| Source frame to clinician camera, 95th percentile | 127 ms | 38 ms | 38 ms |
+| Patient game meter to mirrored meter, 95th percentile | 67 ms | 17 ms | 17 ms |
+| Gap between camera movement and game response on clinician screen, 95th percentile | 100 ms | 50 ms | 84 ms |
+| Changes observed in the dashboard’s reach reading | 12 of 16 | 16 of 16 | 16 of 16 |
+| Patient mirror traffic | 210 KiB/s | 141 KiB/s | 103 KiB/s |
+
+The first two columns used the same patient viewport and HTTPS pairing route. The last column used the local development server, a smaller desktop patient window and the actual local launch link. In that window test, 95% of patient game-meter changes reached the clinician’s “Current reach” reading within 19 ms. Each sample covers about 13 seconds of active play. Times describe browser-observed updates from a generated camera frame. A physical camera, display panel and separate Wi-Fi device add delays outside this measurement.
+
+The Garden Grow browser regression encodes a timestamp in the camera pixels, checks frame age and delivery, and exercises alternating reach levels with checkpoint telemetry suppressed. All five camera-game scenarios passed in both Chromium and WebKit, including calibration, preview, movement and camera release after switching inputs. The relay tests cover a missing update, a newly connected viewer and a viewer using an older client.
+
 The [verified dashboard build](https://github.com/blizzard-labs/thalis-rehab-game/actions/runs/42798217866) covers commit `b3dc7575`. Its Windows job also runs `staff-launch.spec.ts` against the packaged executable. The separated patient flow additionally exercises automatically generated station certificates, HTTPS pairing on a LAN address, rejection of unauthorized mirror viewers, lock-time revocation, ephemeral screen frames and inert handling of untrusted patient markup. The pose-fixture browser scenarios run locally when `NEUROREACH_POSE_FIXTURE` is supplied. A green workflow establishes the software checks described here; the physical and pilot observations below still require their own evidence.
 
 ## Development-plan audit

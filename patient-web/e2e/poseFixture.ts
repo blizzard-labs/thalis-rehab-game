@@ -14,7 +14,9 @@ export async function attachPoseFixture(
         armAngle?: number;
         cameraTrack?: MediaStreamTrack;
       };
-      Object.defineProperty(navigator.mediaDevices, "getUserMedia", {
+      // WebKit can replace the initial mediaDevices wrapper after HTTPS navigation.
+      Object.defineProperty(MediaDevices.prototype, "getUserMedia", {
+        configurable: true,
         value: async () => {
           const subject = new Image();
           subject.src = src;
