@@ -1,4 +1,5 @@
 import { useEffect, type RefObject } from "react";
+import type { LiveInput } from "./station";
 
 export type ScreenEdits = Record<string, string | null>;
 export type ScreenFrame = {
@@ -7,6 +8,8 @@ export type ScreenFrame = {
   css?: string;
   scene?: number;
   edits?: ScreenEdits;
+  patch?: boolean;
+  live?: LiveInput | null;
   width: number;
   height: number;
 };
@@ -37,7 +40,7 @@ function screenStyles() {
     .join("\n");
 }
 
-function screenCapture(root: HTMLElement) {
+function screenCapture(root: HTMLElement, wake: () => void) {
   const canvas = document.createElement("canvas");
   const pictures = new WeakMap<
     HTMLImageElement,
@@ -45,7 +48,8 @@ function screenCapture(root: HTMLElement) {
   >();
   let ids = new WeakMap<Element, number>();
   let media: Media[] = [],
-    edits: ScreenEdits = {};
+    edits: ScreenEdits = {},
+    changes: ScreenEdits = {};
   let width = 0,
     height = 0,
     offset = 0,
@@ -55,13 +59,31 @@ function screenCapture(root: HTMLElement) {
     lastMedia = -Infinity;
   const videoTimes = new WeakMap<HTMLVideoElement, number>();
 
+  let watchedVideo: HTMLVideoElement | undefined;
+  let videoCallback = 0;
+  let videoReady = false;
+  function watchVideo(video?: HTMLVideoElement) {
+    if (video === watchedVideo) return;
+    if (videoCallback) watchedVideo?.cancelVideoFrameCallback(videoCallback);
+    watchedVideo = video;
+    videoCallback = 0;
+    videoReady = false;
+    if (video?.requestVideoFrameCallback) {
+      const next = () => {
+        videoReady = true;
+        wake();
+        videoCallback = video.requestVideoFrameCallback(next);
+      };
+      videoCallback = video.requestVideoFrameCallback(next);
+    }
+  }
+
   function picture(el: Media) {
     const video = el instanceof HTMLVideoElement;
     const image = el instanceof HTMLImageElement;
     const w = video ? el.videoWidth : image ? el.naturalWidth : el.width;
     const h = video ? el.videoHeight : image ? el.naturalHeight : el.height;
-    if (!w || !h || (!image && (!el.clientWidth || !el.clientHeight)))
-      return "";
+    if (!w || !h || !el.clientWidth || !el.clientHeight) return "";
     if (image) {
       const cached = pictures.get(el);
       if (cached?.url === el.currentSrc) return cached.data;
@@ -87,7 +109,7 @@ function screenCapture(root: HTMLElement) {
     if (id === undefined) return;
     const key = id + ":" + name;
     if (edits[key] !== value) {
-      edits[key] = value;
+      edits[key] = changes[key] = value;
       changed = true;
     }
   }
@@ -121,7 +143,10 @@ function screenCapture(root: HTMLElement) {
       }
     }
   }
-  const observer = new MutationObserver(observe);
+  const observer = new MutationObserver((records) => {
+    observe(records);
+    if (changed || rebuild) wake();
+  });
   observer.observe(root, {
     attributes: true,
     characterData: true,
@@ -130,6 +155,7 @@ function screenCapture(root: HTMLElement) {
   });
   const formChange = () => {
     rebuild = true;
+    wake();
   };
   root.addEventListener("input", formChange);
   root.addEventListener("change", formChange);
@@ -142,6 +168,7 @@ function screenCapture(root: HTMLElement) {
     ids = new WeakMap();
     media = [];
     edits = {};
+    changes = {};
     originals.forEach((el, id) => {
       let clone: Element = clones[id];
       ids.set(el, id);
@@ -182,6 +209,11 @@ function screenCapture(root: HTMLElement) {
       }
       clone.setAttribute(nodeId, String(id));
     });
+    watchVideo(
+      media.find(
+        (el): el is HTMLVideoElement => el instanceof HTMLVideoElement,
+      ),
+    );
     copy.querySelectorAll(excluded).forEach((el) => el.remove());
     copy.style.margin = "0";
     copy.style.width = rect.width + "px";
@@ -197,6 +229,7 @@ function screenCapture(root: HTMLElement) {
       full: boolean,
       now: number,
       heartbeat: boolean,
+      patches: boolean,
     ): ScreenFrame | null {
       observe(observer.takeRecords());
       const rect = root.getBoundingClientRect();
@@ -211,7 +244,8 @@ function screenCapture(root: HTMLElement) {
         height = h;
         offset = top;
       }
-      if (now - lastMedia >= 65) {
+      if (videoReady || now - lastMedia >= 33) {
+        videoReady = false;
         lastMedia = now;
         const videoPictures = new Map<MediaProvider, string>();
         for (const el of media) {
@@ -239,9 +273,21 @@ function screenCapture(root: HTMLElement) {
       }
       if (html === undefined && !changed && !heartbeat) return null;
       changed = false;
-      return { type: "frame", scene, html, width, height, edits };
+      const patch = patches && html === undefined;
+      const frame: ScreenFrame = {
+        type: "frame",
+        scene,
+        html,
+        width,
+        height,
+        edits: patch ? changes : edits,
+      };
+      if (patch) frame.patch = true;
+      changes = {};
+      return frame;
     },
     close() {
+      watchVideo();
       observer.disconnect();
       root.removeEventListener("input", formChange);
       root.removeEventListener("change", formChange);
@@ -254,6 +300,7 @@ export function useScreenPublisher(
   root: RefObject<HTMLDivElement>,
   token: string,
   enabled: boolean,
+  telemetry: RefObject<LiveInput | null>,
 ) {
   useEffect(() => {
     if (!token || !enabled) return;
@@ -268,18 +315,34 @@ export function useScreenPublisher(
       let first = true,
         watching = false,
         incremental = false,
-        lastSent = 0;
+        patches = false,
+        lastSent = 0,
+        lastCapture = -Infinity,
+        scheduled = false;
+      function wake() {
+        if (!incremental || !watching || closed || scheduled) return;
+        clearTimeout(timer);
+        scheduled = true;
+        timer = window.setTimeout(
+          publish,
+          Math.max(0, 16 - (performance.now() - lastCapture)),
+        );
+      }
       function publish() {
+        scheduled = false;
         if (closed || !watching || ws.readyState !== WebSocket.OPEN) return;
         const now = performance.now();
         if (root.current && ws.bufferedAmount === 0) {
-          capture ??= screenCapture(root.current);
+          lastCapture = now;
+          capture ??= screenCapture(root.current, wake);
           const frame = capture.capture(
             first || !incremental,
             now,
             now - lastSent >= 900,
+            patches,
           );
           if (frame) {
+            frame.live = telemetry.current;
             if (first) frame.css = screenStyles();
             if (!incremental && frame.html && frame.edits) {
               // Older companions and consoles only understand standalone frames.
@@ -295,15 +358,17 @@ export function useScreenPublisher(
             first = false;
           }
         }
-        timer = window.setTimeout(publish, incremental ? 33 : 200);
+        timer = window.setTimeout(publish, incremental ? 40 : 200);
       }
-      ws.onopen = () => ws.send(JSON.stringify({ token, updates: true }));
+      ws.onopen = () =>
+        ws.send(JSON.stringify({ token, updates: true, patches: true }));
       ws.onmessage = (event) => {
         const msg = JSON.parse(event.data);
         if (msg.type !== "ready" && msg.type !== "mode") return;
         clearTimeout(timer);
         watching = msg.watching !== false;
         incremental = msg.updates === true;
+        patches = incremental && msg.patches === true;
         first = true;
         capture?.close();
         capture = undefined;
@@ -324,7 +389,7 @@ export function useScreenPublisher(
       capture?.close();
       socket?.close();
     };
-  }, [root, token, enabled]);
+  }, [root, token, enabled, telemetry]);
 }
 
 export function indexScreen(root: ParentNode) {

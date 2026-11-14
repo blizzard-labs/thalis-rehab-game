@@ -148,6 +148,39 @@ test("patient plays through HTTPS while the clinician receives the actual screen
   ).toBe(403);
 });
 
+test("Open on this computer keeps patient and clinician in separate desktop windows", async ({
+  page,
+  browserName,
+}) => {
+  test.skip(browserName !== "chromium", "Checks native window IDs in Chromium");
+  await openStaff(page);
+  await page.getByRole("button", { name: "Start supervised session" }).click();
+  const [player] = await Promise.all([
+    page.waitForEvent("popup"),
+    page.getByRole("link", { name: "Open on this computer" }).click(),
+  ]);
+  try {
+    const windowId = async (tab: Page) => {
+      const client = await tab.context().newCDPSession(tab);
+      try {
+        return (await client.send("Browser.getWindowForTarget")).windowId;
+      } finally {
+        await client.detach();
+      }
+    };
+    expect(await windowId(player)).not.toBe(await windowId(page));
+    await player.getByRole("button", { name: "Pair this display" }).click();
+    expect(await player.evaluate(() => window.opener === null)).toBe(true);
+    await page.getByRole("button", { name: "Start patient game" }).click();
+    const water = player.getByRole("button", { name: "Water", exact: true });
+    for (let i = 0; i < 4; i++) await water.click();
+    await expect(preview(page).locator(".game-score")).toHaveText("1 bloom");
+    await finish(page);
+  } finally {
+    await player.close();
+  }
+});
+
 test("moving patient screen updates in place at interactive speed", async ({
   page,
   browser,
@@ -333,48 +366,147 @@ test("live remote monitor receives synthetic EEG, mirrors the stroke and saves i
   }
 });
 
-test("patient camera setup and video preview are mirrored and fallback releases the camera", async ({
-  page,
-  browser,
-}) => {
-  const image = process.env.NEUROREACH_POSE_FIXTURE;
-  test.skip(!image, "Requires local MediaPipe pose fixture");
-  await openStaff(page);
-  await page.getByLabel("Game", { exact: true }).selectOption("garden");
-  await page.getByLabel("Input", { exact: true }).selectOption("camera");
-  await page.getByRole("button", { name: "Start supervised session" }).click();
-  const player = await join(page, browser, (patient) =>
-    attachPoseFixture(patient, image!),
-  );
-  await expect(player.getByText("Arm in view")).toBeVisible({ timeout: 12000 });
-  await expect(
-    preview(page).locator("img[alt='Patient camera preview']").first(),
-  ).toHaveAttribute("src", /^data:image/);
-  await player.getByRole("button", { name: "Set resting position" }).click();
-  await player.evaluate(() => Object.assign(window, { armAngle: 0.5 }));
-  await expect(async () => {
-    await player
-      .getByRole("button", { name: "Set comfortable reach" })
-      .click({ timeout: 1200 });
-    await expect(player.getByTestId("camera-feed")).toBeVisible({
-      timeout: 700,
+for (const game of ["garden", "stars", "river", "fruit", "keeper"]) {
+  test(`patient camera setup, mirrored movement and fallback work in ${game}`, async ({
+    page,
+    browser,
+  }) => {
+    test.setTimeout(50000);
+    const image = process.env.NEUROREACH_POSE_FIXTURE;
+    test.skip(!image, "Requires local MediaPipe pose fixture");
+    await openStaff(page);
+    await page.getByLabel("Game", { exact: true }).selectOption(game);
+    await page.getByLabel("Input", { exact: true }).selectOption("camera");
+    await page
+      .getByRole("button", { name: "Start supervised session" })
+      .click();
+    const player = await join(page, browser, (patient) =>
+      attachPoseFixture(patient, image!, game === "garden"),
+    );
+    if (game === "river")
+      await player.getByRole("button", { name: "One arm" }).click();
+    await expect(player.getByText("Arm in view")).toBeVisible({
+      timeout: 12000,
     });
-  }).toPass({ timeout: 9000 });
-  await page
-    .getByRole("button", { name: "Switch patient to one button" })
-    .click();
-  await player.getByRole("button", { name: "Water", exact: true }).click();
-  await expect
-    .poll(() =>
-      player.evaluate(
+    const camera = preview(page)
+      .locator("img[alt='Patient camera preview']")
+      .first();
+    await expect(camera).toHaveAttribute("src", /^data:image/);
+    await player.getByRole("button", { name: "Set resting position" }).click();
+    const directional = game === "stars" || game === "fruit";
+    if (directional)
+      await expect(
+        player.getByRole("button", { name: "Save direction 1" }),
+      ).toBeVisible();
+    await player.evaluate(() => Object.assign(window, { armAngle: 0.5 }));
+    if (directional) {
+      await player.getByRole("button", { name: "Save direction 1" }).click();
+      await player
+        .getByRole("button", { name: "Play with 1 direction" })
+        .click();
+    } else {
+      await expect(async () => {
+        await player
+          .getByRole("button", { name: "Set comfortable reach" })
+          .click({ timeout: 1200 });
+        await expect(player.getByTestId("camera-feed")).toBeVisible({
+          timeout: 700,
+        });
+      }).toPass({ timeout: 9000 });
+    }
+    // Remove checkpoint readings so a stale poll cannot satisfy the live-input assertions.
+    await page.route("**/api/staff/display", async (route) => {
+      const res = await route.fetch();
+      const state = await res.json();
+      await route.fulfill({
+        response: res,
+        json: { ...state, telemetry: null },
+      });
+    });
+    await expect(preview(page).locator(".live-game")).toBeVisible();
+    await expect(camera).toHaveAttribute("src", /^data:image/);
+    const raised = await camera.getAttribute("src");
+    await player.evaluate(() => Object.assign(window, { armAngle: 0 }));
+    await expect.poll(() => camera.getAttribute("src")).not.toBe(raised);
+    const reach = page
+      .locator(".cl-sensors dt")
+      .filter({ hasText: "Current reach" })
+      .locator("..")
+      .locator("dd");
+    await expect(reach).toHaveText(/\d+%/);
+    if (game === "garden") {
+      const delivery = await page.evaluate(
         () =>
-          (window as Window & { cameraTrack?: MediaStreamTrack }).cameraTrack
-            ?.readyState,
-      ),
-    )
-    .toBe("ended");
-  await finish(page);
-});
+          new Promise<{ frames: number; p95: number }>((resolve) => {
+            const canvas = document.createElement("canvas");
+            canvas.width = 160;
+            canvas.height = 120;
+            const ctx = canvas.getContext("2d", { willReadFrequently: true })!;
+            const ages: number[] = [];
+            let last = -1;
+            const start = performance.now();
+            function sample() {
+              const doc = document.querySelector<HTMLIFrameElement>(
+                'iframe[title="Live patient screen"]',
+              )?.contentDocument;
+              const img = doc?.querySelector<HTMLImageElement>(
+                "img[alt='Patient camera preview']",
+              );
+              if (img?.complete && img.naturalWidth) {
+                ctx.drawImage(img, 0, 0, 160, 120);
+                const row = ctx.getImageData(0, 8, 160, 1).data;
+                let stamp = 0;
+                for (let bit = 0; bit < 16; bit++)
+                  if (row[(12 + bit * 9) * 4] > 128) stamp |= 1 << bit;
+                if (stamp !== last) {
+                  ages.push((Date.now() - stamp) & 0xffff);
+                  last = stamp;
+                }
+              }
+              if (performance.now() - start < 2400)
+                requestAnimationFrame(sample);
+              else
+                resolve({
+                  frames: ages.length,
+                  p95: ages.sort((a, b) => a - b)[
+                    Math.floor(ages.length * 0.95)
+                  ],
+                });
+            }
+            requestAnimationFrame(sample);
+          }),
+      );
+      expect(delivery.frames).toBeGreaterThan(18);
+      expect(delivery.p95).toBeLessThan(200);
+      for (const angle of [0, 0.5, 0, 0.5]) {
+        await player.evaluate(
+          (value) => Object.assign(window, { armAngle: value }),
+          angle,
+        );
+        await expect
+          .poll(async () => {
+            const percent = parseInt(await reach.innerText());
+            return angle ? percent >= 65 : percent <= 30;
+          })
+          .toBe(true);
+      }
+    }
+    await page
+      .getByRole("button", { name: "Switch patient to one button" })
+      .click();
+    await expect(camera).toHaveCount(0);
+    await expect
+      .poll(() =>
+        player.evaluate(
+          () =>
+            (window as Window & { cameraTrack?: MediaStreamTrack }).cameraTrack
+              ?.readyState,
+        ),
+      )
+      .toBe("ended");
+    await finish(page);
+  });
+}
 
 test("locking the clinician console pauses the remote patient and restores the same mirror after unlock", async ({
   page,

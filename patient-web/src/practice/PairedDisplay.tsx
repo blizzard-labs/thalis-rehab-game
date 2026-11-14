@@ -229,7 +229,7 @@ export function PairedDisplay({
     setFinishing(true);
   };
   const done = snapshot?.state === "complete";
-  useScreenPublisher(screen, token, owner && !expired && !done);
+  useScreenPublisher(screen, token, owner && !expired && !done, telemetry);
   return (
     <div ref={screen} className={local ? "station-player" : "practice-app"}>
       {!local && (

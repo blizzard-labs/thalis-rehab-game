@@ -42,7 +42,17 @@
   object-fit: contain;
 }
 .adventure-dock {
+  position: relative;
   text-align: center;
+}
+.adventure-camera {
+  position: absolute;
+  bottom: calc(100% + 12px);
+  left: 2%;
+  width: clamp(72px, 12vw, 144px);
+}
+.adventure-camera .cal-camera {
+  width: 100%;
 }
 .adventure .game-heading {
   padding-bottom: 4px;

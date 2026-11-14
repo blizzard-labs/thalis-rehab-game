@@ -129,6 +129,51 @@ def test_slow_mirror_viewer_skips_stale_updates_without_losing_scene_changes():
     asyncio.run(scenario())
 
 
+def test_camera_pixels_are_sent_once_and_retained_for_a_viewer_who_misses_an_update():
+    from types import SimpleNamespace
+    from server.screen_mirror import ScreenMirror, Viewer
+
+    async def scenario():
+        relay = ScreenMirror(SimpleNamespace(current=SimpleNamespace(
+            session_id="visit", token="token", state="playing")), lambda _: True)
+        relay.session, relay.frame_token = "visit", "token"
+        relay.publisher_patches = True
+        base = {"type": "frame", "scene": 1, "width": 800, "height": 600}
+        assert relay.accept_frame({**base, "html": "<img><b>0</b>", "edits": {}})
+        assert relay.accept_frame({**base, "patch": True, "edits": {"0:src": "camera pixels"}})
+        assert relay.accept_frame({**base, "patch": True, "edits": {"1:#text": "75"},
+                                   "live": {"phase": "play", "input": .75, "cameraLevel": .75,
+                                            "eegLevel": 99, "unexpected": "discard"}})
+
+        async def deliver(revision, base_id, patches=True):
+            query = {"session": "visit", "updates": "1", "patches": "1" if patches else "0"}
+            viewer = Viewer(SimpleNamespace(query=query), revision=revision, base=base_id)
+            class Socket:
+                closed = False
+                async def send_json(self, frame):
+                    self.received = frame
+                    self.closed = True
+            socket = Socket()
+            viewer.changed.set()
+            await asyncio.wait_for(relay.send_latest(socket, viewer), 1)
+            return socket.received
+
+        current = await deliver(relay.revision - 1, relay.base)
+        assert current["patch"] and current["edits"] == {"1:#text": "75"}
+        assert current["live"] == {"phase": "play", "camera": "", "eeg": "",
+                                   "cameraLevel": .75, "eegLevel": None, "input": .75}
+        for frame in (await deliver(relay.revision - 2, relay.base),
+                      await deliver(relay.revision - 1, relay.base, False),
+                      await deliver(-1, -1)):
+            assert "patch" not in frame and frame["edits"] == {"0:src": "camera pixels", "1:#text": "75"}
+            assert frame["live"] == current["live"]
+        assert not relay.accept_frame({**base, "patch": True, "scene": 2})
+        assert relay.accept_frame({**base, "scene": 2, "html": "<p>Paused</p>", "live": None})
+        assert relay.frame["edits"] == {} and relay.frame["live"] is None
+
+    asyncio.run(scenario())
+
+
 def test_generated_station_certificate_is_reusable_and_matches_patient_address(tmp_path):
     from cryptography import x509
     from cryptography.hazmat.primitives import hashes

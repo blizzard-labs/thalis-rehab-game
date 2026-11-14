@@ -153,7 +153,7 @@ export function Play({
         return;
       }
       redraw((n) => n + 1);
-    }, 80);
+    }, stream ? 33 : 80);
     const visibility = () => {
       if (document.hidden) round.setPaused(true);
     };
@@ -162,7 +162,7 @@ export function Play({
       clearInterval(timer);
       document.removeEventListener("visibilitychange", visibility);
     };
-  }, [round]);
+  }, [round, stream]);
   useEffect(() => {
     action.current?.focus();
   }, [round, round.source]);
@@ -182,6 +182,7 @@ export function Play({
   const scan = scanningWrist(round.scanning, round.easy, layout.stops, reduced);
   const aligned = withinNet(scan, layout.goal);
   const redrawRound = () => redraw((n) => n + 1);
+  const camera = stream && <CameraFeed recording sourceStream={stream} />;
   if (!garden && round.record.game !== "stars")
     return (
       <AdventurePlay
@@ -195,6 +196,7 @@ export function Play({
         sourceLabel={sourceLabel}
         status={status}
         controls={children}
+        camera={camera}
         action={action}
         redraw={redrawRound}
         onEnd={onEnd}
@@ -214,7 +216,6 @@ export function Play({
     round.record.elapsed - beeCall < 3;
   const noun = garden ? "bloom" : "star";
   const count = `${rewards} ${noun}${rewards === 1 ? "" : "s"}`;
-  const camera = stream && <CameraFeed recording sourceStream={stream} />;
   return (
     <section
       className={`live-game scene scene--${garden ? "garden" : "stars"}`}

@@ -8,6 +8,16 @@ from dataclasses import dataclass, field
 from aiohttp import web, WSMsgType
 
 
+def clean_live_input(monitor):
+    if not isinstance(monitor, dict) or monitor.get("phase") not in ("setup", "play"):
+        return None
+    result = {key: str(monitor.get(key, ""))[:180] for key in ("phase", "camera", "eeg")}
+    for key in ("input", "cameraLevel", "eegLevel"):
+        level = monitor.get(key)
+        result[key] = level if type(level) in (int, float) and 0 <= level <= 1 else None
+    return result
+
+
 @dataclass
 class Viewer:
     request: web.Request
@@ -23,6 +33,8 @@ class ScreenMirror:
         self.viewers = {}
         self.publisher = None
         self.publisher_updates = False
+        self.publisher_patches = False
+        self.patch = None
         self.mode = None
         self.frame = None
         self.session = None
@@ -56,8 +68,10 @@ class ScreenMirror:
         mode = (bool(viewers), all(v.request.query.get("updates") == "1" for v in viewers))
         if initial or self.mode != mode:
             self.mode = mode
-            await self.publisher.send_json({"type": "ready" if initial else "mode",
-                                            "watching": mode[0], "updates": mode[1]})
+            message = {"type": "ready" if initial else "mode", "watching": mode[0], "updates": mode[1]}
+            if self.publisher_patches and mode[1]:
+                message["patches"] = True
+            await self.publisher.send_json(message)
 
     async def send_latest(self, ws, viewer):
         while not ws.closed:
@@ -82,6 +96,9 @@ class ScreenMirror:
                 base = -1
             elif viewer.base != base or "scene" not in frame:
                 outgoing = frame
+            elif (self.patch is not None and viewer.revision == revision - 1
+                  and viewer.request.query.get("patches") == "1"):
+                outgoing = self.patch
             else:
                 # Edits are cumulative against this base. A slow socket can skip
                 # any number of intermediate updates, including a scene change.
@@ -143,11 +160,26 @@ class ScreenMirror:
         css = incoming.get("css", previous.get("css", ""))
         if not (isinstance(html, str) and len(html) <= 900000 and isinstance(css, str) and len(css) <= 350000):
             return False
+        frame = {"type": "frame", "width": width, "height": height}
+        if scene is not None:
+            frame.update(scene=scene, edits=edits)
+        if "live" in incoming:
+            frame["live"] = clean_live_input(incoming["live"])
+        patch = None
+        if incoming.get("patch") is True:
+            if not self.publisher_patches or full or not scene:
+                return False
+            merged = {**previous["edits"], **edits}
+            # Bound cumulative state even when an untrusted sender adds new keys on every patch.
+            if (len(merged) > 16000 or
+                    sum(len(k) + len(v or "") for k, v in merged.items()) > 1500000):
+                return False
+            patch = {**frame, "patch": True}
+            frame["edits"] = merged
         if full:
             self.base += 1
-        self.frame = {"type": "frame", "html": html, "css": css, "width": width, "height": height}
-        if scene is not None:
-            self.frame.update(scene=scene, edits=edits)
+        self.patch = patch
+        self.frame = {**frame, "html": html, "css": css}
         self.updated = time.monotonic()
         self.notify()
         return True
@@ -164,6 +196,7 @@ class ScreenMirror:
             previous = self.publisher
             self.publisher = ws
             self.publisher_updates = credentials.get("updates") is True
+            self.publisher_patches = self.publisher_updates and credentials.get("patches") is True
             self.session = display.session_id
             self.frame_token = credentials["token"]
             had_frame = self.frame is not None
@@ -188,7 +221,7 @@ class ScreenMirror:
         finally:
             if self.publisher is ws:
                 self.publisher = None
-                self.frame = self.mode = self.frame_token = None
+                self.patch = self.frame = self.mode = self.frame_token = None
                 self.updated = 0
                 self.notify()
             await ws.close()

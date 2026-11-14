@@ -32,12 +32,14 @@ export function useMotionCamera(
     let worker: Worker | undefined;
     let reader: ReadableStreamDefaultReader<VideoFrame> | undefined;
     let timer = 0;
+    let frameCallback = 0;
     const video = document.createElement("video");
     video.muted = true;
     video.playsInline = true;
     const release = () => {
       stopped = true;
       window.clearInterval(timer);
+      if (frameCallback) video.cancelVideoFrameCallback(frameCallback);
       void reader?.cancel().catch(() => {});
       worker?.terminate();
       media?.getTracks().forEach((track) => track.stop());
@@ -184,19 +186,21 @@ export function useMotionCamera(
         }
         return;
       }
-      timer = window.setInterval(async () => {
+      let lastCapture = -Infinity;
+      const capture = async (time: number) => {
         if (
           !ready ||
           busy ||
           video.readyState < 2 ||
           video.currentTime === lastVideoTime ||
+          time - lastCapture < 30 ||
           document.hidden
         )
           return;
         lastVideoTime = video.currentTime;
+        lastCapture = time;
         busy = true;
         try {
-          const time = performance.now();
           const frame = await createImageBitmap(video);
           if (stopped) {
             frame.close();
@@ -206,7 +210,16 @@ export function useMotionCamera(
         } catch {
           fail("Camera frames could not be read. Try one-button play.");
         }
-      }, 80);
+      };
+      if (typeof video.requestVideoFrameCallback === "function") {
+        const next = (time: number) => {
+          frameCallback = video.requestVideoFrameCallback(next);
+          void capture(time);
+        };
+        frameCallback = video.requestVideoFrameCallback(next);
+      } else {
+        timer = window.setInterval(() => void capture(performance.now()), 33);
+      }
     }
     void start().catch((error) =>
       fail(

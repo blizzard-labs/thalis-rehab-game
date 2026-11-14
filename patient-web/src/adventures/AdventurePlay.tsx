@@ -19,6 +19,7 @@ export function AdventurePlay({
   aim,
   status,
   controls,
+  camera,
   action,
   redraw,
   onEnd,
@@ -31,6 +32,7 @@ export function AdventurePlay({
   aim: CameraAim | null;
   status?: string;
   controls?: ReactNode;
+  camera?: ReactNode;
   action: RefObject<HTMLButtonElement>;
   redraw: () => void;
   onEnd: () => void;
@@ -154,6 +156,7 @@ export function AdventurePlay({
         </div>
       )}
       <footer className="game-dock adventure-dock">
+        {camera && <div className="adventure-camera">{camera}</div>}
         {game === "river" && (
           <fieldset className="route-choices" disabled={round.paused}>
             <legend>Choose your channel</legend>

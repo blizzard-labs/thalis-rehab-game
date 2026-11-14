@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type MouseEvent } from "react";
 import QRCode from "qrcode";
 import { StationHeader, RunPerformance } from "./ClinicalPanels";
 import { PatientMirror } from "./PatientMirror";
@@ -7,9 +7,36 @@ import {
   errorText,
   StationError,
   type DisplayState,
+  type LiveInput,
   type Participant,
 } from "./station";
 import { gameNames, sourceNames } from "./session";
+
+function openLocalPlayer(event: MouseEvent<HTMLAnchorElement>) {
+  if (
+    event.button !== 0 ||
+    event.metaKey ||
+    event.ctrlKey ||
+    event.shiftKey ||
+    event.altKey ||
+    !matchMedia("(pointer: fine) and (min-width: 750px)").matches
+  )
+    return;
+  // A second tab hides the clinician screen or pauses the patient. Separate
+  // windows can stay visible side by side and keep their normal pause behavior.
+  const width = Math.round(Math.min(960, screen.availWidth * 0.48));
+  const height = Math.min(920, screen.availHeight - 80);
+  const left = window.screenX + Math.max(0, window.outerWidth - width);
+  const player = window.open(
+    "about:blank",
+    "_blank",
+    `popup,width=${width},height=${height},left=${left},top=${window.screenY}`,
+  );
+  if (!player) return; // Keep the ordinary link available if a popup was blocked.
+  player.opener = null;
+  player.location.replace(event.currentTarget.href);
+  event.preventDefault();
+}
 
 export function DisplayMonitor({
   initial,
@@ -26,6 +53,7 @@ export function DisplayMonitor({
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
     [qr, setQr] = useState("");
+  const [frameInput, setFrameInput] = useState<LiveInput | null>();
   const [copied, setCopied] = useState(false);
   const [networkError, setNetworkError] = useState(""),
     [expanded, setExpanded] = useState(false);
@@ -118,6 +146,7 @@ export function DisplayMonitor({
     ending = display.state === "ending";
   const resting = display.patientPaused || display.state === "paused";
   const source = display.record?.sources.slice(-1)[0] ?? display.source;
+  const telemetry = frameInput === undefined ? display.telemetry : frameInput;
   const stateText = networkError
     ? "Monitor disconnected"
     : done
@@ -138,9 +167,9 @@ export function DisplayMonitor({
                 ? "Ready to start"
                 : resting
                   ? "Patient resting"
-                  : display.telemetry?.phase === "setup"
+                  : telemetry?.phase === "setup"
                     ? "Input setup"
-                    : source !== "button" && display.telemetry?.input == null
+                    : source !== "button" && telemetry?.input == null
                       ? "Awaiting valid input"
                       : "Session active";
   return (
@@ -278,7 +307,12 @@ export function DisplayMonitor({
                   Open patient display
                 </a>
                 {display.localUrl && display.url.startsWith("https://") && (
-                  <a href={display.localUrl} target="_blank" rel="noreferrer">
+                  <a
+                    href={display.localUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    onClick={openLocalPlayer}
+                  >
                     Open on this computer
                   </a>
                 )}
@@ -309,12 +343,28 @@ export function DisplayMonitor({
           display={
             networkError
               ? { ...display, connected: false, telemetry: null, trace: [] }
-              : display
+              : { ...display, telemetry }
           }
           player={
             <PatientMirror
               session={display.session}
               done={done}
+              onInput={(next) =>
+                setFrameInput((previous) => {
+                  if (
+                    next &&
+                    previous &&
+                    previous.phase === next.phase &&
+                    previous.camera === next.camera &&
+                    previous.eeg === next.eeg &&
+                    previous.input === next.input &&
+                    previous.cameraLevel === next.cameraLevel &&
+                    previous.eegLevel === next.eegLevel
+                  )
+                    return previous;
+                  return next;
+                })
+              }
               expanded={expanded}
               expand={() => setExpanded((value) => !value)}
             />

@@ -9,7 +9,7 @@ import time
 from uuid import uuid4
 
 from aiohttp import web
-from server.screen_mirror import ScreenMirror
+from server.screen_mirror import ScreenMirror, clean_live_input
 
 
 GAMES = {"garden": "Garden Grow", "stars": "Star Catcher", "river": "River Rowing", "fruit": "Fruit Picking", "keeper": "Lighthouse Keeper"}
@@ -307,12 +307,9 @@ class DisplayPairing:
             d.record = self.save(self.database(), {**r, "started": d.started}, d.participant, status)
             if d.state == "playing" and b.get("revision") == d.revision:
                 d.patient_paused = b.get("paused") is True
-            monitor = b.get("telemetry")
-            if isinstance(monitor, dict) and monitor.get("phase") in ("setup", "play"):
-                d.telemetry = {key: str(monitor.get(key, ""))[:180] for key in ("phase", "camera", "eeg")}
-                for key in ("input", "cameraLevel", "eegLevel"):
-                    level = monitor.get(key)
-                    d.telemetry[key] = level if type(level) in (int, float) and 0 <= level <= 1 else None
+            monitor = clean_live_input(b.get("telemetry"))
+            if monitor is not None:
+                d.telemetry = monitor
                 if d.source != "button" and d.state == "playing" and not d.patient_paused and monitor["phase"] == "play":
                     at = time.monotonic()
                     if not d.trace or at - d.trace[-1][0] >= 0.4:

@@ -6,18 +6,23 @@ import {
   mirrorSocket,
   type ScreenFrame,
 } from "./screenMirror";
+import type { LiveInput } from "./station";
 
 export function PatientMirror({
   session,
   done,
   expanded,
   expand,
+  onInput,
 }: {
   session: string;
   done: boolean;
   expanded: boolean;
   expand: () => void;
+  onInput: (input: LiveInput | null | undefined) => void;
 }) {
+  const reportInput = useRef(onInput);
+  reportInput.current = onInput;
   const iframe = useRef<HTMLIFrameElement>(null);
   const container = useRef<HTMLDivElement>(null);
   const latest = useRef<ScreenFrame | null>(null);
@@ -49,6 +54,7 @@ export function PatientMirror({
       painted.current = { doc, base: scene };
     }
     if (frame.edits) applyScreenEdits(nodes.current, frame.edits);
+    reportInput.current(frame.live);
   }
   useLayoutEffect(() => {
     const fit = () => {
@@ -71,6 +77,7 @@ export function PatientMirror({
   }, [size.width, size.height, expanded]);
   useEffect(() => {
     function clearScreen() {
+      reportInput.current(null);
       base.current = latest.current = painted.current = null;
       nodes.current.clear();
       iframe.current?.contentDocument
@@ -87,16 +94,35 @@ export function PatientMirror({
     let socket: WebSocket | null = null;
     let retry = 0;
     let stale = 0;
-    let paint = 0;
+    let missedPaint = false;
+    let fresh = false;
+    function paint(frame: ScreenFrame | null) {
+      if (!fresh) return;
+      if (document.hidden) {
+        missedPaint = true;
+        return;
+      }
+      if (missedPaint) frame = latest.current;
+      missedPaint = false;
+      if (!frame) return;
+      render(frame);
+      setSize((old) =>
+        old.width === frame.width && old.height === frame.height
+          ? old
+          : { width: frame.width, height: frame.height },
+      );
+    }
+    const paintLatest = () => paint(latest.current);
     function connect() {
       if (stopped) return;
       socket = mirrorSocket(
-        "/api/staff/display/mirror?updates=1&session=" +
+        "/api/staff/display/mirror?updates=1&patches=1&session=" +
           encodeURIComponent(session),
       );
       socket.onmessage = (event) => {
         const message = JSON.parse(event.data);
         if (message.type === "frame") {
+          fresh = true;
           if (typeof message.html === "string") {
             base.current = {
               ...message,
@@ -106,33 +132,36 @@ export function PatientMirror({
             socket?.close();
             return;
           }
-          latest.current = message;
-          if (!paint)
-            paint = requestAnimationFrame(() => {
-              paint = 0;
-              const frame = latest.current;
-              if (!frame) return;
-              render(frame);
-              setSize((old) =>
-                old.width === frame.width && old.height === frame.height
-                  ? old
-                  : { width: frame.width, height: frame.height },
-              );
-            });
+          // The relay sends cumulative state after a skipped update or reconnect.
+          // Keep that state locally so a hidden or reloaded iframe can catch up in one paint.
+          latest.current = message.patch
+            ? {
+                ...message,
+                edits: { ...latest.current?.edits, ...message.edits },
+              }
+            : message;
+          paint(
+            painted.current?.base === base.current ? message : latest.current,
+          );
           setLive(true);
           setStatus("Live patient screen");
           clearTimeout(stale);
           stale = window.setTimeout(() => {
+            fresh = false;
+            reportInput.current(null);
             setLive(false);
             setStatus("Waiting for the patient connection");
           }, 2500);
         } else {
+          fresh = false;
+          clearTimeout(stale);
           clearScreen();
           setLive(false);
           setStatus("Waiting for the patient screen");
         }
       };
       socket.onclose = () => {
+        fresh = false;
         clearTimeout(stale);
         clearScreen();
         setLive(false);
@@ -141,14 +170,15 @@ export function PatientMirror({
       };
       socket.onerror = () => socket?.close();
     }
+    document.addEventListener("visibilitychange", paintLatest);
     connect();
     return () => {
       stopped = true;
-      cancelAnimationFrame(paint);
+      document.removeEventListener("visibilitychange", paintLatest);
       clearScreen();
       clearTimeout(retry);
       clearTimeout(stale);
-      if (socket) socket.onclose = null;
+      if (socket) socket.onmessage = socket.onclose = null;
       socket?.close();
     };
   }, [session, done]);
