@@ -219,3 +219,21 @@ it("holds picked fruit through pause, checkpoint and input fallback until it is 
   expect(resumed.record.rewards).toBe(1);
   expect(resumed.carryingFruit).toBe(false);
 });
+
+it("carries a queued river fork through pause and recovery and keeps recent discoveries bounded", () => {
+  const round = new PracticeRound("river", "button", true);
+  round.chooseChannel("stone");
+  round.press();
+  round.chooseChannel("reed");
+  round.setPaused(true);
+  round.chooseChannel("stone");
+  const restored = PracticeRound.restore(structuredClone(round.record), true);
+  restored.setPaused(false);
+  for (let i = 1; i < 4; i++) restored.press();
+  expect(restored.record.channel).toBe("reed");
+  expect(restored.record.landfalls).toEqual([{ bend: 1, channel: "stone" }]);
+  for (let i = 4; i < 400; i++) restored.press();
+  expect(restored.record.landfalls).toEqual(
+    [98, 99, 100].map((bend) => ({ bend, channel: "reed" })),
+  );
+});

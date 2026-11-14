@@ -11,7 +11,8 @@ import { keeperStory } from "./keeperStory";
 import { crateSize, harvestAt, orchardStop } from "./orchardTrail";
 import { trailSeed } from "./trail";
 import { OrchardArt } from "./Orchard";
-import { RiverArt, landingName } from "./River";
+import { RiverArt } from "./River";
+import { riverLanding, strokesPerBend } from "./riverJourney";
 import "./adventures.css";
 
 export function AdventurePlay({
@@ -66,6 +67,16 @@ export function AdventurePlay({
     packed = rewards % crateSize;
   const forks = round.record.orchardForks ?? [];
   const stop = orchardStop(seed, leg, forks.includes(leg));
+  const bend = Math.floor(rewards / strokesPerBend);
+  const strokes = rewards % strokesPerBend;
+  const current = riverLanding(
+    seed,
+    round.record.landfalls?.find((entry) => entry.bend === bend)?.channel ??
+      channel,
+    bend,
+  );
+  const next = riverLanding(seed, channel, bend + 1);
+  const selectedChannel = round.record.nextChannel ?? channel;
   const distance = reducedMotion ? rewards : round.travelDistance;
   let cue = riverCue;
   if (fruit) {
@@ -93,8 +104,8 @@ export function AdventurePlay({
           ? "Imagine moving your hand to help the keeper."
           : "Reach to help the keeper, then rest.";
   if (round.celebrating) {
-    if (game === "river" && rewards % 4 === 0)
-      cue = `Landfall at ${landingName(channel, rewards)}!`;
+    if (game === "river" && strokes === 0)
+      cue = `Logged at ${current.name} · ${current.discovery}`;
     if (fruit && !round.carryingFruit && packed === 0) {
       const delivered = orchardStop(seed, leg - 1, forks.includes(leg - 1));
       cue = `${delivered.name} stocked with fresh ${delivered.product}!`;
@@ -168,16 +179,48 @@ export function AdventurePlay({
           <RiverArt
             distance={distance}
             strokes={rewards}
+            seed={seed}
+            log={round.record.landfalls}
+            nextChannel={selectedChannel}
             phase={phase}
             side={side}
             paired={round.record.rowing === "paired"}
             channel={channel}
             onPull={manual ? pull : undefined}
           />
-          <span className="scene-caption">
-            {landingName(channel, rewards)} · {4 - (rewards % 4)} strokes to
-            next landing
-          </span>
+          <div className="trail-sign river-sign">
+            <small>Bend {bend + 1} · downstream</small>
+            <strong>{next.name}</strong>
+            <span className="trail-meter" aria-hidden="true">
+              {[0, 1, 2, 3].map((i) => (
+                <i key={i} className={i < strokes ? "filled" : ""} />
+              ))}
+            </span>
+            <span>
+              {strokesPerBend - strokes}{" "}
+              {strokesPerBend - strokes === 1 ? "stroke" : "strokes"} to
+              landfall
+            </span>
+          </div>
+          {bend > 0 && (
+            <div
+              className="river-log"
+              aria-label={`River log, ${bend} ${bend === 1 ? "landing" : "landings"}`}
+            >
+              <strong>River log · {bend}</strong>
+              <span>
+                {(round.record.landfalls?.length
+                  ? round.record.landfalls
+                  : [{ bend, channel }]
+                )
+                  .map(
+                    (entry) =>
+                      riverLanding(seed, entry.channel, entry.bend).discovery,
+                  )
+                  .join(" · ")}
+              </span>
+            </div>
+          )}
         </div>
       )}
       <footer className="game-dock adventure-dock">
@@ -207,13 +250,15 @@ export function AdventurePlay({
         )}
         {game === "river" && (
           <fieldset className="route-choices" disabled={round.paused}>
-            <legend>Choose your channel</legend>
+            <legend>
+              {strokes ? "At the next fork" : "Choose your channel"}
+            </legend>
             {(["reed", "stone"] as const).map((c) => (
               <button
                 key={c}
-                aria-pressed={channel === c}
+                aria-pressed={selectedChannel === c}
                 onClick={() => {
-                  round.record.channel = c;
+                  round.chooseChannel(c);
                   redraw();
                 }}
               >

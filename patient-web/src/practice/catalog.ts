@@ -22,7 +22,7 @@ export const gameDetails = {
   },
   river: {
     icon: "🚣",
-    description: "Pull the oars, choose a channel and discover the riverbank.",
+    description: "Follow the marsh or the narrows and fill your river log with discoveries at each landing.",
     unit: "stroke",
     units: "strokes",
   },

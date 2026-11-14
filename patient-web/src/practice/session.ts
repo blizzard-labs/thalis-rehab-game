@@ -8,7 +8,11 @@ import { PlantGrowthModel } from "../garden/PlantGrowthModel";
 import { seedAt, type Seed } from "../garden/seeds";
 
 import type { Game } from "./catalog";
-import type { Channel } from "../adventures/River";
+import {
+  strokesPerBend,
+  type Landfall,
+  type Channel,
+} from "../adventures/riverJourney";
 export { gameNames, type Game } from "./catalog";
 export type Source = "button" | "camera" | "eeg" | "blended";
 export type Side = "left" | "right";
@@ -51,6 +55,8 @@ export interface PracticeRecord {
   schedule?: "short" | "clinic";
   harborBase?: number;
   channel?: Channel;
+  nextChannel?: Channel;
+  landfalls?: Landfall[];
   orchardForks?: number[];
   rowing?: "single" | "paired";
   garden?: { next: Seed; bed: Seed[]; goal?: number };
@@ -174,6 +180,12 @@ export class PracticeRound {
     return (
       this.record.game === "fruit" && this.record.actions > this.record.rewards
     );
+  }
+  chooseChannel(channel: Channel) {
+    if (this.paused || this.record.game !== "river") return;
+    if (this.record.rewards % strokesPerBend === 0)
+      this.record.channel = channel;
+    else this.record.nextChannel = channel;
   }
   get travelDistance() {
     const remaining = Math.max(0, 1 - this.elapsedSinceReward / 0.85);
@@ -373,6 +385,19 @@ export class PracticeRound {
       garden.next = seedAt(this.record.rewards + 1);
     }
     this.record.rewards++;
+    if (
+      this.record.game === "river" &&
+      this.record.rewards % strokesPerBend === 0
+    ) {
+      const log = this.record.landfalls ?? [];
+      const channel = this.record.channel ?? "reed";
+      this.record.landfalls = [
+        ...log.slice(-2),
+        { bend: this.record.rewards / strokesPerBend, channel },
+      ];
+      this.record.channel = this.record.nextChannel ?? channel;
+      delete this.record.nextChannel;
+    }
     this.progress = 0;
     this.log("reward");
     this.adjustDifficulty(this.elapsedSinceReward);

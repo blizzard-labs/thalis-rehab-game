@@ -1,3 +1,4 @@
+import { TrailSky, Horizon } from "./Horizon";
 import { OrchardTrail, orchardLight } from "./OrchardScenery";
 import { harvestAt, crateSize, type FruitKind } from "./orchardTrail";
 import { variation } from "./trail";
@@ -176,10 +177,13 @@ export function OrchardArt({
         </g>
       </defs>
       <rect y="-1400" width="960" height="3000" fill={`url(#${id}sky)`} />
-      <circle cx="710" cy="85" r="43" fill="#fff1c5" />
-      <path
-        d="M0 263Q130 135 265 209T534 197q204-112 426 35v100H0Z"
-        fill={light.hill}
+      <TrailSky {...{ seed, distance }} />
+      <Horizon
+        seed={seed}
+        distance={distance * 21}
+        base={265}
+        height={55}
+        color={light.hill}
       />
       <path
         d="M0 264q188-69 372 0t330-19q125-43 258 9v1500H0Z"

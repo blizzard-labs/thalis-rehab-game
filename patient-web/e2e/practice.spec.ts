@@ -258,11 +258,22 @@ test("a rower can pull a stroke, switch channels, reach a landing and save a cor
   await page.mouse.move(box.x + box.width * 0.5, box.y + box.height * 0.8);
   await page.mouse.up();
   await expect(page.getByText("1 stroke", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Reed marsh" }).click();
+  await expect(page.locator(".river-sign strong")).toHaveText("The Old Bridge");
   for (let i = 0; i < 3; i++)
     await page.getByRole("button", { name: "Row", exact: true }).click();
   await expect(
     page.getByRole("img", { name: "Rowboat at The Old Bridge" }),
   ).toBeVisible();
+  await expect(page.getByLabel("River log, 1 landing")).toContainText(
+    "Stone arch",
+  );
+  await expect(page.locator(".river-sign strong")).toHaveText("Reedwater Mill");
+  for (let i = 4; i < 32; i++)
+    await page.getByRole("button", { name: "Row", exact: true }).click();
+  await expect(page.getByText("32 strokes", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("River log, 8 landings")).toBeVisible();
+  await expect(page.locator(".river-sign small")).toContainText("Bend 9");
   await page.getByRole("button", { name: "Pause", exact: true }).click();
   await expect(
     page.getByRole("button", { name: "Row", exact: true }),
