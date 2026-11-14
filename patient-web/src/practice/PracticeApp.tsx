@@ -565,28 +565,30 @@ export function PracticeApp() {
         )}
       </main>
       <footer className="practice-foot">
-        NeuroReach · Wellness &amp; engagement
+        <span>NeuroReach · Wellness &amp; engagement</span>
         {(page === "home" || page === "summary") && (
-          <button
-            onClick={() => {
-              setHandoffError("");
-              setPage("handoff");
-            }}
-          >
-            Next guest
-          </button>
-        )}
-        {page === "home" &&
-          ["127.0.0.1", "localhost"].includes(location.hostname) && (
+          <div className="practice-foot-actions">
             <button
               onClick={() => {
-                history.replaceState(null, "", "#staff");
-                setPage("staff");
+                setHandoffError("");
+                setPage("handoff");
               }}
             >
-              Staff workspace
+              Next guest
             </button>
-          )}
+            {page === "home" &&
+              ["127.0.0.1", "localhost"].includes(location.hostname) && (
+                <button
+                  onClick={() => {
+                    history.replaceState(null, "", "#staff");
+                    setPage("staff");
+                  }}
+                >
+                  Staff workspace
+                </button>
+              )}
+          </div>
+        )}
       </footer>
     </div>
   );

@@ -313,9 +313,15 @@
 .practice-foot {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 12px;
   flex-wrap: wrap;
+}
+.practice-foot-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-inline-start: auto;
 }
 .staff-panel h1 {
   margin-top: 22px;
