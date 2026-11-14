@@ -191,11 +191,11 @@ export function RiverArt({
   seed?: number;
   log?: readonly Landfall[];
   nextChannel?: Channel;
-  onPull?: () => void;
+  onPull?: (route?: Channel) => void;
 }) {
   const landscape = useLandscape(480, 465);
   const id = useId(),
-    start = useRef<{ id: number; y: number } | null>(null);
+    start = useRef<{ id: number; x: number; y: number } | null>(null);
   const travel = distance * 106;
   const bend = Math.floor(strokes / strokesPerBend);
   const light = riverLight(strokes);
@@ -214,25 +214,28 @@ export function RiverArt({
     (channel === "stone" ? approach : 0);
   return (
     <svg
-      className="adventure-art river-art"
+      className={`adventure-art river-art${onPull ? " gesture-art" : ""}`}
       {...landscape}
       role="img"
       aria-label={`Rowboat at ${landing.name}`}
       onPointerDown={(e) => {
-        if (!onPull || e.button !== 0) return;
-        start.current = { id: e.pointerId, y: e.clientY };
+        if (!onPull || !e.isPrimary || e.button !== 0) return;
+        start.current = { id: e.pointerId, x: e.clientX, y: e.clientY };
         e.currentTarget.setPointerCapture(e.pointerId);
       }}
       onPointerUp={(e) => {
         const down = start.current;
+        if (!onPull || down?.id !== e.pointerId) return;
         start.current = null;
+        const dx = e.clientX - down.x,
+          dy = e.clientY - down.y;
         if (
-          onPull &&
-          down?.id === e.pointerId &&
-          e.clientY - down.y >
-            Math.min(44, e.currentTarget.getBoundingClientRect().height * 0.12)
+          dy <=
+          Math.min(44, e.currentTarget.getBoundingClientRect().height * 0.12)
         )
-          onPull();
+          return;
+        const steered = Math.abs(dx) >= Math.max(32, dy * 0.5);
+        onPull(steered ? (dx < 0 ? "reed" : "stone") : undefined);
       }}
       onPointerCancel={() => {
         start.current = null;

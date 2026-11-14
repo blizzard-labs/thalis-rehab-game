@@ -55,7 +55,7 @@ export function AdventurePlay({
     }
   };
   const riverCue = manual
-    ? "Pull down on the boat or press Row to take a stroke."
+    ? "Pull down or press Row. Angle a stroke left for the marsh or right for the narrows."
     : round.needsRest
       ? "Ease back to rest between strokes."
       : round.source === "eeg"
@@ -87,7 +87,7 @@ export function AdventurePlay({
     else if (round.catchProgress > 0) cue = "Hold here to pick the fruit.";
     else
       cue = manual
-        ? `Pick the ripe ${harvestAt(seed, rewards, forks)} with the ring.`
+        ? `Tap the ripe ${harvestAt(seed, rewards, forks)} or drag it to the basket.`
         : round.source === "eeg"
           ? "Imagine reaching for the ripe fruit, then relax."
           : "Guide your hand to the ripe fruit and hold briefly.";
@@ -186,7 +186,14 @@ export function AdventurePlay({
             side={side}
             paired={round.record.rowing === "paired"}
             channel={channel}
-            onPull={manual ? pull : undefined}
+            onPull={
+              manual && !round.paused
+                ? (route) => {
+                    if (route) round.chooseChannel(route);
+                    pull();
+                  }
+                : undefined
+            }
           />
           <div className="trail-sign river-sign">
             <small>Bend {bend + 1} · downstream</small>

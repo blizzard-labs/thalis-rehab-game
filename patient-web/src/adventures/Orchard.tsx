@@ -3,7 +3,7 @@ import { OrchardTrail, orchardLight } from "./OrchardScenery";
 import { harvestAt, crateSize, type FruitKind } from "./orchardTrail";
 import { variation } from "./trail";
 import { useLandscape } from "./useLandscape";
-import { useId, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { armAt, shoulder, type Point } from "../reach/starGeometry";
 import type { CameraAim } from "../practice/StarPlay";
 import type { Side } from "../practice/session";
@@ -93,6 +93,8 @@ export function OrchardArt({
   const landscape = useLandscape(480, 490);
   const id = useId(),
     [hand, setHand] = useState<Point | null>(null);
+  const picking = useRef<number | null>(null);
+  const basketArea = useRef<SVGRectElement>(null);
   const goal = aim?.goal ?? orchardGoal(count, side, seed);
   const target = aim
     ? (aim.wrist ?? shoulder)
@@ -119,7 +121,7 @@ export function OrchardArt({
   const packed = count % crateSize;
   return (
     <svg
-      className="adventure-art orchard-art"
+      className={`adventure-art orchard-art${onPick || onDeposit ? " gesture-art" : ""}`}
       {...landscape}
       role="img"
       aria-label={`Orchard with ${count} fruit gathered`}
@@ -135,7 +137,25 @@ export function OrchardArt({
           y: shoulder.y + (p.y - 257) / 0.75,
         });
       }}
-      onPointerLeave={() => setHand(null)}
+      onPointerUp={(e) => {
+        if (picking.current !== e.pointerId) return;
+        picking.current = null;
+        const bounds = basketArea.current?.getBoundingClientRect();
+        if (
+          bounds &&
+          e.clientX >= bounds.left &&
+          e.clientX <= bounds.right &&
+          e.clientY >= bounds.top &&
+          e.clientY <= bounds.bottom
+        )
+          onDeposit?.();
+      }}
+      onLostPointerCapture={() => {
+        picking.current = null;
+      }}
+      onPointerLeave={() => {
+        if (picking.current === null) setHand(null);
+      }}
     >
       <defs>
         <linearGradient
@@ -285,8 +305,20 @@ export function OrchardArt({
         <g
           data-testid="ripe-fruit"
           transform={`translate(${goalAt.x} ${goalAt.y})`}
+          onPointerDown={(e) => {
+            if (!onPick || !e.isPrimary || e.button !== 0) return;
+            // The fruit leaves the branch on pickup. Capture on its persistent
+            // scene so a finger can carry it all the way back to the cart.
+            e.currentTarget.ownerSVGElement?.setPointerCapture(e.pointerId);
+            picking.current = e.pointerId;
+            setHand(goal);
+            onPick();
+          }}
           onClick={onPick}
-          style={{ cursor: onPick ? "pointer" : undefined }}
+          style={{
+            cursor: onPick ? "grab" : undefined,
+            touchAction: onPick ? "none" : undefined,
+          }}
         >
           <circle
             r="36"
@@ -366,7 +398,14 @@ export function OrchardArt({
             <path d="M-6 0H6M0-6V6" stroke="#eed2a1" strokeWidth="2" />
           </g>
         ))}
-        <rect x="-48" y="-39" width="96" height="75" fill="transparent" />
+        <rect
+          ref={basketArea}
+          x="-48"
+          y="-39"
+          width="96"
+          height="75"
+          fill="transparent"
+        />
       </g>
       {held && (
         <g

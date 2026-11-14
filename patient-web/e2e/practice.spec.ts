@@ -40,6 +40,55 @@ test("guest grows a flower, rests, saves locally and clears the shared browser",
 
 test.describe("touch play", () => {
   test.use({ hasTouch: true });
+  test("a finger can carry orchard fruit and steer a river stroke", async ({
+    page,
+    browserName,
+  }) => {
+    test.skip(browserName !== "chromium", "Uses native Chromium touch events");
+    await page.setViewportSize({ width: 390, height: 844 });
+    const input = await page.context().newCDPSession(page);
+    const swipe = async (
+      from: { x: number; y: number },
+      to: { x: number; y: number },
+    ) => {
+      await input.send("Input.dispatchTouchEvent", {
+        type: "touchStart",
+        touchPoints: [from],
+      });
+      await input.send("Input.dispatchTouchEvent", {
+        type: "touchMove",
+        touchPoints: [to],
+      });
+      await input.send("Input.dispatchTouchEvent", {
+        type: "touchEnd",
+        touchPoints: [],
+      });
+    };
+    await page.goto("/");
+    await page.getByRole("button", { name: /Fruit Picking/ }).click();
+    await page.getByRole("button", { name: "Start game" }).click();
+    const fruit = (await page.getByTestId("ripe-fruit").boundingBox())!;
+    const basket = (await page.getByTestId("fruit-basket").boundingBox())!;
+    await swipe(
+      { x: fruit.x + fruit.width / 2, y: fruit.y + fruit.height / 2 },
+      { x: basket.x + basket.width / 2, y: basket.y + basket.height / 2 },
+    );
+    await expect(page.getByText("1 fruit", { exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "End session" }).click();
+    await page.goto("/");
+    await page.getByRole("button", { name: /River Rowing/ }).click();
+    await page.getByRole("button", { name: "Start game" }).click();
+    const river = (await page.locator(".river-art").boundingBox())!;
+    const from = {
+      x: river.x + river.width * 0.45,
+      y: river.y + river.height * 0.55,
+    };
+    await swipe(from, { x: from.x + 83, y: from.y + 84 });
+    await expect(page.getByText("1 stroke", { exact: true })).toBeVisible();
+    await expect(page.locator(".river-sign strong")).toHaveText(
+      "The Old Bridge",
+    );
+  });
   test("a phone player selects and catches a star by touch", async ({
     page,
   }) => {
