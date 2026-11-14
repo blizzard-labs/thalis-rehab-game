@@ -27,6 +27,12 @@
         cursor: pointer;
         margin: 5px 0;
       }
+      select {
+        width: 100%;
+        padding: 7px;
+        font: inherit;
+        margin: 3px 0 10px;
+      }
       p {
         margin: 12px 0;
       }
@@ -44,7 +50,14 @@
       Open a game, then select just its playable area. Camera and EEG controls
       will stay inside that area.
     </p>
-    <button id="connect">Choose game area</button
+    <label
+      >Controller view
+      <select id="view" disabled>
+        <option value="sidebar">Sidebar</option>
+        <option value="popup">Pop-up window</option>
+      </select>
+    </label>
+    <button id="connect" disabled>Choose game area</button
     ><button id="stop">Stop controls</button>
     <p id="status" role="status"></p>
     <p>

@@ -7,7 +7,7 @@ import { activate, fits, tabTo, zoomHarness } from "./keyboardHarness";
 import { controllerHarness } from "./extensionHarness";
 
 declare const chrome: any;
-declare function beginSelection(tabId: number): Promise<void>;
+declare function beginSelection(tabId: number, layout: "popup"): Promise<void>;
 declare function enqueue(task: () => Promise<void>): Promise<void>;
 
 test.beforeEach(({ browserName }) => {
@@ -122,7 +122,7 @@ test("external-game controller works with keyboard controls at 200% and 400% zoo
       "Select an area after resizing the game",
       () =>
         worker.evaluate(
-          (tabId) => enqueue(() => beginSelection(tabId)),
+          (tabId) => enqueue(() => beginSelection(tabId, "popup")),
           gameTab,
         ),
       { timeout: 10000 },
@@ -169,7 +169,7 @@ test("external-game controller works with keyboard controls at 200% and 400% zoo
       "Select an area again after cancellation",
       () =>
         worker.evaluate(
-          (tabId) => enqueue(() => beginSelection(tabId)),
+          (tabId) => enqueue(() => beginSelection(tabId, "popup")),
           gameTab,
         ),
       { timeout: 10000 },

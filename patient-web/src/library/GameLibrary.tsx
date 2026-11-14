@@ -22,7 +22,8 @@ export function ExtensionHelp() {
         </li>
         <li>
           Open a game below. Click the NeuroReach extension button and choose
-          its playable area. The input controller opens beside the game.
+          its playable area. The controller opens in the sidebar by default.
+          Choose <strong>Pop-up window</strong> in the extension for a separate window.
         </li>
         <li>
           Set up your camera or EEG, then choose{" "}

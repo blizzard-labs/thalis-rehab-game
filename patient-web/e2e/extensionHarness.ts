@@ -9,9 +9,9 @@ import os from "node:os";
 import path from "node:path";
 
 declare const chrome: any;
-declare function beginSelection(tabId: number): Promise<void>;
+declare function beginSelection(tabId: number, layout: "popup"): Promise<void>;
 declare function enqueue(task: () => Promise<void>): Promise<void>;
-export async function controllerHarness(
+export async function openGameFixture(
   origin = "http://127.0.0.1:5173",
   prepare?: (context: BrowserContext) => Promise<void>,
   nativeWindow = false,
@@ -24,7 +24,7 @@ export async function controllerHarness(
   );
   // Tests emulate the activeTab grant normally supplied by clicking the toolbar.
   // Only the intercepted fixture host is granted; the distributed manifest has no such permission.
-  manifest.host_permissions = ["https://poki.com/*"];
+  manifest.host_permissions.push("https://poki.com/*");
   await writeFile(
     path.join(extension, "manifest.json"),
     JSON.stringify(manifest),
@@ -75,25 +75,10 @@ export async function controllerHarness(
     const game = await context.newPage();
     await game.goto("https://poki.com/neuroreach-test");
     await game.bringToFront();
-    await worker.evaluate(async () => {
-      const [tab] = await chrome.tabs.query({
-        url: "https://poki.com/neuroreach-test",
-      });
-      await enqueue(() => beginSelection(tab.id));
-    });
-    const opened = context.waitForEvent("page", { timeout: 10000 });
-    const overlay = game.locator("[data-neuroreach-area]");
-    await overlay.dragTo(overlay, {
-      sourcePosition: { x: 120, y: 60 },
-      targetPosition: { x: 720, y: 560 },
-    });
-    const controller = await opened;
-    await controller.waitForURL("**/#game-controller", { timeout: 10000 });
     return {
       context,
       library,
       game,
-      controller,
       worker,
       events: () =>
         game.frame({ url: "https://game-cdn.invalid/game" })!.evaluate(
@@ -115,6 +100,32 @@ export async function controllerHarness(
   } catch (error) {
     await context.close();
     await rm(root, { recursive: true, force: true });
+    throw error;
+  }
+}
+export async function controllerHarness(
+  ...options: Parameters<typeof openGameFixture>
+) {
+  const run = await openGameFixture(...options);
+  const { worker, game, context } = run;
+  try {
+    await worker.evaluate(async () => {
+      const [tab] = await chrome.tabs.query({
+        url: "https://poki.com/neuroreach-test",
+      });
+      await enqueue(() => beginSelection(tab.id, "popup"));
+    });
+    const opened = context.waitForEvent("page", { timeout: 10000 });
+    const overlay = game.locator("[data-neuroreach-area]");
+    await overlay.dragTo(overlay, {
+      sourcePosition: { x: 120, y: 60 },
+      targetPosition: { x: 720, y: 560 },
+    });
+    const controller = await opened;
+    await controller.waitForURL("**/#game-controller", { timeout: 10000 });
+    return { ...run, controller };
+  } catch (error) {
+    await run.close();
     throw error;
   }
 }

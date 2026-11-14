@@ -13,7 +13,7 @@ import {
   cameraDirection,
   type PointerRange,
 } from "./PointerSetup";
-import { sendControl, useGameController } from "./bridge";
+import { onExtensionMessage, sendControl, useGameController } from "./bridge";
 import { findFavorite, type ControlPreset } from "./catalog";
 import { ExtensionHelp } from "./GameLibrary";
 import "./library.css";
@@ -22,6 +22,7 @@ import "../practice/practice.css";
 const usesArrows = (preset: ControlPreset) =>
   preset === "arrows" || preset === "steer";
 const keys = ["ArrowUp", "ArrowRight", "ArrowDown", "ArrowLeft", "Space"];
+const transferKey = "neuroreach-controller-view-transfer";
 const keyLabels = ["↑ Up", "→ Right", "↓ Down", "← Left", "Space"];
 const pointerLabels = [
   "← Left",
@@ -35,6 +36,7 @@ const pointerLabels = [
 
 export function GameController() {
   const status = useGameController();
+  const guestId = useRef<string>();
   const favorite = findFavorite(status.gameUrl);
   const [source, setSource] = useState<Source>("button");
   const [side, setSide] = useState<Side>("right");
@@ -59,6 +61,69 @@ export function GameController() {
   useEffect(() => {
     if (status.connectionId) setPreset(favorite?.preset ?? "arrows");
   }, [status.connectionId, favorite]);
+  // Keep the player's setup on localhost when a view change recreates this page.
+  // The new view still needs a fresh game rectangle, live input and explicit arming.
+  useEffect(
+    () =>
+      onExtensionMessage(async (message) => {
+        if (message.type !== "save-setup") return;
+        let saved = false;
+        try {
+          if (!guestId.current) return;
+          const guest = await currentGuest(guestId.current);
+          localStorage.setItem(
+            transferKey,
+            JSON.stringify({
+              token: message.token,
+              expires: Date.now() + 120_000,
+              guest,
+              source,
+              side,
+              preset,
+              range,
+              configured,
+              scanSeconds,
+              dwellMs,
+              step,
+            }),
+          );
+          saved = true;
+        } catch {
+          // Restricted storage or a guest handoff falls back to ordinary setup.
+        } finally {
+          sendControl("setup-saved", { token: message.token, saved });
+        }
+      }),
+    [source, side, preset, range, configured, scanSeconds, dwellMs, step],
+  );
+  useEffect(() => {
+    const token = status.transferToken;
+    if (!token) return;
+    let active = true;
+    void currentGuest()
+      .then((guest) => {
+        if (!active) return;
+        const setup = JSON.parse(localStorage.getItem(transferKey) ?? "null");
+        if (setup?.token !== token) return;
+        localStorage.removeItem(transferKey);
+        if (setup.expires < Date.now() || setup.guest !== guest) return;
+        setSource(setup.source);
+        setSide(setup.side);
+        setPreset(setup.preset);
+        setRange(setup.range);
+        setConfigured(setup.configured);
+        setScanSeconds(setup.scanSeconds);
+        setDwellMs(setup.dwellMs);
+        setStep(setup.step);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (active) sendControl("setup-restored", { token });
+      });
+    return () => {
+      active = false;
+    };
+  }, [status.transferToken]);
   const cameraTick = useRef<(() => void) | null>(null);
   const camera = useMotionCamera(cameraNeeded, side, false, {
     armed: status.armed,
@@ -154,11 +219,10 @@ export function GameController() {
     };
   }, []);
   useEffect(() => {
-    let guest: string | null = null,
-      disposed = false;
+    let disposed = false;
     void currentGuest()
       .then((id) => {
-        if (!disposed) guest = id;
+        if (!disposed) guestId.current = id;
       })
       .catch(() => {});
     const channel = new BroadcastChannel("neuroreach-guest-handoff");
@@ -170,8 +234,8 @@ export function GameController() {
       setSource("button");
     };
     const check = () => {
-      if (guest)
-        void currentGuest(guest).catch(() => {
+      if (guestId.current)
+        void currentGuest(guestId.current).catch(() => {
           stop();
           setConfigured(false);
           setRange(null);
@@ -705,7 +769,7 @@ export function GameController() {
         )}
         <p className="library-note">
           {cameraNeeded
-            ? "Enabling camera controls brings the game to the front. Leave this controller open behind it. If the game shows a pause screen, use its Resume button."
+            ? "Enabling camera controls brings the game to the front. Keep this controller open while you play. If the game shows a pause screen, use its Resume button."
             : "Keep the controller visible to use the buttons or follow the highlighted choice."}{" "}
           Alt+Shift+S stops controls from the game. Controls also stop if input
           is lost, you switch tabs, leave both windows, or the game area moves.

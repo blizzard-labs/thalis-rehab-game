@@ -9,6 +9,14 @@ const hosts = [
   "service.play.works",
 ];
 const ports = new Set();
+const panels = new Map();
+const controllerPorts = new Set();
+let layout = "sidebar";
+let controllerWindow = null;
+let popupTabId = null;
+let selectedGame = null;
+let transferToken = null;
+let confirmTransfer = null;
 let target = null,
   owner = null,
   armed = false,
@@ -17,8 +25,11 @@ let target = null,
   held = false,
   point = { x: 0.5, y: 0.5 },
   lastBeat = 0;
-let station = "http://127.0.0.1:8766",
+let station = null,
   reason = "Choose a game area using the extension button.";
+const stationReady = chrome.storage.session.get("station").then((stored) => {
+  station ??= stored.station ?? "http://127.0.0.1:8766";
+});
 let queue = Promise.resolve();
 let pendingMotion = false;
 const supported = (url) => {
@@ -38,6 +49,7 @@ function status(port) {
     connected: !!target?.rect,
     canControl: !!port && owner === port,
     connectionId: target?.rect ? `${target.tabId}:${target.url}` : "",
+    transferToken: owner === port && target?.rect ? transferToken : null,
     armed: port ? owner === port && armed : armed,
     held,
     reason:
@@ -51,6 +63,76 @@ function status(port) {
     host: target ? new URL(target.url).hostname : "",
     area: target?.rect ?? null,
   };
+}
+function syncPanel(port) {
+  const active =
+    layout === "sidebar" &&
+    controllerWindow !== null &&
+    panels.get(port) === controllerWindow;
+  if (owner === port && !active) owner = null;
+  if (active && !owner) owner = port;
+  port.postMessage({ type: "panel", station: active ? station : null });
+  port.postMessage(status(port));
+}
+
+async function setSurface(next, windowId) {
+  const previousWindow = controllerWindow;
+  if (next !== layout || windowId !== previousWindow) {
+    owner = null;
+    layout = next;
+    controllerWindow = windowId;
+    if (popupTabId !== null) {
+      await chrome.tabs.remove(popupTabId).catch(() => {});
+      popupTabId = null;
+    }
+    if (
+      previousWindow !== null &&
+      (next !== "sidebar" || previousWindow !== windowId)
+    ) {
+      if (chrome.sidePanel.close) {
+        await chrome.sidePanel
+          .close({ windowId: previousWindow })
+          .catch(() => {});
+      } else {
+        for (const [panel, id] of panels) {
+          if (id === previousWindow) panel.postMessage({ type: "close-panel" });
+        }
+      }
+    }
+  }
+  for (const panel of panels.keys()) syncPanel(panel);
+  if (next === "sidebar" && ![...panels.values()].includes(windowId)) {
+    // A still-open idle panel may have lost its port while the worker slept.
+    void chrome.runtime
+      .sendMessage({ type: "reconnect-sidebar" })
+      .catch(() => {});
+  }
+  if (next === "popup" && !owner)
+    owner =
+      [...controllerPorts].find((port) =>
+        port.sender.url.startsWith(station + "/"),
+      ) ?? null;
+}
+// Calibration stays on localhost. Only the one-time handoff token crosses the bridge.
+async function prepareTransfer() {
+  const token = crypto.randomUUID();
+  const port = owner;
+  return new Promise((resolve) => {
+    const finish = (saved) => {
+      clearTimeout(timeout);
+      confirmTransfer = null;
+      resolve(saved ? token : null);
+    };
+    const timeout = setTimeout(() => finish(false), 750);
+    confirmTransfer = (sender, message) => {
+      if (port === sender && message.token === token) finish(message.saved);
+    };
+    try {
+      port.postMessage({ type: "save-setup", token });
+    } catch {
+      finish(false);
+    }
+  });
 }
 function tell() {
   for (const port of ports) {
@@ -346,11 +428,19 @@ async function chooseArea() {
   };
 }
 
-async function beginSelection(tabId) {
+async function beginSelection(tabId, nextLayout = "sidebar") {
   const tab = await chrome.tabs.get(tabId);
   if (!supported(tab.url) || !tab.active)
     throw new Error("Open a supported game in the active tab first.");
+  const switching =
+    owner &&
+    nextLayout !== layout &&
+    selectedGame?.id === tabId &&
+    selectedGame.url === tab.url;
   await stop("Choose a new game area.", true);
+  transferToken = switching ? await prepareTransfer() : null;
+  selectedGame = { id: tabId, url: tab.url };
+  await setSurface(nextLayout, tab.windowId);
   await chrome.debugger.attach({ tabId }, "1.3");
   const selection = {
     tabId,
@@ -398,24 +488,42 @@ async function connectGame(tabId, rect) {
   point = { x: 0.5, y: 0.5 };
   reason = "Game connected. Set up your input, then enable controls.";
   tell();
-  if (!owner)
-    await chrome.windows.create({
+  if (layout === "popup" && !owner) {
+    const popup = await chrome.windows.create({
       url: station + "/#game-controller",
       type: "popup",
       width: 490,
       height: 840,
     });
+    popupTabId = popup.tabs?.[0]?.id ?? null;
+  }
 }
 
 chrome.runtime.onMessage.addListener((message, sender, respond) => {
   if (sender.id !== chrome.runtime.id) return;
+  const toolbar = sender.url === chrome.runtime.getURL("popup.html");
+  if (toolbar && message.type === "game-view") {
+    chrome.tabs.get(message.tabId).then(
+      (tab) =>
+        respond({
+          supported: supported(tab.url),
+          layout: target?.tabId === tab.id ? layout : null,
+        }),
+      () => respond({ supported: false }),
+    );
+    return true;
+  }
   const run = async () => {
     if (message.type === "stop") {
       await stop(undefined, !target?.rect);
       return;
     }
-    if (message.type === "choose-area" && !sender.tab) {
-      await beginSelection(message.tabId);
+    if (message.type === "choose-area" && toolbar) {
+      await stationReady;
+      await beginSelection(
+        message.tabId,
+        message.layout === "popup" ? "popup" : "sidebar",
+      );
     } else if (message.type === "area" && sender.tab)
       await connectGame(sender.tab.id, message.rect);
     else if (
@@ -426,6 +534,7 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
       await stop("Game selection cancelled.", true);
     else if (
       message.type === "layout-changed" &&
+      target?.rect &&
       sender.tab?.id === target?.tabId
     )
       await stop("The game layout moved. Choose its play area again.", true);
@@ -437,26 +546,40 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
 });
 
 chrome.runtime.onConnect.addListener((port) => {
-  if (port.name !== "neuroreach-controls" || !port.sender?.tab) return;
-  let url;
-  try {
-    url = new URL(port.sender.url);
-  } catch {
-    return;
+  const sidebar =
+    port.name === "neuroreach-sidebar" &&
+    port.sender?.url === chrome.runtime.getURL("sidebar.html");
+  let controller = sidebar;
+  if (!sidebar) {
+    if (
+      port.name !== "neuroreach-controls" ||
+      !port.sender?.tab ||
+      port.sender.frameId !== 0
+    )
+      return;
+    const url = new URL(port.sender.url);
+    if (
+      url.protocol !== "http:" ||
+      !["localhost", "127.0.0.1"].includes(url.hostname) ||
+      !["#library", "#game-controller"].includes(url.hash)
+    )
+      return;
+    controller = url.hash === "#game-controller";
+    if (!controller) {
+      station = url.origin;
+      void chrome.storage.session.set({ station });
+    }
+    if (controller) controllerPorts.add(port);
+    if (controller && layout === "popup" && !owner && url.origin === station)
+      owner = port;
   }
-  if (
-    url.protocol !== "http:" ||
-    !["localhost", "127.0.0.1"].includes(url.hostname) ||
-    !["#library", "#game-controller"].includes(url.hash)
-  )
-    return;
-  station = url.origin;
   ports.add(port);
-  const controller = url.hash === "#game-controller";
-  if (controller && !owner) owner = port;
   port.postMessage(status(port));
   port.onDisconnect.addListener(() => {
     ports.delete(port);
+    panels.delete(port);
+    controllerPorts.delete(port);
+    if (port.sender?.tab?.id === popupTabId) popupTabId = null;
     if (owner === port) {
       owner = null;
       void enqueue(() =>
@@ -465,12 +588,36 @@ chrome.runtime.onConnect.addListener((port) => {
     }
   });
   port.onMessage.addListener((message) => {
+    if (
+      sidebar &&
+      message.type === "panel-ready" &&
+      Number.isInteger(message.windowId)
+    ) {
+      panels.set(port, message.windowId);
+      syncPanel(port);
+      return;
+    }
     if (message.type === "hello") {
-      if (controller && !owner) owner = port;
+      if (
+        !sidebar &&
+        controller &&
+        layout === "popup" &&
+        !owner &&
+        new URL(port.sender.url).origin === station
+      )
+        owner = port;
       port.postMessage(status(port));
       return;
     }
     if (!controller || owner !== port) return;
+    if (message.type === "setup-saved") {
+      confirmTransfer?.(port, message);
+      return;
+    }
+    if (message.type === "setup-restored" && message.token === transferToken) {
+      transferToken = null;
+      return;
+    }
     if (message.type === "heartbeat") {
       lastBeat = Date.now();
       return;
