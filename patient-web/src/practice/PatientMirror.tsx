@@ -1,5 +1,11 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { mirrorDocument, mirrorSocket, type ScreenFrame } from "./screenMirror";
+import {
+  applyScreenEdits,
+  indexScreen,
+  mirrorDocument,
+  mirrorSocket,
+  type ScreenFrame,
+} from "./screenMirror";
 
 export function PatientMirror({
   session,
@@ -15,6 +21,9 @@ export function PatientMirror({
   const iframe = useRef<HTMLIFrameElement>(null);
   const container = useRef<HTMLDivElement>(null);
   const latest = useRef<ScreenFrame | null>(null);
+  const nodes = useRef(new Map<string, Element>());
+  const painted = useRef<{ doc: Document; base: ScreenFrame } | null>(null);
+  const base = useRef<ScreenFrame | null>(null);
   const [size, setSize] = useState({ width: 1024, height: 768 });
   const [scale, setScale] = useState(1);
   const [status, setStatus] = useState("Waiting for the patient screen");
@@ -23,15 +32,23 @@ export function PatientMirror({
     const doc = iframe.current?.contentDocument;
     const target = doc?.getElementById("patient-screen");
     if (!doc || !target) return;
-    if (frame.css !== undefined)
-      doc.getElementById("patient-styles")!.textContent = frame.css;
-    // This document has scripts and forms disabled, with all network requests blocked.
-    const template = doc.createElement("template");
-    template.innerHTML = frame.html;
-    template.content
-      .querySelectorAll("script, iframe, object, embed, link, base, meta")
-      .forEach((el) => el.remove());
-    target.replaceChildren(template.content);
+    const scene = base.current;
+    if (!scene || scene.html === undefined) return;
+    if (painted.current?.doc !== doc || painted.current.base !== scene) {
+      const styles = doc.getElementById("patient-styles")!;
+      if (scene.css !== undefined && styles.textContent !== scene.css)
+        styles.textContent = scene.css;
+      // Parse exclusively inside the inert, network-isolated preview.
+      const template = doc.createElement("template");
+      template.innerHTML = scene.html;
+      template.content
+        .querySelectorAll("script, iframe, object, embed, link, base, meta")
+        .forEach((el) => el.remove());
+      target.replaceChildren(template.content);
+      nodes.current = indexScreen(target);
+      painted.current = { doc, base: scene };
+    }
+    if (frame.edits) applyScreenEdits(nodes.current, frame.edits);
   }
   useLayoutEffect(() => {
     const fit = () => {
@@ -53,6 +70,14 @@ export function PatientMirror({
     };
   }, [size.width, size.height, expanded]);
   useEffect(() => {
+    function clearScreen() {
+      base.current = latest.current = painted.current = null;
+      nodes.current.clear();
+      iframe.current?.contentDocument
+        ?.getElementById("patient-screen")
+        ?.replaceChildren();
+    }
+    clearScreen();
     if (done) {
       setLive(false);
       setStatus("Session ended");
@@ -62,20 +87,38 @@ export function PatientMirror({
     let socket: WebSocket | null = null;
     let retry = 0;
     let stale = 0;
+    let paint = 0;
     function connect() {
       if (stopped) return;
       socket = mirrorSocket(
-        "/api/staff/display/mirror?session=" + encodeURIComponent(session),
+        "/api/staff/display/mirror?updates=1&session=" +
+          encodeURIComponent(session),
       );
       socket.onmessage = (event) => {
         const message = JSON.parse(event.data);
         if (message.type === "frame") {
-          latest.current = {
-            ...message,
-            css: message.css ?? latest.current?.css,
-          };
-          setSize({ width: message.width, height: message.height });
-          render(latest.current!);
+          if (typeof message.html === "string") {
+            base.current = {
+              ...message,
+              css: message.css ?? base.current?.css,
+            };
+          } else if (!base.current || message.scene !== base.current.scene) {
+            socket?.close();
+            return;
+          }
+          latest.current = message;
+          if (!paint)
+            paint = requestAnimationFrame(() => {
+              paint = 0;
+              const frame = latest.current;
+              if (!frame) return;
+              render(frame);
+              setSize((old) =>
+                old.width === frame.width && old.height === frame.height
+                  ? old
+                  : { width: frame.width, height: frame.height },
+              );
+            });
           setLive(true);
           setStatus("Live patient screen");
           clearTimeout(stale);
@@ -84,11 +127,14 @@ export function PatientMirror({
             setStatus("Waiting for the patient connection");
           }, 2500);
         } else {
+          clearScreen();
           setLive(false);
           setStatus("Waiting for the patient screen");
         }
       };
       socket.onclose = () => {
+        clearTimeout(stale);
+        clearScreen();
         setLive(false);
         setStatus("Reconnecting screen preview");
         if (!stopped) retry = window.setTimeout(connect, 1200);
@@ -98,6 +144,8 @@ export function PatientMirror({
     connect();
     return () => {
       stopped = true;
+      cancelAnimationFrame(paint);
+      clearScreen();
       clearTimeout(retry);
       clearTimeout(stale);
       if (socket) socket.onclose = null;

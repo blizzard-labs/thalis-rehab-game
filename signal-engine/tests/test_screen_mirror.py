@@ -48,6 +48,87 @@ def test_mirror_is_session_scoped_ephemeral_and_staff_authenticated(tmp_path):
     asyncio.run(scenario())
 
 
+def test_incremental_mirror_resumes_at_latest_state_and_pauses_capture_without_viewers(tmp_path):
+    async def scenario():
+        app = web.Application()
+        register_clinic(app, tmp_path)
+        async with TestClient(TestServer(app)) as clinic:
+            await clinic.post("/api/staff/setup", json={"password": "screen-mirror-updates"})
+            people = await (await clinic.post("/api/staff/participants",
+                json={"name": "Mirror fixture", "side": "left", "consent": True})).json()
+            invite = await (await clinic.post("/api/staff/display",
+                json={"participant": people[0]["id"], "game": "stars"})).json()
+            claim = await (await clinic.post("/api/display/claim",
+                json={"code": invite["url"].split("=")[1]})).json()
+            path = "/api/staff/display/mirror?updates=1&session=" + invite["session"]
+            async with clinic.ws_connect("/api/display/mirror") as patient:
+                await patient.send_json({"token": claim["token"], "updates": True})
+                assert await patient.receive_json(timeout=3) == {"type": "ready", "updates": True, "watching": False}
+                async with clinic.ws_connect(path) as viewer:
+                    assert await patient.receive_json(timeout=3) == {"type": "mode", "updates": True, "watching": True}
+                    assert await viewer.receive_json(timeout=3) == {"type": "waiting"}
+                    frame = {"type": "frame", "scene": 1, "html": '<b data-nr-mirror="2">0</b>',
+                             "css": "b{color:blue}", "edits": {}, "width": 800, "height": 600}
+                    await patient.send_json(frame)
+                    assert await viewer.receive_json(timeout=3) == frame
+                    edits = {"2:#text": "5"}
+                    patch = {"type": "frame", "scene": 1, "width": 800, "height": 600, "edits": edits}
+                    await patient.send_json(patch)
+                    assert await viewer.receive_json(timeout=3) == patch
+                    async with clinic.ws_connect(path) as late:
+                        assert await late.receive_json(timeout=3) == {**frame, "edits": edits}
+                    async with clinic.ws_connect(path.replace("updates=1&", "")) as legacy:
+                        assert await patient.receive_json(timeout=3) == {"type": "mode", "updates": False, "watching": True}
+                        assert await legacy.receive_json(timeout=3) == {"type": "waiting"}
+                        standalone = {"type": "frame", "width": 800, "height": 600, "html": "<b>6</b>", "css": ""}
+                        await patient.send_json(standalone)
+                        assert await legacy.receive_json(timeout=3) == standalone
+                    assert await patient.receive_json(timeout=3) == {"type": "mode", "updates": True, "watching": True}
+                assert await patient.receive_json(timeout=3) == {"type": "mode", "updates": True, "watching": False}
+
+    asyncio.run(scenario())
+
+
+def test_slow_mirror_viewer_skips_stale_updates_without_losing_scene_changes():
+    from types import SimpleNamespace
+    from server.screen_mirror import ScreenMirror, Viewer
+
+    async def scenario():
+        relay = ScreenMirror(SimpleNamespace(current=SimpleNamespace(
+            session_id="visit", token="token", state="playing")), lambda _: True)
+        relay.session, relay.frame_token = "visit", "token"
+        viewer = Viewer(SimpleNamespace(query={"session": "visit", "updates": "1"}))
+        sending, resume = asyncio.Event(), asyncio.Event()
+        messages = []
+
+        class SlowSocket:
+            closed = False
+
+            async def send_json(self, frame):
+                if not messages:
+                    sending.set()
+                    await resume.wait()
+                messages.append(frame)
+                self.closed = len(messages) == 2
+
+        socket = SlowSocket()
+        relay.viewers[socket] = viewer
+        frame = {"type": "frame", "scene": 1, "html": "<p>0</p>", "width": 800, "height": 600}
+        assert relay.accept_frame(frame)
+        writer = asyncio.create_task(relay.send_latest(socket, viewer))
+        await asyncio.wait_for(sending.wait(), 1)
+        assert relay.accept_frame({**frame, "scene": 2, "html": '<b data-nr-mirror="1">0</b>'})
+        for i in range(20):
+            assert relay.accept_frame({"type": "frame", "scene": 2, "width": 800,
+                                       "height": 600, "edits": {"1:#text": str(i)}})
+        resume.set()
+        await asyncio.wait_for(writer, 1)
+        assert [message["scene"] for message in messages] == [1, 2]
+        assert messages[-1]["html"].startswith("<b") and messages[-1]["edits"] == {"1:#text": "19"}
+
+    asyncio.run(scenario())
+
+
 def test_generated_station_certificate_is_reusable_and_matches_patient_address(tmp_path):
     from cryptography import x509
     from cryptography.hazmat.primitives import hashes
