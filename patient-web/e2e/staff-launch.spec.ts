@@ -148,6 +148,67 @@ test("patient plays through HTTPS while the clinician receives the actual screen
   ).toBe(403);
 });
 
+test("moving patient screen updates in place at interactive speed", async ({
+  page,
+  browser,
+}) => {
+  await openStaff(page);
+  await page.getByLabel("Game", { exact: true }).selectOption("stars");
+  await page.getByRole("button", { name: "Start supervised session" }).click();
+  const player = await join(page, browser);
+  await expect(preview(page).locator("h1")).toHaveText("Star Catcher");
+
+  // A timestamp beside the score lets us measure what a clinician actually sees,
+  // including the wait for the next frame, with no dependency on an EEG stream.
+  await player.locator(".game-score").evaluate((score) => {
+    const stamp = document.createElement("span");
+    stamp.id = "mirror-timing";
+    score.after(stamp);
+    window.setInterval(() => {
+      stamp.textContent = String(Date.now());
+    }, 50);
+  });
+  const stamp = preview(page).locator("#mirror-timing");
+  await expect(stamp).toHaveText(/^\d+$/);
+  const result = await page
+    .locator('iframe[title="Live patient screen"]')
+    .evaluate(
+      (el) =>
+        new Promise<{
+          changes: number;
+          sameHeading: boolean;
+          p95Age: number;
+        }>((resolve) => {
+          const doc = (el as HTMLIFrameElement).contentDocument!;
+          const heading = doc.querySelector("h1");
+          const start = performance.now(),
+            ages: number[] = [];
+          const values = new Set<string>();
+          function sample() {
+            const value = doc.querySelector("#mirror-timing")?.textContent;
+            if (value) {
+              values.add(value);
+              ages.push(Date.now() - Number(value));
+            }
+            if (performance.now() - start < 2000) requestAnimationFrame(sample);
+            else
+              resolve({
+                changes: values.size,
+                sameHeading: heading === doc.querySelector("h1"),
+                p95Age: ages.sort((a, b) => a - b)[
+                  Math.floor(ages.length * 0.95)
+                ],
+              });
+          }
+          requestAnimationFrame(sample);
+        }),
+    );
+  expect(result.sameHeading).toBe(true);
+  expect(result.changes).toBeGreaterThan(14);
+  expect(result.p95Age).toBeLessThan(220);
+  await finish(page);
+});
+
 test("each game opens only on the paired patient screen and appears in the clinician mirror", async ({
   page,
   browser,

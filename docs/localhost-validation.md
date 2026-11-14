@@ -24,6 +24,22 @@ For the full browser suite, set `NEUROREACH_TEST_PYTHON` to the Python executabl
 
 For a full-duration cued-training check, set `NEUROREACH_TEST_TRAINING=1` and run `pytest signal-engine/tests/test_cued_training.py` in the EEG environment. Its labelled synthetic outlet responds to engine-generated cues. The test verifies a reliable saved classifier for the left hand and loads it in a second session. This test shortens the initial resting baseline to three seconds. The EEG browser tests separately exercise the production 60-clean-second baseline. The opt-in check passed against `b3dc7575` in 210.95 seconds. MNE emitted numerical warnings during fitting; the assertions verified held-out accuracy, the selected method, a live score and successful model reuse.
 
+### Supervised monitor latency
+
+A seven-second localhost comparison used two separate Chromium browser contexts, a supervised Star Catcher session and a visible timestamp updated every 50 ms beside the score. The observer sampled the clinician preview on animation frames. Screen age includes the time between patient updates. Traffic counts patient mirror WebSocket payloads after the scene loaded.
+
+| Measurement | Previous monitor | Incremental monitor |
+|---|---:|---:|
+| Distinct timestamp updates displayed per second | 5.0 | 19.9 |
+| Median displayed timestamp age | 144 ms | 70 ms |
+| 95th-percentile displayed timestamp age | 243 ms | 103 ms |
+| Patient mirror payload per second | 361 KiB | 14 KiB |
+| Heading elements replaced during steady play | 34 | 0 |
+
+A separate supervised Garden Grow run used a moving 15 fps pose fixture. The clinician saw 70 distinct preview images in seven seconds and a 95th-percentile game timestamp age of 122 ms. Physical patient-device performance and clinic Wi-Fi latency require measurement on site.
+
+The browser regression `moving patient screen updates in place at interactive speed` exercises the paired HTTPS workflow. The relay tests cover slow viewers, reconnecting to the latest scene, capture stopping when the last viewer leaves, and compatibility with older clients.
+
 The [verified dashboard build](https://github.com/blizzard-labs/thalis-rehab-game/actions/runs/42798217866) covers commit `b3dc7575`. Its Windows job also runs `staff-launch.spec.ts` against the packaged executable. The separated patient flow additionally exercises automatically generated station certificates, HTTPS pairing on a LAN address, rejection of unauthorized mirror viewers, lock-time revocation, ephemeral screen frames and inert handling of untrusted patient markup. The pose-fixture browser scenarios run locally when `NEUROREACH_POSE_FIXTURE` is supplied. A green workflow establishes the software checks described here; the physical and pilot observations below still require their own evidence.
 
 ## Development-plan audit
