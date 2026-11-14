@@ -47,7 +47,7 @@ Phone/tablet visitors can open providers' ordinary touch games. Camera/EEG forwa
 The library serves the card images locally from `patient-web/public/library-logos/`. Each image uses the brand's original proportions and colors. The card title supplies the accessible name for the game or provider.
 
 - Provider marks come from the home-screen icons published by [Poki](https://poki.com/), [Coolmath Games](https://www.coolmathgames.com/), [Playgama](https://playgama.com/) and [CrazyGames](https://www.crazygames.com/).
-- Poki supplies the square game artwork for [Fruit Ninja](https://poki.com/en/g/fruit-ninja), [Subway Surfers](https://poki.com/en/g/subway-surfers), [Crossy Road](https://poki.com/en/g/crossy-road) and [Jetpack Joyride](https://poki.com/en/g/jetpack-joyride).
+- Poki cards use the square artwork from each game's linked Poki listing. Cut the Rope uses the square cover from its [CrazyGames listing](https://www.crazygames.com/game/cut-the-rope-ebx). Doodle Jump uses [Lima Sky’s app icon](https://apps.apple.com/us/app/doodle-jump/id307727765).
 - Angry Birds Friends uses Rovio's app icon. 2048 uses the original game's home-screen icon. [Angry Birds Friends on the App Store](https://apps.apple.com/us/app/angry-birds-friends/id555936735), [2048 icon](https://play2048.co/favicon180.png).
 
 ## Verification

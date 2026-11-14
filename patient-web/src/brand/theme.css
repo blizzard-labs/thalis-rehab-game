@@ -32,13 +32,13 @@
   white-space: nowrap;
 }
 .nr-brand-seal {
-  width: 56px;
+  width: 82px;
   height: auto;
 }
 .nr-brand .nr-brand-name {
   margin: 0;
   font:
-    700 30px/1 Baskerville,
+    700 41px/1 Baskerville,
     Georgia,
     serif;
   letter-spacing: -0.045em;
@@ -73,40 +73,39 @@
     column-gap: 5px;
   }
   .nr-brand-seal {
-    width: 39px;
+    width: 52px;
   }
   .nr-brand .nr-brand-name {
-    font-size: 25px;
+    font-size: 30px;
   }
   .nr-brand .nr-credit {
     font-size: 12px;
     padding-inline: 6px;
   }
 }
-@media (max-width: 360px) {
+@media (max-width: 389px) {
   .nr-brand {
     gap: 4px;
   }
   .nr-brand-seal {
-    width: 32px;
+    width: 42px;
   }
   .nr-brand .nr-brand-name {
-    font-size: 23px;
+    font-size: 26px;
   }
-  .nr-brand .nr-credit {
-    font-size: 12px;
-    padding-inline: 4px;
-  }
-}
-/* Keep the badge beside the name even in a zoomed controller window. */
-@media (max-width: 280px) {
-  .nr-brand-seal { width: 26px; }
-  .nr-brand .nr-brand-name { font-size: 19px; }
   .nr-brand .nr-credit {
     display: inline-grid;
     gap: 0;
     text-align: center;
-    padding: 3px 4px;
+    padding: 3px 6px;
   }
   .nr-credit [aria-hidden] { display: none; }
+}
+/* Keep the badge beside the name even in a zoomed controller window. */
+@media (max-width: 310px) {
+  .nr-brand-seal { width: 26px; }
+  .nr-brand .nr-brand-name { font-size: 19px; }
+  .nr-brand .nr-credit {
+    padding: 3px 4px;
+  }
 }

@@ -20,7 +20,7 @@ test("independent game library opens official services and is usable on a phone"
     page.getByRole("heading", { name: "Explore full libraries" }),
   ).toBeVisible();
   await expect(page.locator(".library-services a")).toHaveCount(4);
-  await expect(page.locator(".library-favorites a")).toHaveCount(6);
+  await expect(page.locator(".library-favorites a")).toHaveCount(16);
   await expect(page.getByRole("link", { name: /Fruit Ninja/ })).toHaveAttribute(
     "href",
     "https://poki.com/en/g/fruit-ninja",
@@ -39,6 +39,10 @@ test("independent game library opens official services and is usable on a phone"
   }
   await page.getByLabel("Find a favorite").fill("2048");
   await expect(page.locator(".library-favorites a")).toHaveCount(1);
+  await page.getByLabel("Find a favorite").fill("cut the rope");
+  await expect(page.locator(".library-favorites a")).toHaveAttribute(
+    "href", "https://www.crazygames.com/game/cut-the-rope-ebx",
+  );
   await page.getByLabel("Find a favorite").fill("nonsense");
   await expect(page.getByText(/No matching favorite/)).toBeVisible();
   await page.getByLabel("Find a favorite").fill("");

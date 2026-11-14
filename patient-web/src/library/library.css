@@ -318,6 +318,10 @@
     padding: 16px;
   }
 }
+@media (max-width: 319px) {
+  .library-services { grid-template-columns: 1fr; }
+  .library-favorites a { flex-wrap: wrap; }
+}
 @media (max-width: 280px) {
   .controller-stop,
   .controller-keys {
