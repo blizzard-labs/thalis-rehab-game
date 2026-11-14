@@ -13,11 +13,13 @@ import {
   type PointerRange,
 } from "./PointerSetup";
 import { sendControl, useGameController } from "./bridge";
+import { suggestedPreset, type ControlPreset } from "./catalog";
 import { ExtensionHelp } from "./GameLibrary";
 import "./library.css";
 import "../practice/practice.css";
 
-type Preset = "arrows" | "pointer" | "drag" | "slice" | "hold";
+const usesArrows = (preset: ControlPreset) =>
+  preset === "arrows" || preset === "steer";
 const keys = ["ArrowUp", "ArrowRight", "ArrowDown", "ArrowLeft", "Space"];
 const keyLabels = ["↑ Up", "→ Right", "↓ Down", "← Left", "Space"];
 const pointerLabels = [
@@ -34,7 +36,7 @@ export function GameController() {
   const status = useGameController();
   const [source, setSource] = useState<Source>("button");
   const [side, setSide] = useState<Side>("right");
-  const [preset, setPreset] = useState<Preset>("arrows");
+  const [preset, setPreset] = useState<ControlPreset>("arrows");
   const [range, setRange] = useState<PointerRange | null>(null);
   const [configured, setConfigured] = useState(false);
   const [played, setPlayed] = useState(false);
@@ -51,6 +53,10 @@ export function GameController() {
   const cameraNeeded =
     configured && (source === "camera" || source === "blended");
   const eegNeeded = configured && (source === "eeg" || source === "blended");
+  // A new selected game gets its own mapping. A player can override it in setup.
+  useEffect(() => {
+    if (status.connectionId) setPreset(suggestedPreset(status.gameUrl));
+  }, [status.connectionId, status.gameUrl]);
   const cameraTick = useRef<(() => void) | null>(null);
   const camera = useMotionCamera(cameraNeeded, side, false, {
     armed: status.armed,
@@ -179,7 +185,7 @@ export function GameController() {
   function select(index: number) {
     const current = live.current;
     if (!current.status.armed) return;
-    if (current.preset === "arrows") {
+    if (usesArrows(current.preset)) {
       sendControl("key", { key: keys[index] });
       return;
     }
@@ -219,6 +225,7 @@ export function GameController() {
     let last = performance.now(),
       scanAt = last,
       wasArmed = false;
+    let steeringKey: string | null = null;
     const tick = () => {
       const now = performance.now();
       const current = live.current;
@@ -248,11 +255,13 @@ export function GameController() {
         scanAt = now;
         swipe.current = null;
         wasArmed = enabled;
+        steeringKey = null;
       }
       if (enabled && valid) {
-        if (isCamera && current.preset !== "arrows" && frame && current.range) {
+        if (isCamera && !usesArrows(current.preset) && frame && current.range) {
           const p = pointerPosition(current.range, frame.point);
-          const alpha = Math.min(1, (now - last) / 100);
+          const precision = current.preset === "pointer" || current.preset === "drag";
+          const alpha = Math.min(1, (now - last) / (precision ? 220 : 100));
           point.current = {
             x: point.current.x + (p.x - point.current.x) * alpha,
             y: point.current.y + (p.y - point.current.y) * alpha,
@@ -273,7 +282,7 @@ export function GameController() {
               Math.hypot(
                 (gesture.current.x - point.current.x) * width,
                 (gesture.current.y - point.current.y) * height,
-              ) > 18
+              ) > (gesture.current.fired ? 36 : 24)
             )
               gesture.current = { ...point.current, at: now, fired: false };
             if (
@@ -294,10 +303,21 @@ export function GameController() {
         const stamp = isEeg ? current.eeg.sampleMs() : (frame?.time ?? null);
         const fired =
           current.source !== "button" && gate.current.update(level, stamp);
-        if (isCamera && current.preset === "arrows" && directed) {
-          if (fired && directed.level >= 0.3)
+        if (isCamera && usesArrows(current.preset) && directed) {
+          if (current.preset === "steer" && !isEeg) {
+            const key =
+              directed.level >= 0.5
+                ? directed.key
+                : directed.level < 0.3
+                  ? null
+                  : steeringKey;
+            if (key !== steeringKey) {
+              sendControl("steer", { key });
+              steeringKey = key;
+            }
+          } else if (fired && directed.level >= 0.3)
             sendControl("key", { key: directed.key });
-        } else if (isCamera && isEeg && current.preset !== "arrows") {
+        } else if (isCamera && isEeg && !usesArrows(current.preset)) {
           if (fired)
             sendControl(
               current.preset === "drag" ||
@@ -316,9 +336,7 @@ export function GameController() {
           ) {
             choice.current =
               (choice.current + 1) %
-              (current.preset === "arrows"
-                ? keys.length
-                : pointerLabels.length);
+              (usesArrows(current.preset) ? keys.length : pointerLabels.length);
             scanAt = now;
           }
           if (fired) {
@@ -363,7 +381,7 @@ export function GameController() {
     setPlayed(false);
     setRange(null);
   }
-  const options = preset === "arrows" ? keyLabels : pointerLabels;
+  const options = usesArrows(preset) ? keyLabels : pointerLabels;
   return (
     <div className="practice-app game-controller">
       <main className="controller-main">
@@ -440,9 +458,14 @@ export function GameController() {
               Control preset{" "}
               <select
                 value={preset}
-                onChange={(event) => setPreset(event.target.value as Preset)}
+                onChange={(event) =>
+                  setPreset(event.target.value as ControlPreset)
+                }
               >
                 <option value="arrows">Arrow keys · 2048, Crossy Road</option>
+                <option value="steer">
+                  Hold arrow keys · driving and steering
+                </option>
                 <option value="pointer">Pointer + click · puzzles</option>
                 <option value="drag">Drag + release · Angry Birds</option>
                 <option value="slice">Slice · Fruit Ninja</option>
@@ -504,10 +527,12 @@ export function GameController() {
               )}
               <p>
                 {cameraNeeded
-                  ? preset === "arrows"
+                  ? usesArrows(preset)
                     ? source === "blended"
                       ? "Aim your hand up, right, down or left. Imagine moving it to send that arrow, then relax."
-                      : "Reach up, right, down or left for an arrow key. Return to rest between moves."
+                      : preset === "steer"
+                        ? "Reach to hold an arrow. Change direction to steer, or return to rest to release."
+                        : "Reach up, right, down or left for an arrow key. Return to rest between moves."
                     : source === "blended"
                       ? "Move your hand to aim. Imagine moving your hand, then relax to click or toggle the hold."
                       : preset === "slice"
@@ -521,7 +546,7 @@ export function GameController() {
                     ? "Wait for the highlighted control. Imagine moving your hand to select it, then relax."
                     : "Use the buttons below, or press Space to choose the highlighted control."}
               </p>
-              {preset !== "arrows" && (
+              {!usesArrows(preset) && (
                 <div
                   className="controller-map"
                   aria-label="Pointer position in the game"
@@ -587,7 +612,7 @@ export function GameController() {
                   </select>
                 </label>
               )}
-              {preset !== "arrows" && !cameraNeeded && (
+              {!usesArrows(preset) && !cameraNeeded && (
                 <label>
                   Pointer step{" "}
                   <select

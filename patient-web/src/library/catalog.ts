@@ -28,6 +28,7 @@ export const services = [
 export const familiarGames = [
   {
     name: "Fruit Ninja",
+    preset: "slice",
     url: "https://poki.com/en/g/fruit-ninja",
     provider: "Poki",
     controls: "Pointer · slice",
@@ -36,6 +37,7 @@ export const familiarGames = [
   },
   {
     name: "Angry Birds Friends",
+    preset: "drag",
     url: "https://redsclub.com/ab-friends/play/",
     provider: "Rovio · desktop web",
     controls: "Pointer · drag",
@@ -44,6 +46,7 @@ export const familiarGames = [
   },
   {
     name: "2048",
+    preset: "arrows",
     url: "https://play2048.co/",
     provider: "Original game",
     controls: "Arrow keys",
@@ -52,6 +55,7 @@ export const familiarGames = [
   },
   {
     name: "Subway Surfers",
+    preset: "arrows",
     url: "https://poki.com/en/g/subway-surfers",
     provider: "Poki",
     controls: "Arrow keys",
@@ -60,6 +64,7 @@ export const familiarGames = [
   },
   {
     name: "Crossy Road",
+    preset: "arrows",
     url: "https://poki.com/en/g/crossy-road",
     provider: "Poki",
     controls: "Arrow keys",
@@ -68,6 +73,7 @@ export const familiarGames = [
   },
   {
     name: "Jetpack Joyride",
+    preset: "hold",
     url: "https://poki.com/en/g/jetpack-joyride",
     provider: "Poki",
     controls: "Pointer · hold",
@@ -76,6 +82,7 @@ export const familiarGames = [
   },
   {
     name: "Temple Run 2",
+    preset: "arrows",
     url: "https://poki.com/en/g/temple-run-2",
     provider: "Poki",
     controls: "Arrow keys",
@@ -84,6 +91,7 @@ export const familiarGames = [
   },
   {
     name: "Cut the Rope",
+    preset: "slice",
     url: "https://www.crazygames.com/game/cut-the-rope-ebx",
     provider: "CrazyGames",
     controls: "Pointer · slice",
@@ -92,14 +100,16 @@ export const familiarGames = [
   },
   {
     name: "Doodle Jump",
-    url: "https://www.crazygames.com/game/doodle-jump",
-    provider: "CrazyGames",
-    controls: "Arrow keys · click to shoot",
+    preset: "steer",
+    url: "https://service.play.works/service/apps/doodle_jump_old/index.html",
+    provider: "Play.Works",
+    controls: "Hold arrow keys · steer",
     logo: "/library-logos/doodle-jump.webp",
     description: "Steer each bounce onto the next platform and climb past the monsters.",
   },
   {
     name: "Master Chess",
+    preset: "pointer",
     url: "https://poki.com/en/g/master-chess",
     provider: "Poki",
     controls: "Pointer · click",
@@ -108,6 +118,7 @@ export const familiarGames = [
   },
   {
     name: "Stickman Hook",
+    preset: "hold",
     url: "https://poki.com/en/g/stickman-hook",
     provider: "Poki",
     controls: "Pointer · hold",
@@ -116,6 +127,7 @@ export const familiarGames = [
   },
   {
     name: "Bubbleshooter",
+    preset: "pointer",
     url: "https://poki.com/en/g/bubbleshooter",
     provider: "Poki",
     controls: "Pointer · click",
@@ -124,14 +136,16 @@ export const familiarGames = [
   },
   {
     name: "Moto X3M",
+    preset: "steer",
     url: "https://poki.com/en/g/moto-x3m",
     provider: "Poki",
-    controls: "Arrow keys",
+    controls: "Hold arrow keys · drive",
     logo: "/library-logos/moto-x3m.webp",
     description: "Race a motorbike over ramps and lean into the landing to stay upright.",
   },
   {
     name: "Blocky Blast Puzzle",
+    preset: "drag",
     url: "https://poki.com/en/g/blocky-blast-puzzle",
     provider: "Poki",
     controls: "Pointer · drag",
@@ -140,14 +154,16 @@ export const familiarGames = [
   },
   {
     name: "Drive Mad",
+    preset: "steer",
     url: "https://poki.com/en/g/drive-mad",
     provider: "Poki",
-    controls: "Arrow keys",
+    controls: "Hold arrow keys · drive",
     logo: "/library-logos/drive-mad.webp",
     description: "Ease a truck over uneven bridges and steep ramps without tipping it over.",
   },
   {
     name: "Tiny Fishing",
+    preset: "drag",
     url: "https://poki.com/en/g/tiny-fishing",
     provider: "Poki",
     controls: "Pointer · drag",
@@ -155,3 +171,16 @@ export const familiarGames = [
     description: "Cast your line, steer your hook toward fish and upgrade your rod between catches.",
   },
 ] as const;
+
+export type ControlPreset = (typeof familiarGames)[number]["preset"];
+
+export function suggestedPreset(gameUrl?: string): ControlPreset {
+  if (!gameUrl) return "arrows";
+  try {
+    const page = new URL(gameUrl);
+    const address = page.origin + page.pathname.replace(/\/$/, "");
+    return familiarGames.find((game) => game.url.replace(/\/$/, "") === address)?.preset ?? "arrows";
+  } catch {
+    return "arrows";
+  }
+}

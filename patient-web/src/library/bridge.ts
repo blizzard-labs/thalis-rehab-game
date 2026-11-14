@@ -8,6 +8,7 @@ export type ControllerStatus = {
   armed: boolean;
   held: boolean;
   game: string;
+  gameUrl?: string;
   host: string;
   reason: string;
   area: { width: number; height: number } | null;

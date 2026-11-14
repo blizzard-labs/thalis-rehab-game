@@ -149,6 +149,49 @@ test("extension sends trusted keys and pointer events into a cross-origin game a
   }
 });
 
+test("held steering changes direction and releases on stop", async () => {
+  const run = await controllerHarness();
+  try {
+    await run.controller.getByRole("button", { name: "Set up input" }).click();
+    await enable(run.controller);
+    const steer = (key: string | null) =>
+      run.controller.evaluate(
+        (key) =>
+          window.postMessage(
+            { channel: "neuroreach-library", from: "app", type: "steer", key },
+            location.origin,
+          ),
+        key,
+      );
+    await steer("ArrowRight");
+    await steer("ArrowRight");
+    await steer("ArrowLeft");
+    await expect
+      .poll(async () =>
+        (await run.events())
+          .filter((e) => e.type.startsWith("key"))
+          .map((e) => [e.type, e.key]),
+      )
+      .toEqual([
+        ["keydown", "ArrowRight"],
+        ["keyup", "ArrowRight"],
+        ["keydown", "ArrowLeft"],
+      ]);
+    await run.controller
+      .getByRole("button", { name: "Stop controls", exact: true })
+      .click();
+    await expect
+      .poll(async () => (await run.events()).at(-1))
+      .toMatchObject({
+        type: "keyup",
+        key: "ArrowLeft",
+        trusted: true,
+      });
+  } finally {
+    await run.close();
+  }
+});
+
 test("fresh EEG bursts select a game control and signal loss disarms it", async () => {
   let level: number | null = 0.1;
   let timer: ReturnType<typeof setInterval> | undefined;

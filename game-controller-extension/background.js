@@ -6,11 +6,13 @@ const hosts = [
   "crazygames.com",
   "play2048.co",
   "redsclub.com",
+  "service.play.works",
 ];
 const ports = new Set();
 let target = null,
   owner = null,
   armed = false,
+  heldKey = null,
   held = false,
   point = { x: 0.5, y: 0.5 },
   lastBeat = 0;
@@ -42,6 +44,9 @@ function status(port) {
         ? "Another controller window is open. Use it, or close it to take control here."
         : reason,
     game: target?.title ?? "",
+    gameUrl: target
+      ? new URL(target.url).origin + new URL(target.url).pathname
+      : "",
     host: target ? new URL(target.url).hostname : "",
     area: target?.rect ?? null,
   };
@@ -117,6 +122,28 @@ async function focusPlayArea(tabId, rect) {
     // The player can still give the game focus by clicking its play area.
   }
 }
+const keyCodes = {
+  ArrowUp: 38,
+  ArrowRight: 39,
+  ArrowDown: 40,
+  ArrowLeft: 37,
+  Space: 32,
+};
+function keyEvent(type, key) {
+  return input("dispatchKeyEvent", {
+    type,
+    key: key === "Space" ? " " : key,
+    code: key,
+    windowsVirtualKeyCode: keyCodes[key],
+  });
+}
+async function releaseKey() {
+  if (heldKey) {
+    const key = heldKey;
+    heldKey = null;
+    await keyEvent("keyUp", key);
+  }
+}
 async function release() {
   if (held && target) {
     held = false;
@@ -137,6 +164,7 @@ async function stop(
 ) {
   armed = false;
   reason = message;
+  await releaseKey().catch(() => {});
   await release();
   if (detach && target) {
     const old = target;
@@ -415,6 +443,7 @@ chrome.runtime.onConnect.addListener((port) => {
           await stop("Return to the selected game, then reconnect.", true);
           return;
         }
+        await releaseKey();
         await release();
         // Games such as Crossy Road pause on window blur. Camera play can
         // leave its controller behind the game once calibration is complete.
@@ -472,28 +501,35 @@ chrome.runtime.onConnect.addListener((port) => {
             buttons: 1,
             clickCount: 1,
           });
-          if (message.type === "click") await release();
+          if (message.type === "click") {
+            // Frame-polled games can miss a press and release within one frame.
+            await new Promise((resolve) => setTimeout(resolve, 90));
+            await release();
+          }
         }
         tell();
       });
     } else if (message.type === "key") {
-      const keys = {
-        ArrowUp: 38,
-        ArrowRight: 39,
-        ArrowDown: 40,
-        ArrowLeft: 37,
-        Space: 32,
-      };
-      if (!Object.hasOwn(keys, message.key)) return;
+      if (!Object.hasOwn(keyCodes, message.key)) return;
       void enqueue(async () => {
         if (!armed || !target) return;
-        const values = {
-          key: message.key === "Space" ? " " : message.key,
-          code: message.key,
-          windowsVirtualKeyCode: keys[message.key],
-        };
-        await input("dispatchKeyEvent", { type: "rawKeyDown", ...values });
-        await input("dispatchKeyEvent", { type: "keyUp", ...values });
+        await releaseKey();
+        heldKey = message.key;
+        await keyEvent("rawKeyDown", message.key);
+        await new Promise((resolve) => setTimeout(resolve, 60));
+        await releaseKey();
+      });
+    } else if (message.type === "steer") {
+      const key = message.key;
+      if (key !== null && (!Object.hasOwn(keyCodes, key) || key === "Space"))
+        return;
+      void enqueue(async () => {
+        if (!armed || !target || key === heldKey) return;
+        await releaseKey();
+        if (key && armed) {
+          heldKey = key;
+          await keyEvent("rawKeyDown", key);
+        }
       });
     }
   });
@@ -508,6 +544,7 @@ chrome.debugger.onDetach.addListener(({ tabId }) => {
   if (target?.tabId === tabId) {
     target = null;
     armed = held = false;
+    heldKey = null;
     reason = "Game disconnected. Choose its area again.";
     void chrome.scripting
       .executeScript({
