@@ -342,10 +342,15 @@ test("orchard fruit must be picked and delivered, including with a single switch
   const stop = await detour.innerText();
   await detour.click();
   await expect(page.locator(".trail-sign strong")).toHaveText(stop);
+  const trunk = page.locator("[data-orchard-trees] > g").nth(1);
+  const startX = (await trunk.boundingBox())!.x;
   await page.getByTestId("ripe-fruit").click();
   await expect(page.getByText("0 fruit", { exact: true })).toBeVisible();
   await page.getByTestId("fruit-basket").click();
   await expect(page.getByText("1 fruit", { exact: true })).toBeVisible();
+  await expect
+    .poll(async () => (await trunk.boundingBox())!.x)
+    .toBeLessThan(startX - 30);
   await page.getByRole("button", { name: "Pick", exact: true }).focus();
   await page.keyboard.press("Space");
   await page.keyboard.press("Space");

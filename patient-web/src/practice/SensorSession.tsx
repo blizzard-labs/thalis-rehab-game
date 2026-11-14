@@ -199,7 +199,14 @@ export function SensorSession({
     }
     const aim = trial?.aim ?? null;
     const reached = movement !== null && movement >= round.activationThreshold;
-    const onTarget = trial?.onTarget ?? (!cameraStroke || reached);
+    // A new orchard branch rolls up after a deposit. Begin the camera hold once
+    // its on-screen fruit is within a few pixels of the calibrated destination.
+    const arriving =
+      round.record.game === "fruit" &&
+      round.record.rewards - round.travelDistance > 0.025 &&
+      !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const onTarget =
+      !arriving && (trial?.onTarget ?? (!cameraStroke || reached));
     const neural = eegNeeded ? eeg.latest() : null;
     const cameraHold =
       trial || cameraStroke
