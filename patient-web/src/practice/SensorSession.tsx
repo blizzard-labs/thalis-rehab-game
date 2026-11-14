@@ -202,9 +202,10 @@ export function SensorSession({
     // A new orchard branch rolls up after a deposit. Begin the camera hold once
     // its on-screen fruit is within a few pixels of the calibrated destination.
     const arriving =
+      trial !== null &&
       round.record.game === "fruit" &&
       round.record.rewards - round.travelDistance > 0.025 &&
-      !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      !window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
     const onTarget =
       !arriving && (trial?.onTarget ?? (!cameraStroke || reached));
     const neural = eegNeeded ? eeg.latest() : null;

@@ -188,3 +188,12 @@
 @media (prefers-reduced-motion: no-preference) {
   .river-art stop { transition: stop-color .75s; }
 }
+
+.adventure .keeper-sign { box-shadow: inset 3px 0 #9c7251, 0 2px 6px #514a3722; }
+.keeper-arrival { display: inline-block; margin-inline: .6em; font-size: .88em; }
+@media (max-width: 600px), (max-height: 580px) {
+  .adventure .keeper-sign { grid-template-columns: auto; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .lighthouse-art stop { transition: stop-color .6s; }
+}

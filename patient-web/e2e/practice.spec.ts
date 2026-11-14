@@ -40,7 +40,7 @@ test("guest grows a flower, rests, saves locally and clears the shared browser",
 
 test.describe("touch play", () => {
   test.use({ hasTouch: true });
-  test("a finger can carry orchard fruit and steer a river stroke", async ({
+  test("a finger can carry fruit, steer a stroke and pilot a boat home", async ({
     page,
     browserName,
   }) => {
@@ -88,6 +88,35 @@ test.describe("touch play", () => {
     await expect(page.locator(".river-sign strong")).toHaveText(
       "The Old Bridge",
     );
+    await page.getByRole("button", { name: "End session" }).click();
+    await page.goto("/");
+    await page.getByRole("button", { name: /Lighthouse Keeper/ }).tap();
+    await page.getByRole("button", { name: "Start game" }).tap();
+    const keeper = page.locator(".keeper-stage");
+    // Run in regular motion and pick up the vessel while it is still sailing.
+    for (let i = 0; i < 16; i++) await page.getByTestId("keeper-task").tap();
+    const point = (selector: string, x = 0, y = 0) =>
+      keeper.locator(selector).evaluate(
+        (el, position) => {
+          const p = new DOMPoint(position.x, position.y).matrixTransform(
+            (el as SVGGraphicsElement).getScreenCTM()!,
+          );
+          return { x: p.x, y: p.y };
+        },
+        { x, y },
+      );
+    await swipe(
+      await point("svg", 495, 146),
+      await point("[data-testid=keeper-task]"),
+    );
+    await expect(
+      page.getByRole("button", { name: "Pilot to berth" }),
+    ).toBeEnabled();
+    await swipe(
+      await point("[data-keeper-vessel]"),
+      await point("[data-testid=keeper-task]"),
+    );
+    await expect(page.locator(".keeper-log")).toContainText("2 boats home");
   });
   test("a phone player selects and catches a star by touch", async ({
     page,
@@ -422,4 +451,81 @@ test("saved outings supply the keeper and the lamp stays repaired across visits"
       name: "Lighthouse with 12 of 12 repairs and 1 boat home",
     }),
   ).toBeVisible();
+  await expect(page.locator(".keeper-sign")).toContainText("Through the fog");
+  await expect(page.locator("[data-harbor-town]")).toHaveAttribute(
+    "data-harbor-town",
+    "1",
+  );
+  await page.getByRole("button", { name: "Sound fog bell" }).click();
+  await save();
+  await open();
+  await expect(page.locator(".keeper-sign")).toContainText(
+    "2 of 3 · Light fog buoy",
+  );
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  const art = page.locator(".lighthouse-art");
+  const screen = (x: number, y: number) =>
+    art.evaluate(
+      (svg, p) => {
+        const point = new DOMPoint(p.x, p.y).matrixTransform(
+          (svg as SVGSVGElement).getScreenCTM()!,
+        );
+        return { x: point.x, y: point.y };
+      },
+      { x, y },
+    );
+  const marker = page.getByTestId("keeper-task");
+  async function steer(from: { x: number; y: number }, hit = true) {
+    const box = (await marker.boundingBox())!;
+    await page.mouse.move(from.x, from.y);
+    await page.mouse.down();
+    await page.mouse.move(
+      box.x + box.width / 2 + (hit ? 0 : 85),
+      box.y + box.height / 2,
+      { steps: 6 },
+    );
+    await page.mouse.up();
+  }
+  await steer(await screen(495, 146), false);
+  await expect(
+    page.getByRole("button", { name: "Light fog buoy" }),
+  ).toBeEnabled();
+  await steer(await screen(495, 146));
+  await expect(
+    page.getByRole("button", { name: "Pilot to berth" }),
+  ).toBeEnabled();
+  await page.getByRole("button", { name: "Pause", exact: true }).click();
+  await marker.click();
+  await expect(
+    page.getByRole("button", { name: "Pilot to berth" }),
+  ).toBeDisabled();
+  await page.getByRole("button", { name: "Resume" }).click();
+  const vessel = page.locator("[data-keeper-vessel]");
+  const boat = await vessel.evaluate((el) => {
+    const p = new DOMPoint(0, 0).matrixTransform(
+      (el as SVGGraphicsElement).getScreenCTM()!,
+    );
+    return { x: p.x, y: p.y };
+  });
+  await steer(boat);
+  await expect(page.locator(".keeper-sign")).toContainText("The tide gate");
+  await expect(page.locator(".keeper-arrival")).toContainText("fish baskets");
+  await page.setViewportSize({ width: 390, height: 844 });
+  for (const watch of [
+    "The tide gate",
+    "Ferry crossing",
+    "The reef passage",
+    "Night pilot",
+  ]) {
+    await expect(page.locator(".keeper-sign")).toContainText(watch);
+    for (let i = 0; i < 3; i++) await marker.click();
+  }
+  await expect(page.locator(".keeper-sign")).toContainText("Passage 7");
+  await expect(art).toHaveAccessibleName(
+    "Lighthouse with 12 of 12 repairs and 6 boats home",
+  );
+  await expect(page.locator("[data-harbor-town]")).toHaveAttribute(
+    "data-harbor-town",
+    "4",
+  );
 });

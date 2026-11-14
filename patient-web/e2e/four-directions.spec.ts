@@ -180,3 +180,43 @@ test("camera orchard keeps a picked fruit until the measured wrist returns to th
   await wrist(page, 0, 0);
   await expect(page.getByText("1 fruit", { exact: true })).toBeVisible();
 });
+
+test("three camera reaches guide a boat into a repaired harbor", async ({
+  page,
+}) => {
+  await attachWristReplay(page);
+  await page.goto("/");
+  await page.getByRole("button", { name: /Lighthouse Keeper/ }).click();
+  await page.getByRole("button", { name: "Start game" }).click();
+  for (let i = 0; i < 12; i++) await page.getByTestId("keeper-task").click();
+  await page.getByRole("button", { name: "End session" }).click();
+  await page.getByRole("button", { name: "Save on this device" }).click();
+  await expect(
+    page.getByRole("button", { name: "Saved on this device" }),
+  ).toBeVisible();
+  await page.reload();
+  await page.getByRole("button", { name: /Lighthouse Keeper/ }).click();
+  await page.getByLabel("Camera", { exact: true }).check();
+  await page.getByRole("button", { name: "Start game" }).click();
+  await expect(page.getByText("Arm in view")).toBeVisible();
+  await page.getByRole("button", { name: "Set resting position" }).click();
+  await wrist(page, 1, 0);
+  await expect(async () => {
+    await page
+      .getByRole("button", { name: "Set comfortable reach" })
+      .click({ timeout: 500 });
+    await expect(page.locator(".keeper-sign")).toBeVisible({ timeout: 500 });
+  }).toPass();
+  for (let i = 1; i <= 3; i++) {
+    await wrist(page, 0, 0);
+    await expect(page.locator(".game-cue")).not.toHaveText(
+      "Relax before the next signal.",
+    );
+    await wrist(page, 1, 0);
+    await expect(page.locator(".game-score")).toHaveText(
+      i === 1 ? "1 task" : `${i} tasks`,
+    );
+  }
+  await expect(page.locator(".keeper-log")).toContainText("1 boat home");
+  await expect(page.locator(".keeper-sign")).toContainText("Through the fog");
+});

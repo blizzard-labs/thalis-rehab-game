@@ -1,3 +1,4 @@
+import { harborPassage } from "./harborPassage";
 import type { PracticeRecord } from "../practice/session";
 
 const chapters = [
@@ -26,41 +27,30 @@ const chapters = [
     icon: "☀",
   },
 ];
-const ships = [
-  "Wren",
-  "Sea Fern",
-  "Marigold",
-  "North Star",
-  "Blue Petrel",
-  "Dawn",
-];
-const signals = [
-  {
-    action: "Sight sail",
-    icon: "⚑",
-    cue: "Find the returning sail beyond the breakwater.",
-  },
-  {
-    action: "Aim lantern",
-    icon: "☀",
-    cue: "Turn the beam toward the safe channel.",
-  },
-  {
-    action: "Ring bell",
-    icon: "♫",
-    cue: "Sound the harbor bell to welcome the boat home.",
-  },
-];
 export function keeperStory(work: number) {
-  const built = Math.min(12, work),
-    shipsHome = Math.floor(Math.max(0, work - 12) / 3);
-  const step = work % 3,
-    ship = ships[shipsHome % ships.length];
+  const built = Math.min(12, work);
+  const shipsHome = Math.floor(Math.max(0, work - 12) / 3);
+  const step = work % 3;
+  const passage = harborPassage(shipsHome);
+  const [action, cue, target] = passage.tasks[step];
   const chapter =
     built < 12
       ? chapters[Math.floor(built / 3)]
-      : { ...signals[step], title: `${ship} returns` };
-  return { ...chapter, step, built, shipsHome, ship };
+      : {
+          title: `${passage.ship} returns`,
+          action,
+          cue,
+          icon: target === "bell" ? "♫" : target === "guide" ? "⚓" : "⚑",
+        };
+  return {
+    ...chapter,
+    built,
+    shipsHome,
+    step,
+    ship: passage.ship,
+    passage,
+    target,
+  };
 }
 /** Other completed games bring up to three supplies per outing. A keeper task
  * contributes one unit. An earlier starting balance is never counted again. */

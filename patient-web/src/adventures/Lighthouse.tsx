@@ -1,63 +1,177 @@
 import { useLandscape } from "./useLandscape";
-import { useId } from "react";
+import {
+  useId,
+  useMemo,
+  useEffect,
+  useRef,
+  useState,
+  type PointerEvent,
+} from "react";
+import {
+  Vessel,
+  DockedBoats,
+  ferryAt,
+  HarborTown,
+  ChannelMarks,
+  harborColors,
+} from "./Harbor";
+import { passagePosition, type HarborPoint } from "./harborPassage";
 import { keeperStory } from "./keeperStory";
 
-function Cutter({
-  color = "#b55d47",
-  rig = 0,
-}: {
-  color?: string;
-  rig?: number;
-}) {
-  return (
-    <g>
-      <path
-        d="M-42 1q38 8 87-4L30 15H-26Z"
-        fill={color}
-        stroke="#434e51"
-        strokeWidth="2"
-      />
-      <path d="M4 1v-64" stroke="#715741" strokeWidth="3" />
-      <path d={rig % 2 ? "M0-60-27-5H0Z" : "M0-55-32-8 0-4Z"} fill="#f4e7bd" />
-      <path d="M8-52 33-8 8-6Z" fill="#c9ccc0" />
-      <path d="M5-63 22-61 5-55Z" fill={color} />
-    </g>
+const lantern = { x: 495, y: 146 },
+  bell = { x: 435, y: 229 };
+
+function scenePoint(event: PointerEvent<SVGSVGElement>) {
+  const transform = event.currentTarget.getScreenCTM();
+  if (!transform) return null;
+  return new DOMPoint(event.clientX, event.clientY).matrixTransform(
+    transform.inverse(),
   );
 }
 export function LighthouseArt({
   work = 10,
   effort = 0,
+  visualWork = work,
   onWork,
 }: {
   work?: number;
   effort?: number;
+  visualWork?: number;
   onWork?: () => void;
 }) {
   const landscape = useLandscape(570, 555);
   const id = useId(),
-    { built, shipsHome, step } = keeperStory(work);
+    { built, shipsHome, step, target, passage } = useMemo(
+      () => keeperStory(work),
+      [work],
+    );
   const complete = built === 12,
     progress = work % 3;
   const piers = Math.min(3, built),
     steps = Math.min(3, Math.max(0, built - 3)),
     panes = Math.min(3, Math.max(0, built - 6));
-  const hotspot =
-    built < 3
-      ? [425, 349]
-      : built < 6
-        ? [492, 296]
-        : built < 9
-          ? [494, 156]
-          : built < 12
-            ? [492, 145]
-            : step === 0
-              ? [718, 274]
-              : step === 1
-                ? [500, 149]
-                : [434, 231];
+  const repairTargets = [
+    { x: 425, y: 349 },
+    { x: 492, y: 296 },
+    { x: 494, y: 156 },
+    lantern,
+  ];
+  const dragFinish = useRef<{
+    work: number;
+    kind: "boat" | "lamp";
+    point: HarborPoint;
+  } | null>(null);
+  const landed = dragFinish.current?.work === work ? dragFinish.current : null;
+  const visualHomeWork = Math.max(
+    0,
+    (landed?.kind === "boat" ? work : visualWork) - 12,
+  );
+  const stage = Math.max(0, Math.min(3, visualHomeWork - shipsHome * 3));
+  const ship = passagePosition(passage.route, stage);
+  const next = passage.route[step + 1];
+  const buoy = step === 0 ? passage.outer : passage.inner;
+  const ferry = ferryAt(stage);
+  const targets = {
+    boat: { x: ship.x, y: ship.y - 14 },
+    buoy: { x: buoy.x, y: buoy.y - 10 },
+    gate: passage.inner,
+    guide: next,
+    berth: passage.berth,
+    reef: { x: passage.outer.x - 31, y: passage.outer.y + 4 },
+    lamp: lantern,
+    bell,
+    ferry,
+  };
+  const hotspot = complete
+    ? targets[target]
+    : repairTargets[Math.floor(built / 3)];
+  const colors = harborColors(complete ? passage.weather : "clear");
+  const dragKind =
+    complete &&
+    (target === "guide" ? "boat" : target === "buoy" ? "lamp" : null);
+  const pointer = useRef<{
+    id: number;
+    work: number;
+    from: HarborPoint;
+  } | null>(null);
+  const [drag, setDrag] = useState<HarborPoint | null>(null);
+  const guiding =
+    drag && onWork && pointer.current?.work === work ? drag : null;
+  const shownShip = guiding && dragKind === "boat" ? guiding : ship;
+  const beamTarget =
+    guiding && dragKind === "lamp"
+      ? guiding
+      : landed?.kind === "lamp"
+        ? landed.point
+        : shownShip;
+  const beamAngle =
+    (Math.atan2(beamTarget.y - lantern.y, beamTarget.x - lantern.x) * 180) /
+    Math.PI;
+  const endDrag = () => {
+    pointer.current = null;
+    setDrag(null);
+  };
+  const interactive = !!onWork;
+  useEffect(() => {
+    pointer.current = null;
+    setDrag(null);
+  }, [interactive, work]);
   return (
     <svg
-      className="adventure-art lighthouse-art"
+      className={`adventure-art lighthouse-art${onWork && dragKind ? " gesture-art" : ""}`}
+      onPointerDown={(e) => {
+        if (!onWork || !dragKind || !e.isPrimary || e.button !== 0) return;
+        const p = scenePoint(e),
+          from = dragKind === "boat" ? ship : lantern;
+        if (!p || Math.hypot(p.x - from.x, p.y - from.y) > 39) return;
+        pointer.current = { id: e.pointerId, work, from };
+        e.currentTarget.setPointerCapture(e.pointerId);
+        setDrag(from);
+      }}
+      onPointerMove={(e) => {
+        if (
+          !onWork ||
+          pointer.current?.id !== e.pointerId ||
+          pointer.current.work !== work
+        )
+          return;
+        const p = scenePoint(e);
+        if (p && dragKind === "boat") {
+          // The boat stays in the fairway even when a finger strays inland.
+          const a = pointer.current.from,
+            dx = next.x - a.x,
+            dy = next.y - a.y;
+          const f = Math.max(
+            0,
+            Math.min(
+              1,
+              ((p.x - a.x) * dx + (p.y - a.y) * dy) / (dx * dx + dy * dy),
+            ),
+          );
+          setDrag({ x: a.x + dx * f, y: a.y + dy * f });
+        } else if (p) setDrag(p);
+      }}
+      onPointerUp={(e) => {
+        if (pointer.current?.id !== e.pointerId) return;
+        const p = scenePoint(e),
+          same = pointer.current.work === work;
+        endDrag();
+        if (
+          same &&
+          onWork &&
+          dragKind &&
+          p &&
+          Math.hypot(p.x - hotspot.x, p.y - hotspot.y) <= 40
+        ) {
+          dragFinish.current = {
+            work: work + 1,
+            kind: dragKind,
+            point: hotspot,
+          };
+          onWork();
+        }
+      }}
+      onLostPointerCapture={endDrag}
       {...landscape}
       role="img"
       aria-label={`Lighthouse with ${built} of 12 repairs and ${shipsHome} ${shipsHome === 1 ? "boat" : "boats"} home`}
@@ -71,9 +185,9 @@ export function LighthouseArt({
           x2="0"
           y2="265"
         >
-          <stop stopColor="#586a83" />
-          <stop offset=".58" stopColor="#c29a8f" />
-          <stop offset="1" stopColor="#f3cb9b" />
+          <stop stopColor={colors[0]} />
+          <stop offset=".58" stopColor={colors[1]} />
+          <stop offset="1" stopColor={colors[2]} />
         </linearGradient>
         <linearGradient
           id={id + "sea"}
@@ -83,8 +197,8 @@ export function LighthouseArt({
           x2="0"
           y2="560"
         >
-          <stop stopColor="#96acb2" />
-          <stop offset="1" stopColor="#405e71" />
+          <stop stopColor={colors[3]} />
+          <stop offset="1" stopColor={colors[4]} />
         </linearGradient>
         <linearGradient id={id + "tower"}>
           <stop stopColor="#b7b4a2" />
@@ -95,9 +209,33 @@ export function LighthouseArt({
           <stop stopColor="#fff2ae" stopOpacity=".8" />
           <stop offset="1" stopColor="#ffe7a4" stopOpacity=".03" />
         </linearGradient>
+        {complete && passage.weather === "fog" && (
+          <linearGradient id={id + "mist"} x2="0" y2="1">
+            <stop stopColor="#edf1e6" stopOpacity=".15" />
+            <stop offset=".48" stopColor="#edf1e6" stopOpacity=".88" />
+            <stop offset="1" stopColor="#edf1e6" stopOpacity="0" />
+          </linearGradient>
+        )}
       </defs>
       <rect y="-1400" width="960" height="3000" fill={`url(#${id}sky)`} />
-      <circle cx="784" cy="93" r="27" fill="#ffdfb1" />
+      {complete && passage.weather === "night" && (
+        <g fill="#f7ddb5">
+          {Array.from({ length: 20 }, (_, i) => (
+            <circle
+              key={i}
+              cx={(i * 113 + 59) % 960}
+              cy={17 + ((i * 29) % 89)}
+              r={i % 3 === 0 ? 1.8 : 1.1}
+            />
+          ))}
+        </g>
+      )}
+      <circle
+        cx={complete ? 635 + ((shipsHome * 73) % 200) : 784}
+        cy={complete ? 67 + ((shipsHome * 17) % 45) : 93}
+        r={passage.weather === "night" ? 19 : 27}
+        fill="#ffdfb1"
+      />
       <path
         d="M69 85q49-21 95-5m-63 10q56-11 94-2M656 51q40-12 81 0"
         fill="none"
@@ -114,13 +252,29 @@ export function LighthouseArt({
       {Array.from({ length: 33 }, (_, i) => (
         <path
           key={i}
-          d={`M${((i * 113) % 970) - 16} ${270 + ((i * 29) % 178)}q19-4 49 0`}
+          d={`M${((i * 113 + (complete ? visualHomeWork * 5 : 0)) % 1000) - 26} ${270 + ((i * 29) % 178)}q19-4 49 0`}
           fill="none"
           stroke="#d4ded6"
           opacity=".44"
           strokeWidth={(i % 3) + 1}
         />
       ))}
+      {complete && passage.weather === "fog" && (
+        <g fill="#eff0df" opacity={0.78 - stage * 0.2} pointerEvents="none">
+          <path
+            d="M520 278q50-25 124-14 63-27 129-9 94-18 197-3v50H520Z"
+            fill={`url(#${id}mist)`}
+            transform={`translate(${stage * 37} 0)`}
+          />
+          {[0, 1, 2].map((i) => (
+            <path
+              key={i}
+              transform={`translate(${353 + i * 196 + stage * (i - 1) * 25} ${256 + (i % 2) * 12})`}
+              d="M-103 0q15-7 37-7 14-16 41-10 17-18 46-6 24-3 37 10 21 0 49 13Z"
+            />
+          ))}
+        </g>
+      )}
       <path
         d="m0 357 121-20 91 5 72-42 107 12 64-22 72-13 42 21 74 21 29 26-102 19-74-5-92 30-161 10-91-13-152 48Z"
         fill="#788269"
@@ -195,10 +349,16 @@ export function LighthouseArt({
       <path d="M494 110V97" stroke="#4d5052" strokeWidth="3" />
       {built >= 9 && (
         <path
-          d="M495 146 919 106 944 206Z"
+          d="M495 146 935 109 939 179Z"
           fill={`url(#${id}beam)`}
-          opacity={complete ? 0.78 : 0.22 + 0.12 * progress}
-          transform={`rotate(${(complete ? step - 1 : 0) * 7 + effort * 3} 495 146)`}
+          opacity={
+            complete
+              ? passage.weather === "night"
+                ? 0.98
+                : 0.65
+              : 0.22 + 0.12 * progress
+          }
+          transform={`rotate(${complete ? beamAngle : effort * 3} 495 146)`}
         />
       )}
       <path
@@ -215,21 +375,88 @@ export function LighthouseArt({
           stroke="#896d51"
         />
       ))}
+      {complete && (
+        <g aria-hidden="true" strokeLinejoin="round">
+          <path
+            d="m451 334 11-2 32 51-12 4Z"
+            fill="#b79b79"
+            stroke="#846d58"
+            strokeWidth="2"
+          />
+          {[0, 1, 2, 3, 4, 5].map((i) => (
+            <path
+              key={i}
+              d={`m${455 + i * 5} ${339 + i * 8} 9-2`}
+              stroke="#947e66"
+              strokeWidth="2"
+            />
+          ))}
+          <path
+            d="m402 393 139-16 6 7-142 17Z"
+            fill="#c6a782"
+            stroke="#806b54"
+            strokeWidth="2"
+          />
+          {[0, 1, 2, 3].map((i) => (
+            <g
+              key={i}
+              transform={`translate(${411 + i * 41} ${393 - i * 4.7})`}
+            >
+              <path d="M0 5v7M0-6v7" stroke="#7b6753" strokeWidth="4" />
+              <circle cy="-6" r="2.5" fill="#eed3a7" />
+            </g>
+          ))}
+        </g>
+      )}
+      <HarborTown home={shipsHome} />
       <path d="M420 256v-39h28" fill="none" stroke="#6c5945" strokeWidth="5" />
       <path d="M426 237q4-30 16-17l5 18Z" fill="#c49c55" />
+      {complete && (
+        <>
+          <path
+            d={
+              `M${passage.route[0].x} ${passage.route[0].y} ` +
+              passage.route
+                .slice(1)
+                .map((p) => `L${p.x} ${p.y}`)
+                .join(" ")
+            }
+            fill="none"
+            stroke="#fff0bf"
+            opacity=".66"
+            strokeWidth="2.2"
+            strokeDasharray="3 8"
+            strokeLinecap="round"
+          />
+          <ChannelMarks passage={passage} progress={stage} />
+          <DockedBoats home={shipsHome} visualHomeWork={visualHomeWork} />
+          {target === "guide" && (
+            <g transform={`translate(${next.x} ${next.y})`}>
+              <ellipse
+                rx="22"
+                ry="6"
+                fill="none"
+                stroke="#fbe0a1"
+                strokeWidth="2"
+              />
+              <path d="M0 1v-25" stroke="#796650" strokeWidth="2" />
+              <path d="m1-25 15 4-15 6Z" fill="#f2c66d" />
+            </g>
+          )}
+        </>
+      )}
       <g
-        transform={`translate(${complete ? 718 - step * 15 : 757} ${296 + effort * 2}) scale(.85)`}
+        data-keeper-vessel=""
+        transform={`translate(${complete ? shownShip.x : 757} ${complete ? shownShip.y : 296 + effort * 2}) scale(${complete ? 0.76 : 0.85})`}
       >
-        <Cutter rig={shipsHome} />
+        <path
+          d="M-42 18q28 5 65 0m-43 5q18 2 38-1"
+          fill="none"
+          stroke="#cfdfd3"
+          strokeWidth="2"
+        />
+        <Vessel color={passage.color} rig={passage.rig} />
       </g>
-      {Array.from({ length: Math.min(shipsHome, 7) }, (_, i) => (
-        <g
-          key={i}
-          transform={`translate(${90 + i * 42} ${345 - (i % 2) * 12}) scale(.42)`}
-        >
-          <Cutter rig={i} color={i % 2 ? "#576e83" : "#b26b50"} />
-        </g>
-      ))}
       <path
         d="M235 106q11-7 19 2 12-9 24-5m311-19q8-5 14 1 9-7 17-4"
         fill="none"
@@ -238,7 +465,7 @@ export function LighthouseArt({
         strokeLinecap="round"
       />
       <g
-        transform={`translate(${hotspot.join(" ")})`}
+        transform={`translate(${hotspot.x} ${hotspot.y})`}
         data-testid="keeper-task"
         onClick={onWork}
         style={{ cursor: onWork ? "pointer" : undefined }}

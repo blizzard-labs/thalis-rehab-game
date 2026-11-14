@@ -36,7 +36,7 @@ export const gameDetails = {
   keeper: {
     icon: "⚓",
     description:
-      "Repair the lighthouse across visits and guide the harbor fleet home.",
+      "Repair the lighthouse, then pilot boats through fog, tide gates and night crossings as your harbor grows.",
     unit: "task",
     units: "tasks",
   },
