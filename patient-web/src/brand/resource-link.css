@@ -1,0 +1,48 @@
+.nr-resource-link {
+  position: fixed;
+  right: max(6px, env(safe-area-inset-right));
+  bottom: max(6px, env(safe-area-inset-bottom));
+  z-index: 1001;
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border-radius: 50%;
+  color: #696868;
+}
+
+.nr-resource-link svg {
+  border-radius: 50%;
+  box-shadow: 0 1px 3px #211e201a;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .nr-resource-link:hover {
+    color: #444344;
+  }
+}
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .nr-resource-link svg {
+    transition: transform 160ms ease-out;
+  }
+  .nr-resource-link:hover svg {
+    transform: translateY(-2px) scale(1.08);
+  }
+}
+
+.nr-resource-link:focus-visible {
+  outline: 2px solid var(--nr-link);
+  outline-offset: -3px;
+}
+
+/* The open report provides its own link inside the native modal's focus scope. */
+body:has(.nr-report[open]) #root > .nr-resource-link {
+  display: none;
+}
+
+@media print {
+  .nr-resource-link {
+    display: none;
+  }
+}

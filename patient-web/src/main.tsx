@@ -2,6 +2,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import "./styles.css";
 import { readSessionCode } from "./config";
+import { ResourceLink } from "./brand/ResourceLink";
 
 async function start() {
   // Keep the paired calibration's 3D renderer out of the standalone startup path.
@@ -16,6 +17,7 @@ async function start() {
   createRoot(document.getElementById("root")!).render(
     <StrictMode>
       <App />
+      <ResourceLink />
     </StrictMode>,
   );
   if (

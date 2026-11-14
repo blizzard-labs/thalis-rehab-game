@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { games, gameNames, type Game } from "../practice/catalog";
+import { ResourceLink } from "../brand/ResourceLink";
 import {
   progressReport,
   sessionReport,
@@ -340,6 +341,7 @@ function ReportReader({
         )}
         <p className="report-reliability">{reliabilityNote}</p>
       </article>
+      <ResourceLink />
     </dialog>
   );
 }

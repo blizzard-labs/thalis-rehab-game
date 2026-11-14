@@ -323,6 +323,11 @@
   gap: 12px;
   margin-inline-start: auto;
 }
+@media (max-width: 1180px) {
+  .practice-foot {
+    padding-right: max(44px, env(safe-area-inset-right));
+  }
+}
 .staff-panel h1 {
   margin-top: 22px;
 }
