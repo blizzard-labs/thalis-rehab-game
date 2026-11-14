@@ -28,6 +28,7 @@ export const services = [
 export const familiarGames = [
   {
     name: "Fruit Ninja",
+    tip: "Enable controls, then hold the ring on the start watermelon until the round begins. Sweep through flying fruit. Hold still on a menu button to play again.",
     preset: "slice",
     url: "https://poki.com/en/g/fruit-ninja",
     provider: "Poki",

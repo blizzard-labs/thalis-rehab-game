@@ -22,7 +22,7 @@ In camera pointer games, a ring in the game window follows your hand and fills w
 - **Pointer + click:** camera aim and dwell selection, or scanning pointer steps.
 - **Drag + release:** dwell to grab, move, dwell to release; EEG can toggle the hold.
 - **Cast and steer** clicks when you dwell in the middle of the play area. A sideways reach holds the mouse button underwater in Tiny Fishing.
-- **Slice:** camera movement with the mouse held; EEG-only offers a horizontal swipe.
+- **Slice** with the camera by sweeping your hand. A short pause lifts the blade. Hold the ring still over the start watermelon or Retry to tap once. The **Hold still to select** setting adjusts the tap delay. EEG-only play offers a horizontal swipe.
 - **Hold + release:** camera effort holds, returning to rest releases; EEG can toggle.
 
 These are input mappings, not a guarantee that every game works. Menus, embedded frames, browser permissions and timing vary. A scanning EEG switch cannot provide the speed or precise continuous two-dimensional movement of a mouse in every action game. Use ordinary controls when needed. Public games require internet and may have their own ads, accounts and purchases.

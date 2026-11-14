@@ -6,6 +6,7 @@ import { useMotionCamera } from "../practice/useMotionCamera";
 import { currentGuest } from "../practice/guestHistory";
 import type { Side, Source } from "../practice/session";
 import { IntentSwitch } from "./intentSwitch";
+import { CameraSlice } from "./cameraSlice";
 import {
   PointerSetup,
   pointerPosition,
@@ -97,6 +98,7 @@ export function GameController() {
     step,
   };
   const gate = useRef(new IntentSwitch());
+  const blade = useRef(new CameraSlice());
   const choice = useRef(0);
   const point = useRef({ x: 0.5, y: 0.5 });
   useEffect(() => {
@@ -116,6 +118,7 @@ export function GameController() {
     swipe.current = null;
     sendControl("stop");
     gate.current.reset();
+    blade.current.reset();
     gesture.current = null;
   };
   useEffect(() => {
@@ -252,6 +255,7 @@ export function GameController() {
       if (enabled && valid) sendControl("heartbeat");
       if (enabled !== wasArmed) {
         gate.current.reset();
+        blade.current.reset();
         gesture.current = null;
         scanAt = now;
         swipe.current = null;
@@ -269,10 +273,19 @@ export function GameController() {
             x: point.current.x + (p.x - point.current.x) * alpha,
             y: point.current.y + (p.y - point.current.y) * alpha,
           };
-          sendControl("move", point.current);
-          if (current.preset === "slice" && !isEeg && !current.status.held)
-            sendControl("hold");
-          else if (current.preset === "hold" && !isEeg) {
+          if (current.preset === "slice" && !isEeg && current.status.area) {
+            const action = blade.current.update(
+              point.current,
+              frame.time,
+              current.status.area,
+              current.dwellMs,
+            );
+            // Start the drag at the previous position so this movement cuts across the fruit.
+            if (action === "hold") sendControl("hold");
+            sendControl("move", point.current);
+            if (action === "release" || action === "click") sendControl(action);
+          } else sendControl("move", point.current);
+          if (current.preset === "hold" && !isEeg) {
             if (directed!.level > 0.65 && !current.status.held)
               sendControl("hold");
             if (directed!.level < 0.3 && current.status.held)
@@ -565,7 +578,7 @@ export function GameController() {
                     : source === "blended"
                       ? "Move your hand to aim. Imagine moving your hand, then relax to click or toggle the hold."
                       : preset === "slice"
-                        ? "Move your hand to slice. Stop controls before using game menus."
+                        ? "Hold the ring still to tap a menu button. Sweep through fruit to slice, then pause your hand to lift the blade."
                         : preset === "hold"
                           ? "Reach away from rest to hold. Return to rest to release."
                           : preset === "drag"
@@ -631,7 +644,7 @@ export function GameController() {
                 </label>
               )}
               {source === "camera" &&
-                ["pointer", "drag", "cast"].includes(preset) && (
+                ["pointer", "drag", "cast", "slice"].includes(preset) && (
                   <label>
                     Hold still to select{" "}
                     <select

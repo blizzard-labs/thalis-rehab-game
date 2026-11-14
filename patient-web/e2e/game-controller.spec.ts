@@ -335,9 +335,13 @@ test("camera reaches control a foreground game while its controller is hidden an
         }),
       )
       .toBe(true);
+    // A game menu needs a fresh press and release at the aimed location. A permanently
+    // held button can move the ring without ever activating the menu again.
     await expect
       .poll(async () =>
-        (await run.events()).some((e) => e.type === "mousedown" && e.trusted),
+        (await run.events()).some(
+          (event) => event.type === "mouseup" && event.trusted && event.x > 450,
+        ),
       )
       .toBe(true);
     const before = (await run.events()).length;
@@ -359,6 +363,7 @@ test("camera reaches control a foreground game while its controller is hidden an
         .some(
           (event) =>
             event.type === "mousemove" &&
+            event.buttons === 1 &&
             event.trusted &&
             (left ? event.x < 150 : event.x > 450),
         );

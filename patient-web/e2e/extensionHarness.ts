@@ -61,7 +61,7 @@ export async function controllerHarness(
     await context.route("https://game-cdn.invalid/game", (route) =>
       route.fulfill({
         contentType: "text/html",
-        body: '<body style="margin:0;background:#e1efda"><h1>External game</h1><script>window.events=[]; for(const type of ["keydown","keyup","mousedown","mouseup","mousemove"])document.addEventListener(type,event=>events.push({type:event.type,key:event.key,x:event.clientX,y:event.clientY,trusted:event.isTrusted}));</script></body>',
+        body: '<body style="margin:0;background:#e1efda"><h1>External game</h1><script>window.events=[]; for(const type of ["keydown","keyup","mousedown","mouseup","mousemove"])document.addEventListener(type,event=>events.push({type:event.type,key:event.key,x:event.clientX,y:event.clientY,buttons:event.buttons,trusted:event.isTrusted}));</script></body>',
       }),
     );
     const worker =
@@ -104,6 +104,7 @@ export async function controllerHarness(
               x: number;
               y: number;
               trusted: boolean;
+              buttons: number;
             }[],
         ),
       close: async () => {

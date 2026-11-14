@@ -72,7 +72,7 @@ The November 2026 replay opened all fifteen remaining titles on their public gam
 | Cut the Rope | Sweep across the rope | The first rope broke and its candy fell to Om Nom. |
 | Doodle Jump | Press Enter on Play, then hold left or right reaches | The jumper changed horizontal position, landed on a platform and reached a score of 18 on Play.Works. |
 | Drive Mad | Hold a rightward reach, then rest to release the accelerator | The truck completed level one. Short arrow taps had left it at the start. |
-| Fruit Ninja | Sweep through airborne fruit | Sliced fruit for a score of 3 in a live round. |
+| Fruit Ninja | Hold the ring over the start watermelon to tap, sweep to slice, and pause to lift the blade | The November 14 camera replay started from the title screen and scored 2 by slicing airborne fruit on Poki. |
 | Jetpack Joyride | Reach to thrust and rest to drop | The jetpack lifted Barry above the floor. The game received repeated hold and release pairs. |
 | Master Chess | Dwell on a pawn, then its destination | White advanced a pawn and the computer replied. |
 | Moto X3M | Hold an upward reach to accelerate | The bike left the start and rode up the first ramp. |
@@ -81,6 +81,6 @@ The November 2026 replay opened all fifteen remaining titles on their public gam
 | Temple Run 2 | Press Space to start, then use directional reaches | The focused game received up, right and down arrows during an active run. |
 | Tiny Fishing | Dwell on Play to cast, then steer sideways | The submerged hook moved across the water and caught a fish. |
 
-The on-game ring shows the camera’s aim over pointer games and fills while holding a drag or slice. For chess, select the board itself to give each square more of your comfortable reach. For Blocky Blast, include the tray in the rectangle. Players can adjust dwell time in the controller.
+The on-game ring shows the camera’s aim over pointer games and fills while holding a drag or slice. For chess, select the board itself to give each square more of your comfortable reach. For Blocky Blast, include the tray in the rectangle. Players can adjust dwell time in the controller, including the menu tap in Slice mode.
 
 These checks cover the listed actions in desktop Chromium with repeatable camera input. Comfortable movement ranges, fatigue and sustained play with patients still need hands-on testing. The public-site results do not measure EEG or Edge-specific behavior.
