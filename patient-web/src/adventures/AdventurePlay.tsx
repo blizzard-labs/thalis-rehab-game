@@ -8,7 +8,9 @@ import {
 import type { CameraAim } from "../practice/StarPlay";
 import { LighthouseArt } from "./Lighthouse";
 import { keeperStory } from "./keeperStory";
-import { OrchardArt, fruitName } from "./Orchard";
+import { crateSize, harvestAt, orchardStop } from "./orchardTrail";
+import { trailSeed } from "./trail";
+import { OrchardArt } from "./Orchard";
 import { RiverArt, landingName } from "./River";
 import "./adventures.css";
 
@@ -25,6 +27,7 @@ export function AdventurePlay({
   onEnd,
   lockedPause,
   clock,
+  reducedMotion,
 }: {
   round: PracticeRound;
   side: Side;
@@ -38,6 +41,7 @@ export function AdventurePlay({
   onEnd: () => void;
   lockedPause: boolean;
   clock: string;
+  reducedMotion: boolean;
 }) {
   const { game, rewards } = round.record;
   const manual = round.source === "button",
@@ -57,6 +61,12 @@ export function AdventurePlay({
         ? "Imagine pulling the oar, then relax."
         : "Pull toward your calibrated position, then ease back.";
   const fruit = game === "fruit";
+  const seed = trailSeed(round.record.id);
+  const leg = Math.floor(rewards / crateSize),
+    packed = rewards % crateSize;
+  const forks = round.record.orchardForks ?? [];
+  const stop = orchardStop(seed, leg, forks.includes(leg));
+  const distance = reducedMotion ? rewards : round.travelDistance;
   let cue = riverCue;
   if (fruit) {
     if (round.carryingFruit)
@@ -66,7 +76,7 @@ export function AdventurePlay({
     else if (round.catchProgress > 0) cue = "Hold here to pick the fruit.";
     else
       cue = manual
-        ? `Pick the ripe ${fruitName(rewards)} with the ring.`
+        ? `Pick the ripe ${harvestAt(seed, rewards, forks)} with the ring.`
         : round.source === "eeg"
           ? "Imagine reaching for the ripe fruit, then relax."
           : "Guide your hand to the ripe fruit and hold briefly.";
@@ -85,8 +95,10 @@ export function AdventurePlay({
   if (round.celebrating) {
     if (game === "river" && rewards % 4 === 0)
       cue = `Landfall at ${landingName(channel, rewards)}!`;
-    if (fruit && !round.carryingFruit && rewards % 6 === 0)
-      cue = `Harvest basket ${rewards / 6} is full!`;
+    if (fruit && !round.carryingFruit && packed === 0) {
+      const delivered = orchardStop(seed, leg - 1, forks.includes(leg - 1));
+      cue = `${delivered.name} stocked with fresh ${delivered.product}!`;
+    }
     if (keeper && work > 12 && work % 3 === 0)
       cue = `${keeperStory(work - 1).ship} is safely home.`;
   }
@@ -122,6 +134,7 @@ export function AdventurePlay({
         <div className="adventure-scene orchard-stage">
           <OrchardArt
             count={rewards}
+            {...{ seed, distance, forks }}
             held={round.carryingFruit}
             side={side}
             aim={aim}
@@ -134,14 +147,26 @@ export function AdventurePlay({
               manual && !round.paused && round.carryingFruit ? pull : undefined
             }
           />
-          <span className="scene-caption">
-            Basket {1 + Math.floor(rewards / 6)} · {rewards % 6} of 6 fruit
-          </span>
+          <div
+            className="trail-sign"
+            aria-label={`Delivery ${leg + 1} to the ${stop.name}, ${packed} of ${crateSize} fruit packed`}
+          >
+            <small>Delivery {leg + 1}</small>
+            <strong>{stop.name}</strong>
+            <span className="trail-meter" aria-hidden="true">
+              {[0, 1, 2].map((i) => (
+                <i key={i} className={i < packed ? "filled" : ""} />
+              ))}
+            </span>
+            <span>
+              {packed} of {crateSize} packed
+            </span>
+          </div>
         </div>
       ) : (
         <div className="adventure-scene river-stage">
           <RiverArt
-            distance={round.rowDistance}
+            distance={distance}
             strokes={rewards}
             phase={phase}
             side={side}
@@ -157,6 +182,29 @@ export function AdventurePlay({
       )}
       <footer className="game-dock adventure-dock">
         {camera && <div className="adventure-camera">{camera}</div>}
+        {fruit && (
+          <fieldset
+            className="route-choices"
+            disabled={round.paused || packed > 0 || round.carryingFruit}
+          >
+            <legend>Deliver to</legend>
+            {[false, true].map((alternate) => (
+              <button
+                key={Number(alternate)}
+                aria-pressed={forks.includes(leg) === alternate}
+                onClick={() => {
+                  const recent = forks.filter((n) => n === leg - 1);
+                  round.record.orchardForks = alternate
+                    ? [...recent, leg]
+                    : recent;
+                  redraw();
+                }}
+              >
+                {orchardStop(seed, leg, alternate).name}
+              </button>
+            ))}
+          </fieldset>
+        )}
         {game === "river" && (
           <fieldset className="route-choices" disabled={round.paused}>
             <legend>Choose your channel</legend>

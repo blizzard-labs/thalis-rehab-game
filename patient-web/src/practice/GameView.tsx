@@ -186,6 +186,7 @@ export function Play({
   if (!garden && round.record.game !== "stars")
     return (
       <AdventurePlay
+        reducedMotion={reduced}
         aim={
           round.source === "camera" || round.source === "blended"
             ? aim.current

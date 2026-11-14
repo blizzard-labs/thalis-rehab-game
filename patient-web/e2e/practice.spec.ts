@@ -277,6 +277,11 @@ test("orchard fruit must be picked and delivered, including with a single switch
   await page.goto("/");
   await page.getByRole("button", { name: /Fruit Picking/ }).click();
   await page.getByRole("button", { name: "Start game" }).click();
+  const choices = page.getByRole("group", { name: "Deliver to" });
+  const detour = choices.getByRole("button").nth(1);
+  const stop = await detour.innerText();
+  await detour.click();
+  await expect(page.locator(".trail-sign strong")).toHaveText(stop);
   await page.getByTestId("ripe-fruit").click();
   await expect(page.getByText("0 fruit", { exact: true })).toBeVisible();
   await page.getByTestId("fruit-basket").click();
@@ -285,6 +290,21 @@ test("orchard fruit must be picked and delivered, including with a single switch
   await page.keyboard.press("Space");
   await page.keyboard.press("Space");
   await expect(page.getByText("2 fruit", { exact: true })).toBeVisible();
+  await expect(detour).toBeDisabled();
+  const trail = page.locator("[data-orchard-travel]");
+  await page.getByRole("button", { name: "Pause", exact: true }).click();
+  const pausedPosition = await trail.getAttribute("transform");
+  await page.waitForTimeout(250);
+  expect(await trail.getAttribute("transform")).toBe(pausedPosition);
+  await page.getByRole("button", { name: "Resume" }).click();
+  for (let n = 2; n < 9; n++) {
+    await page.getByRole("button", { name: "Pick", exact: true }).click();
+    await page.getByRole("button", { name: "Place in basket" }).click();
+  }
+  await expect(page.locator(".trail-sign small")).toHaveText("Delivery 4");
+  await expect(page.getByText("9 fruit", { exact: true })).toBeVisible();
+  await expect(trail).not.toHaveAttribute("transform", pausedPosition!);
+  await expect(detour).toBeEnabled();
   await page.getByRole("button", { name: "End session" }).click();
   await expect(page.getByText("Fruit", { exact: true })).toBeVisible();
 });

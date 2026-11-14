@@ -51,6 +51,7 @@ export interface PracticeRecord {
   schedule?: "short" | "clinic";
   harborBase?: number;
   channel?: Channel;
+  orchardForks?: number[];
   rowing?: "single" | "paired";
   garden?: { next: Seed; bed: Seed[]; goal?: number };
   calibration?: {
@@ -174,7 +175,7 @@ export class PracticeRound {
       this.record.game === "fruit" && this.record.actions > this.record.rewards
     );
   }
-  get rowDistance() {
+  get travelDistance() {
     const remaining = Math.max(0, 1 - this.elapsedSinceReward / 0.85);
     return Math.max(0, this.record.rewards - remaining * remaining);
   }

@@ -1,25 +1,24 @@
+import { OrchardTrail, orchardLight } from "./OrchardScenery";
+import { harvestAt, crateSize, type FruitKind } from "./orchardTrail";
+import { variation } from "./trail";
 import { useLandscape } from "./useLandscape";
 import { useId, useState } from "react";
 import { armAt, shoulder, type Point } from "../reach/starGeometry";
 import type { CameraAim } from "../practice/StarPlay";
 import type { Side } from "../practice/session";
 
-const harvest = ["apple", "pear", "plum"] as const;
-export const fruitName = (n: number) => harvest[n % harvest.length];
-export function orchardGoal(n: number, side: Side): Point {
-  // Every fruit is inside the reach of the same two-bone rig as Star Catcher.
-  const spots = [
-    [130, -125],
-    [-90, -155],
-    [170, 45],
-    [44, -195],
-    [-137, -45],
-    [135, -65],
-  ];
-  const [x, y] = spots[n % spots.length];
-  return { x: shoulder.x + (side === "left" ? -1 : 1) * x, y: shoulder.y + y };
+const noForks: readonly number[] = [];
+export function orchardGoal(n: number, side: Side, seed: number): Point {
+  // Alternate sides of the canopy and vary height within comfortable rig reach.
+  const angle = ((-63 + variation(seed, n, 2) * 82) * Math.PI) / 180;
+  const radius = 125 + variation(seed, n, 3) * 69;
+  const sign = ((n + seed) % 2 === 0) === (side === "right") ? 1 : -1;
+  return {
+    x: shoulder.x + sign * Math.cos(angle) * radius,
+    y: shoulder.y + Math.sin(angle) * radius,
+  };
 }
-function Fruit({ kind }: { kind: ReturnType<typeof fruitName> }) {
+function Fruit({ kind }: { kind: FruitKind }) {
   const pear = kind === "pear",
     plum = kind === "plum";
   return (
@@ -34,10 +33,26 @@ function Fruit({ kind }: { kind: ReturnType<typeof fruitName> }) {
               ? "M-2-16c-21-5-26 17-18 31 10 20 26 14 34 0 12-18 5-33-16-31Z"
               : "M0-12c-17-13-30 0-23 21 6 19 14 25 23 20 13 7 23-10 26-24 4-16-12-28-26-17Z"
         }
-        fill={pear ? "#dcad44" : plum ? "#77527d" : "#c85a48"}
+        fill={
+          pear
+            ? "#dcad44"
+            : plum
+              ? "#77527d"
+              : kind === "peach"
+                ? "#efa477"
+                : "#c85a48"
+        }
         stroke={pear ? "#967139" : plum ? "#52395b" : "#943f36"}
         strokeWidth="2"
       />
+      {kind === "peach" && (
+        <path
+          d="M1-10q12 20 1 34"
+          fill="none"
+          stroke="#cf785e"
+          strokeWidth="2"
+        />
+      )}
       <path
         d="M-12-2q-5 5-3 12"
         fill="none"
@@ -52,6 +67,9 @@ function Fruit({ kind }: { kind: ReturnType<typeof fruitName> }) {
 export function OrchardArt({
   count = 0,
   held = false,
+  seed = 0,
+  distance = count,
+  forks = noForks,
   side = "right",
   aim,
   effort = 0,
@@ -60,6 +78,9 @@ export function OrchardArt({
   onDeposit,
 }: {
   count?: number;
+  seed?: number;
+  distance?: number;
+  forks?: readonly number[];
   held?: boolean;
   side?: Side;
   aim?: CameraAim | null;
@@ -71,7 +92,7 @@ export function OrchardArt({
   const landscape = useLandscape(480, 490);
   const id = useId(),
     [hand, setHand] = useState<Point | null>(null);
-  const goal = aim?.goal ?? orchardGoal(count, side);
+  const goal = aim?.goal ?? orchardGoal(count, side, seed);
   const target = aim
     ? (aim.wrist ?? shoulder)
     : (onPick || onDeposit) && hand
@@ -92,7 +113,9 @@ export function OrchardArt({
   const goalAt = screen(goal),
     tip = screen(wrist),
     bend = screen(elbow);
-  const kind = fruitName(count);
+  const kind = harvestAt(seed, count, forks);
+  const light = orchardLight(count);
+  const packed = count % crateSize;
   return (
     <svg
       className="adventure-art orchard-art"
@@ -122,8 +145,8 @@ export function OrchardArt({
           x2="0"
           y2="265"
         >
-          <stop stopColor="#c4d8c4" />
-          <stop offset="1" stopColor="#fff1cc" />
+          <stop stopColor={light.sky} />
+          <stop offset="1" stopColor={light.light} />
         </linearGradient>
         <linearGradient
           id={id + "grass"}
@@ -133,18 +156,18 @@ export function OrchardArt({
           x2="0"
           y2="510"
         >
-          <stop stopColor="#b6bd76" />
-          <stop offset="1" stopColor="#738453" />
+          <stop stopColor={light.turf} />
+          <stop offset="1" stopColor={light.grass} />
         </linearGradient>
         <g id={id + "tree"}>
           <path d="m-5 0 2-69h8l2 69Z" fill="#806c4b" />
           <path
             d="M-41-56q-23-15-5-35-2-19 23-26 16-23 35-9 26-10 38 15 24 18 9 46-8 16-32 14-22 16-42-1Z"
-            fill="#7d986b"
+            fill={light.tree}
           />
           <path
             d="M-42-69q10 13 23 8 17 9 32 0 22 3 44-12-6 25-31 24-23 14-43 0-21 4-25-20Z"
-            fill="#69885e"
+            fill={light.shade}
           />
         </g>
         <g id={id + "leaf"}>
@@ -156,23 +179,13 @@ export function OrchardArt({
       <circle cx="710" cy="85" r="43" fill="#fff1c5" />
       <path
         d="M0 263Q130 135 265 209T534 197q204-112 426 35v100H0Z"
-        fill="#a1b69a"
+        fill={light.hill}
       />
       <path
         d="M0 264q188-69 372 0t330-19q125-43 258 9v1500H0Z"
         fill={`url(#${id}grass)`}
       />
-      {[32, 104, 195, 290, 690, 764, 842, 934].map((x, i) => (
-        <use
-          key={x}
-          href={"#" + id + "tree"}
-          transform={`translate(${x} ${282 + (i % 3) * 17}) scale(${0.39 + (i % 3) * 0.13})`}
-        />
-      ))}
-      <path
-        d="M-800 1200 330 460q173-101 353-157-116 66-198 157L150 1200Z"
-        fill="#cfb587"
-      />
+      <OrchardTrail {...{ id, seed, count, distance, forks }} />
       <path
         d="M83 406Q128 300 107 163L78 66l21-11 43 83q63-48 123-59l6 12q-80 31-106 80 25 95-29 239Z"
         fill="#876249"
@@ -209,7 +222,7 @@ export function OrchardArt({
           transform={`translate(${[63, 205, 820, 905][n]} ${[110, 88, 71, 63][n]}) scale(.45)`}
           opacity=".85"
         >
-          <Fruit kind={fruitName(count + n + 1)} />
+          <Fruit kind={harvestAt(seed, count + n + 1, forks)} />
         </g>
       ))}
       <path
@@ -223,6 +236,19 @@ export function OrchardArt({
         href={"#" + id + "leaf"}
         transform={`translate(${goalAt.x} ${goalAt.y - 31})`}
       />
+      {held && (
+        <g
+          className="harvest-leaves"
+          key={count}
+          pointerEvents="none"
+          transform={`translate(${goalAt.x} ${goalAt.y - 24})`}
+        >
+          <g fill="#c8ae59">
+            <path d="M0 0q-11-7-15 5Q-4 9 0 0Z" />
+            <path d="M9-4q14-7 18 3Q15 4 9-4Z" />
+          </g>
+        </g>
+      )}
       <path
         d={`M480 257 L${bend.x} ${bend.y} L${tip.x} ${tip.y}`}
         fill="none"
@@ -231,6 +257,19 @@ export function OrchardArt({
         strokeLinejoin="round"
         strokeLinecap="round"
       />
+      {held && (
+        <g
+          className="harvest-leaves"
+          key={count}
+          pointerEvents="none"
+          transform={`translate(${goalAt.x} ${goalAt.y - 24})`}
+        >
+          <g fill="#c8ae59">
+            <path d="M0 0q-11-7-15 5Q-4 9 0 0Z" />
+            <path d="M9-4q14-7 18 3Q15 4 9-4Z" />
+          </g>
+        </g>
+      )}
       <path
         d={`M480 257L${480 + (bend.x - 480) * 0.62} ${257 + (bend.y - 257) * 0.62}`}
         stroke="#5c7681"
@@ -290,12 +329,12 @@ export function OrchardArt({
           stroke="#785638"
           strokeWidth="5"
         />
-        {Array.from({ length: Math.min(count, 6) }, (_, i) => (
+        {Array.from({ length: packed }, (_, i) => (
           <g
             key={i}
             transform={`translate(${-24 + (i % 3) * 21} ${-4 - Math.floor(i / 3) * 11}) scale(.34)`}
           >
-            <Fruit kind={fruitName(Math.max(0, count - 6) + i)} />
+            <Fruit kind={harvestAt(seed, count - packed + i, forks)} />
           </g>
         ))}
         <path
@@ -310,6 +349,19 @@ export function OrchardArt({
           stroke="#88623f"
           strokeWidth="2"
         />
+        <path
+          d="M-36 32h73l14-10"
+          stroke="#73573e"
+          strokeWidth="5"
+          fill="none"
+          strokeLinecap="round"
+        />
+        {[-23, 23].map((x) => (
+          <g key={x} transform={`translate(${x} 38) rotate(${distance * 120})`}>
+            <circle r="8" fill="#a57b50" stroke="#654c3e" strokeWidth="3" />
+            <path d="M-6 0H6M0-6V6" stroke="#eed2a1" strokeWidth="2" />
+          </g>
+        ))}
         <rect x="-48" y="-39" width="96" height="75" fill="transparent" />
       </g>
       {held && (
@@ -320,12 +372,6 @@ export function OrchardArt({
           <Fruit kind={kind} />
         </g>
       )}
-      {Array.from({ length: Math.min(5, Math.floor(count / 6)) }, (_, i) => (
-        <g key={i} transform={`translate(${48 + i * 47} 382)`}>
-          <path d="m0 0 40-4v25l-40 4Z" fill="#be9464" stroke="#796243" />
-          <path d="m3 9 35-3" stroke="#805f43" strokeWidth="2" />
-        </g>
-      ))}
     </svg>
   );
 }

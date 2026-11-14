@@ -144,3 +144,35 @@
 .adventure .scene-caption {
   pointer-events: none;
 }
+
+.adventure .trail-sign {
+  position: absolute;
+  top: 12px;
+  left: clamp(10px, 2vw, 28px);
+  display: grid;
+  gap: 3px;
+  min-width: 110px;
+  padding: 9px 14px;
+  color: #423e35;
+  background: #fff8e8f5;
+  border: 1px solid #bda882;
+  border-radius: 5px 13px 13px 5px;
+  box-shadow: inset 3px 0 #a66a45, 0 2px 6px #514a3722;
+  pointer-events: none;
+}
+.trail-sign small { font: 650 11px/1.2 system-ui; letter-spacing: .08em; text-transform: uppercase; }
+.trail-sign strong { font: 600 clamp(17px, 2vw, 23px)/1.15 Georgia, serif; }
+.trail-sign > span:last-child { font: 13px/1.25 system-ui; }
+.trail-meter { display: flex; gap: 3px; margin-block: 2px; }
+.trail-meter i { flex: 1; height: 4px; background: #d8cdb5; border-radius: 3px; }
+.trail-meter i.filled { background: #a3633b; }
+@media (prefers-reduced-motion: no-preference) {
+  .harvest-leaves > g { animation: harvest-fall .7s ease-out both; }
+  @keyframes harvest-fall { from {opacity: 1; transform: translateY(-4px)} to {opacity: 0; transform: translateY(21px) rotate(12deg)} }
+  .orchard-art stop { transition: stop-color .75s; }
+}
+.adventure[data-paused="true"] .harvest-leaves > g { animation-play-state: paused; }
+@media (max-height: 580px), (max-width: 600px) {
+  .adventure .trail-sign { grid-template-columns: auto auto; align-items: center; column-gap: 8px; min-width: 0; padding: 5px 10px; top: 5px; left: 6px; }
+  .trail-sign strong { font-size: 16px; }
+}

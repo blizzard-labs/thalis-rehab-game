@@ -29,7 +29,7 @@ export const gameDetails = {
   fruit: {
     icon: "🍐",
     description:
-      "Reach for ripe orchard fruit and bring it back to your harvest basket.",
+      "Pick ripe fruit, fill your cart and make deliveries along an endless orchard lane.",
     unit: "fruit",
     units: "fruit",
   },
