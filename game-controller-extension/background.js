@@ -231,7 +231,9 @@ async function chooseArea() {
     "position:fixed;inset:0;z-index:2147483647;background:#142d3944;cursor:crosshair;touch-action:none";
   const help = document.createElement("div");
   help.style.cssText =
-    "position:absolute;left:20px;right:20px;top:12px;padding:14px 18px;background:#fff;color:#153b30;border-radius:10px;font:16px/1.5 system-ui;pointer-events:none";
+    "position:absolute;left:20px;right:20px;top:12px;padding:14px 18px;background:#fff;color:#153b30;border-radius:10px;font:16px/1.5 system-ui;user-select:none";
+  if (!matchMedia("(prefers-reduced-motion: reduce)").matches)
+    help.style.transition = "opacity 140ms ease-out";
   help.textContent =
     "NeuroReach · Drag a rectangle over just the game. Keep advertisements outside it. Escape cancels.";
   const box = document.createElement("div");
@@ -241,6 +243,13 @@ async function chooseArea() {
   document.documentElement.append(cover);
   cover.focus({ preventScroll: true });
   let start = null;
+  // Pointer events bubble to the picker, so a selection can start inside the hint.
+  help.onpointerenter = () => {
+    help.style.opacity = "0.45";
+  };
+  help.onpointerleave = () => {
+    if (!start) help.style.opacity = "1";
+  };
   const removePicker = () => {
     const restoreFocus = document.activeElement === cover;
     cover.remove();
@@ -295,6 +304,7 @@ async function chooseArea() {
   document.addEventListener("keydown", escape, true);
   cover.onpointerdown = (event) => {
     start = { x: event.clientX, y: event.clientY };
+    help.style.opacity = "0.45";
     cover.setPointerCapture(event.pointerId);
   };
   cover.onpointermove = (event) => {
@@ -317,6 +327,7 @@ async function chooseArea() {
       viewportHeight: innerHeight,
     };
     start = null;
+    help.style.opacity = help.matches(":hover") ? "0.45" : "1";
     if (
       rect.width < 120 ||
       rect.height < 100 ||

@@ -175,11 +175,17 @@ test("external-game controller works with keyboard controls at 200% and 400% zoo
       { timeout: 10000 },
     );
     const overlay = run.game.locator("[data-neuroreach-area]");
-    await overlay.dragTo(overlay, {
-      timeout: 7000,
-      sourcePosition: { x: 120, y: 60 },
-      targetPosition: { x: 720, y: 560 },
-    });
+    const hint = overlay.getByText(/Drag a rectangle/);
+    await hint.hover({ position: { x: 80, y: 15 } });
+    await expect(hint).toHaveCSS("opacity", "0.45");
+    await run.game.mouse.move(150, 240);
+    await expect(hint).toHaveCSS("opacity", "1");
+    // The prompt accepts a drag start even when it covers the top of the game.
+    await hint.hover({ position: { x: 80, y: 15 } });
+    await run.game.mouse.down();
+    await run.game.mouse.move(720, 560, { steps: 6 });
+    await expect(hint).toHaveCSS("opacity", "0.45");
+    await run.game.mouse.up();
     await expect
       .poll(() => worker.evaluate(() => (globalThis as any).status().connected))
       .toBe(true);
