@@ -1,9 +1,9 @@
-import logoSrc from '../../img/logo.png';
+import { Brand } from '../brand/Brand';
 
 export function WelcomeScene({ firstName, onBegin }: { firstName: string; onBegin: () => void }) {
   return (
     <main className="scene scene--welcome" aria-labelledby="welcome-title">
-      <img src={logoSrc} alt="NeuroReach" className="welcome-logo" />
+      <Brand />
       <div className="welcome-card">
         <div className="mascot" aria-hidden="true" />
         <h1 id="welcome-title" className="welcome-title">

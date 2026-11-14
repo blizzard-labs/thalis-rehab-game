@@ -1,6 +1,6 @@
 # NeuroReach — Development Status & TODOs
 
-_Localhost status reviewed 2026-11-12. Paired Electron inventory dated 2026-07-10. Reference spec: [`docs/specs.md`](specs.md). Game design docs:
+_Localhost status reviewed 2026-11-13. Paired Electron inventory dated 2026-07-10. Reference spec: [`docs/specs.md`](specs.md). Game design docs:
 [`gardengrow.md`](gardengrow.md), [`reachcollect.md`](reachcollect.md)._
 
 ## Localhost prototype
@@ -8,6 +8,7 @@ _Localhost status reviewed 2026-11-12. Paired Electron inventory dated 2026-07-1
 | Entry | Current behavior |
 |---|---|
 | Root `npm start` | Starts the browser player on loopback and attempts to start the optional Python companion. |
+| Website identity | The patient, library, controller and staff headers pair the supplied circular seal with the existing NeuroReach title and a linked Powered by THALis badge. The home screen opens directly on the library invitation and five game cards. Warm ivory, plum, peach and lavender adapt the newsletter palette. |
 | Standalone play | All five games support one-button, camera, Unicorn EEG and blended input. Garden Grow retains every bloom and attracts bees. Star Catcher varies targets across up to four calibrated directions and keeps completed constellations. Rowing, fruit pickup and delivery, and the persistent lighthouse have game-specific interactions. Guest history is optional and exportable. Next guest resets saved rounds, lighthouse progress and the guest calibration link. |
 | Existing-game library | Independent-only links to four full catalogs and six familiar games, each with its official icon served locally. The downloadable Chrome/Edge extension maps camera, EEG, blended or switch input to a selected external game area. Selection waits for the browser notice to settle; Escape cancels even after game-frame focus, and resize/reselection recovery is tested. Compact zoomed windows stack controls to accommodate wider system fonts. No external games are added to supervised sessions or clinical reports. See [scope and verification](game-library.md). |
 | EEG companion | Rescans use the stream currently shown and multiple streams require an explicit available selection. Discovers supported Unicorn streams, checks continuity and contact, collects 60 clean seconds of rest, optionally trains and reuses a personal CSP/LDA model, and stops scoring on missing data. |

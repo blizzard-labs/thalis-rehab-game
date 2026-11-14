@@ -8,6 +8,14 @@ test("independent game library opens official services and is usable on a phone"
   await page.goto("/");
   await page.getByRole("button", { name: /Play familiar games/ }).click();
   await expect(page).toHaveURL(/#library$/);
+  const header = page.getByRole("banner");
+  await header
+    .locator("img")
+    .evaluate((logo: HTMLImageElement) => logo.decode());
+  await expect(
+    header.getByRole("link", { name: "Powered by THALis" }),
+  ).toHaveAttribute("href", "https://krishna-bhatt.com/");
+  await expect(page.locator(".library-hero img")).toHaveCount(0);
   await expect(
     page.getByRole("heading", { name: "Explore full libraries" }),
   ).toBeVisible();
@@ -25,7 +33,9 @@ test("independent game library opens official services and is usable on a phone"
     .all()) {
     await expect(anchor).toHaveAttribute("target", "_blank");
     await expect(anchor).toHaveAttribute("rel", "noopener noreferrer");
-    await anchor.locator("img").evaluate((logo: HTMLImageElement) => logo.decode());
+    await anchor
+      .locator("img")
+      .evaluate((logo: HTMLImageElement) => logo.decode());
   }
   await page.getByLabel("Find a favorite").fill("2048");
   await expect(page.locator(".library-favorites a")).toHaveCount(1);

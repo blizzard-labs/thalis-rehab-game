@@ -1,7 +1,9 @@
+@import "./brand/theme.css";
+
 :root {
   /* Brand: deep grape purple over warm off-white are the dominant colors.
      --good green is reserved for semantic "go" cues (ready gate, REC, MI). */
-  --warm-bg: #fdfbf9; --purple: #6a4c93; --purple-deep: #553a78;
+  --warm-bg: var(--nr-paper); --purple: #6a4c93; --purple-deep: #553a78;
   --warm-accent: var(--purple); --ink: #33425a;
   --good: #2e7d54; --grow: #b5651f;
 }
@@ -9,8 +11,8 @@
 body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, sans-serif; color: var(--ink); }
 .scene { min-height: 100vh; display: flex; flex-direction: column; align-items: center;
   justify-content: center; gap: 16px; padding: 24px; background: var(--warm-bg); }
-.scene--welcome { position: relative; }
-.welcome-logo { position: absolute; top: 24px; width: 650px; max-width: 85vw; z-index: 0; }
+.scene--welcome { position: relative; justify-content: flex-start; }
+.scene--welcome .welcome-card { margin-block: auto; }
 .welcome-card { display: flex; flex-direction: column; align-items: center; gap: 16px; position: relative; z-index: 1; }
 .welcome-title, .cal-cue, .summary-title { font-size: clamp(28px, 5vw, 44px); text-align: center; }
 .big-button { font-size: 24px; padding: 18px 36px; border: 0; border-radius: 14px;
@@ -395,5 +397,5 @@ body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, sans-serif; co
   animation: waiting-spin 0.8s linear infinite; }
 @keyframes waiting-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .waiting__spin { animation: none; } }
-.rest-notice {position:fixed;inset:0;display:grid;place-items:center;background:#f8f8f0ed;color:#254935;font-size:clamp(22px,4vw,40px);z-index:15;text-align:center;padding:24px}
+.rest-notice {position:fixed;inset:0;display:grid;place-items:center;background:#fdfbf9ed;color:var(--nr-violet-deep);font-size:clamp(22px,4vw,40px);z-index:15;text-align:center;padding:24px}
 .simulation-label {position:fixed;top:12px;left:12px;z-index:12;background:#fff9d9;color:#5f4215;font-size:14px;font-weight:600;padding:6px 10px;border-radius:6px}

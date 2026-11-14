@@ -25,6 +25,8 @@
   gap: 12px;
 }
 .practice-app .game-heading h1 {
+  font-family: Baskerville, Georgia, serif;
+  font-weight: 600;
   margin: 0 0 4px;
   font-size: clamp(30px, 4vw, 54px);
 }

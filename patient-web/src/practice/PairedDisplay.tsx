@@ -1,3 +1,4 @@
+import { Brand } from "../brand/Brand";
 import { useEffect, useRef, useState } from "react";
 import "./practice.css";
 import type { LiveInput } from "./station";
@@ -233,7 +234,7 @@ export function PairedDisplay({
     <div ref={screen} className={local ? "station-player" : "practice-app"}>
       {!local && (
         <header className="practice-nav">
-          <span className="brand">NeuroReach</span>
+          <Brand />
           <span>Shared with your clinician</span>
         </header>
       )}

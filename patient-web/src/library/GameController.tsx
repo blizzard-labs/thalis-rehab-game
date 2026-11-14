@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { Brand } from "../brand/Brand";
 import { HeadsetSetup } from "../practice/HeadsetSetup";
 import { useHeadset } from "../practice/useHeadset";
 import { useMotionCamera } from "../practice/useMotionCamera";
@@ -354,7 +355,8 @@ export function GameController() {
   return (
     <div className="practice-app game-controller">
       <main className="controller-main">
-        <p className="library-eyebrow">NeuroReach · Independent play</p>
+        <Brand />
+        <p className="library-eyebrow">Independent play</p>
         <h1>Game controller</h1>
         <div className="controller-game">
           <strong>{status.game || "No game connected"}</strong>

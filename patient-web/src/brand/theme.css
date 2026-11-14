@@ -1,0 +1,112 @@
+@font-face {
+  font-family: "IBM Plex Sans";
+  src: url("./ibm-plex-sans-latin.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 100 700;
+  font-display: swap;
+}
+
+:root {
+  --nr-paper: #fdf9f4;
+  --nr-ink: #38323e;
+  --nr-muted: #625969;
+  --nr-violet: #704f80;
+  --nr-violet-deep: #583e69;
+  --nr-blue: #4e6785;
+  --nr-link: #465f83;
+  --nr-gold: #f8e5b5;
+  --nr-wash: #f1e9f5;
+  --nr-blue-wash: #edf2f8;
+  --nr-line: #e1d6dc;
+  --nr-control-line: #958a9a;
+  --nr-body-font: "IBM Plex Sans", "Segoe UI", Arial, sans-serif;
+  --nr-heading-font: Verdana, "Segoe UI", sans-serif;
+}
+
+.nr-brand {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  gap: 10px;
+  flex: none;
+  white-space: nowrap;
+}
+.nr-brand-seal {
+  width: 56px;
+  height: auto;
+}
+.nr-brand .nr-brand-name {
+  margin: 0;
+  font:
+    700 30px/1 Baskerville,
+    Georgia,
+    serif;
+  letter-spacing: -0.045em;
+  color: var(--nr-violet-deep);
+}
+.nr-brand .nr-credit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.28em;
+  min-height: 26px;
+  padding: 1px 10px;
+  background: var(--nr-gold);
+  border: 1px solid #d6b878;
+  border-radius: 999px;
+  color: #604f33;
+  font: 500 13px/1.2 var(--nr-body-font);
+  text-decoration: none;
+}
+.nr-credit strong {
+  font-weight: 700;
+}
+.nr-brand .nr-credit:hover {
+  text-decoration: underline;
+}
+.nr-credit:focus-visible {
+  outline: 3px solid var(--nr-link);
+  outline-offset: 3px;
+}
+@media (max-width: 650px) {
+  .nr-brand {
+    column-gap: 5px;
+  }
+  .nr-brand-seal {
+    width: 39px;
+  }
+  .nr-brand .nr-brand-name {
+    font-size: 25px;
+  }
+  .nr-brand .nr-credit {
+    font-size: 12px;
+    padding-inline: 6px;
+  }
+}
+@media (max-width: 360px) {
+  .nr-brand {
+    gap: 4px;
+  }
+  .nr-brand-seal {
+    width: 32px;
+  }
+  .nr-brand .nr-brand-name {
+    font-size: 23px;
+  }
+  .nr-brand .nr-credit {
+    font-size: 12px;
+    padding-inline: 4px;
+  }
+}
+/* Keep the badge beside the name even in a zoomed controller window. */
+@media (max-width: 280px) {
+  .nr-brand-seal { width: 26px; }
+  .nr-brand .nr-brand-name { font-size: 19px; }
+  .nr-brand .nr-credit {
+    display: inline-grid;
+    gap: 0;
+    text-align: center;
+    padding: 3px 4px;
+  }
+  .nr-credit [aria-hidden] { display: none; }
+}

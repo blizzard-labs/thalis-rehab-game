@@ -38,7 +38,7 @@ function DirectionGuide({
         cy="60"
         r="45"
         fill="none"
-        stroke="#a5b4a8"
+        stroke="var(--nr-control-line)"
         strokeDasharray="2 4"
       />
       {saved.map((point, i) => {
@@ -50,10 +50,10 @@ function DirectionGuide({
               y1="60"
               x2={p.x}
               y2={p.y}
-              stroke="#537658"
+              stroke="var(--nr-blue)"
               strokeWidth="2"
             />
-            <circle cx={p.x} cy={p.y} r="9" fill="#315c48" />
+            <circle cx={p.x} cy={p.y} r="9" fill="var(--nr-blue)" />
             <text
               x={p.x}
               y={p.y + 3.5}
@@ -72,7 +72,7 @@ function DirectionGuide({
           <circle cx={live.x} cy={live.y} r="11" strokeWidth="2" />
         </g>
       )}
-      <circle cx="60" cy="60" r="4" fill="#294232" />
+      <circle cx="60" cy="60" r="4" fill="var(--nr-ink)" />
     </svg>
   );
 }

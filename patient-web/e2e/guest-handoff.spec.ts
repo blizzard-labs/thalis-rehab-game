@@ -83,7 +83,7 @@ test("the next guest starts a fresh harbor and calibration across open tabs", as
     .click();
   await expect(page.getByText("Ready for the next guest.")).toBeVisible();
   await expect(
-    original.getByRole("heading", { name: "Choose a game" }),
+    original.getByRole("heading", { name: "NeuroReach", level: 1, exact: true }),
   ).toBeVisible();
 
   await page.reload();

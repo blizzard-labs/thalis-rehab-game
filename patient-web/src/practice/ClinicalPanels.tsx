@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { Brand } from "../brand/Brand";
 import { gameNames, sourceNames, type PracticeRecord } from "./session";
 import { gameDetails } from "./catalog";
 import {
@@ -22,9 +23,8 @@ export function StationHeader({
   return (
     <header className="cl-mast">
       <div className="cl-identity">
-        <i aria-hidden="true" />
-        <b>NeuroReach</b>
-        <span>Clinical workspace</span>
+        <Brand />
+        <span className="cl-workspace-name">Clinical workspace</span>
       </div>
       <div className="cl-mast-actions">
         {live && <span className="cl-live-label">Session monitor</span>}
@@ -92,7 +92,7 @@ export function ActivityChart({
             x2="650"
             y1={y(high * f)}
             y2={y(high * f)}
-            stroke="#d9e3e4"
+            stroke="var(--nr-line)"
             strokeDasharray={f ? "3 4" : undefined}
           />
           <text x="32" y={y(high * f) + 4} textAnchor="end">
@@ -109,7 +109,7 @@ export function ActivityChart({
               width={width}
               height={109 - y(p.value)}
               rx="2"
-              fill="#247873"
+              fill="var(--nr-blue)"
             >
               <title>
                 {p.label} · {num(p.value)} {unit}
@@ -259,7 +259,7 @@ export function PatientPerformance({
 
 function InputTrace({ display }: { display: DisplayState }) {
   const points = display.trace ?? [];
-  const colors = { camera: "#17655f", eeg: "#564ba3" };
+  const colors = { camera: "var(--camera-trace)", eeg: "var(--eeg-trace)" };
   const usable = points.some((p) => p.camera !== null || p.eeg !== null);
   return (
     <section className="cl-card">
@@ -281,7 +281,7 @@ function InputTrace({ display }: { display: DisplayState }) {
                 x2="410"
                 y1={104 - v * 0.86}
                 y2={104 - v * 0.86}
-                stroke="#cddbdd"
+                stroke="var(--nr-line)"
                 strokeDasharray="3 3"
               />
               <text x="26" y={108 - v * 0.86} textAnchor="end">

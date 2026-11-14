@@ -58,14 +58,6 @@ export function GameLibrary({ back }: { back: () => void }) {
             Edge.
           </p>
         </div>
-        <div className="library-emblem" aria-hidden="true">
-          ✦
-          <span>
-            PLAY
-            <br />
-            YOUR WAY
-          </span>
-        </div>
       </div>
       <div className="library-status">
         <span aria-hidden="true">{status.installed ? "●" : "○"}</span>{" "}

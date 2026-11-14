@@ -1,4 +1,5 @@
 import { ReportButton } from "../reports/ReportReader";
+import { Brand } from "../brand/Brand";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { games, gameDetails } from "./catalog";
 import { LighthouseArt } from "../adventures/Lighthouse";
@@ -270,7 +271,7 @@ function GameSetup({
   return (
     <section className="practice-panel">
       <button onClick={onBack}>← Games</button>
-      <h1>{gameNames[game]}</h1>
+      <h1 className="game-title">{gameNames[game]}</h1>
       <p>{gameDetails[game].description}</p>
       {game === "keeper" && (
         <p role="status">
@@ -436,12 +437,7 @@ export function PracticeApp() {
   return (
     <div className="practice-app">
       <header className="practice-nav">
-        <span className="brand">
-          <span aria-hidden="true" className="brand-mark">
-            ✳
-          </span>{" "}
-          NeuroReach
-        </span>
+        <Brand home={page === "home"} />
         {page === "home" && (
           <button onClick={() => setPage("history")}>Saved sessions</button>
         )}
@@ -449,11 +445,7 @@ export function PracticeApp() {
       <main className="practice-main">
         {page === "home" && (
           <>
-            <h1>Choose a game</h1>
             {handoffComplete && <p role="status">Ready for the next guest.</p>}
-            <p className="intro">
-              Practice at your own pace. You can pause or finish at any time.
-            </p>
             <button
               className="library-entry"
               onClick={() => {

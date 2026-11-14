@@ -13,7 +13,7 @@ for (const zoom of [2, 4]) {
     const run = await zoomHarness(zoom);
     const { page } = run;
     try {
-      await page.getByRole("heading", { name: "Choose a game" }).waitFor();
+      await page.getByRole("heading", { name: "NeuroReach", level: 1, exact: true }).waitFor();
       for (const game of [
         "Garden Grow",
         "Star Catcher",
