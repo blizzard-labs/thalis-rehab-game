@@ -83,7 +83,8 @@
     padding-inline: 6px;
   }
 }
-@media (max-width: 389px) {
+/* Leave room for the wider serif fallbacks used by Linux and Windows browsers. */
+@media (max-width: 450px) {
   .nr-brand {
     gap: 4px;
   }
@@ -102,6 +103,10 @@
   .nr-credit [aria-hidden] { display: none; }
 }
 /* Keep the badge beside the name even in a zoomed controller window. */
+@media (max-width: 359px) {
+  .nr-brand-seal { width: 32px; }
+  .nr-brand .nr-brand-name { font-size: 22px; }
+}
 @media (max-width: 310px) {
   .nr-brand-seal { width: 26px; }
   .nr-brand .nr-brand-name { font-size: 19px; }

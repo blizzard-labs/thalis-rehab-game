@@ -93,12 +93,15 @@ test("published project paths load every game, icons and downloadable controls",
   expect(zip.ok()).toBe(true);
   expect((await zip.body()).subarray(0, 2).toString()).toBe("PK");
   await page.goto("./");
+  for (const width of [320, 390, 430]) {
+    await page.setViewportSize({ width, height: 844 });
+    await expect
+      .poll(() =>
+        page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+      )
+      .toBe(true);
+  }
   await page.setViewportSize({ width: 390, height: 844 });
-  expect(
-    await page.evaluate(
-      () => document.documentElement.scrollWidth <= innerWidth,
-    ),
-  ).toBe(true);
   await page.screenshot({
     path: testInfo.outputPath("website-phone.png"),
     fullPage: true,
