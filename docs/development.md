@@ -171,7 +171,7 @@ The desktop launcher bundles Python, the built website, camera assets, report de
 The declared Mac minimum is macOS 15. Build each architecture natively using Python 3.12 on Mac; the older Intel 3.10 runner runtime has mismatched Tk headers and libraries. Windows currently bundles Python 3.10. Install `packaging/requirements-build.txt` in the build environment (PyInstaller **6.17.0**, with its fix for bundled setuptools dependencies), then:
 
 1. Run `npm run build`.
-2. On Mac, install liblsl on the build machine and set `PYLSL_LIB` to its library path. The build copies it into the app; users do not install it.
+2. On Mac, install liblsl on the build machine and set `PYLSL_LIB` to its library path. The build copies it into the app; users do not install it. When installing build requirements on Intel Mac, also set `OPENSSL_STATIC=1` and `OPENSSL_DIR` to Homebrew's OpenSSL prefix, and use `pip --no-cache-dir`. Cryptography builds from source there and must not dynamically share Python's different OpenSSL library. The workflow checks its linkage before packaging; see the [upstream build guidance](https://cryptography.io/en/stable/installation/#building-cryptography-on-macos).
 3. Run `python -m PyInstaller --clean --noconfirm packaging/companion.spec`.
 4. On Windows, compile `packaging/windows.iss` with Inno Setup 6 and `/DCompanionVersion=0.2.BUILD`.
 5. On Mac, package `dist/NeuroReach.app` with an Applications shortcut using `hdiutil`; see the verification workflow.

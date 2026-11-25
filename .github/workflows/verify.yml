@@ -206,11 +206,26 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - run: python -m pip install -r packaging/requirements-build.txt
-      - name: Prepare bundled LSL
+      - name: Prepare native libraries
         run: |
-          brew install labstreaminglayer/tap/lsl
+          brew install labstreaminglayer/tap/lsl openssl@3
           echo "PYLSL_LIB=$(brew --prefix lsl)/lib/liblsl.dylib" >> "$GITHUB_ENV"
+          echo "OPENSSL_DIR=$(brew --prefix openssl@3)" >> "$GITHUB_ENV"
+      # Intel builds cryptography from source. Its OpenSSL must be linked
+      # statically, like the upstream wheels, to avoid colliding with the
+      # different libssl.3 bundled by Python's standard ssl module.
+      - name: Install packaging dependencies
+        env:
+          OPENSSL_STATIC: '1'
+        run: python -m pip install --no-cache-dir -r packaging/requirements-build.txt
+      - name: Check isolated cryptography linkage
+        run: |
+          python - <<'PY'
+          import subprocess
+          import cryptography.hazmat.bindings._rust as binding
+          libraries = subprocess.check_output(['otool', '-L', binding.__file__], text=True)
+          assert 'libssl' not in libraries and 'libcrypto' not in libraries, libraries
+          PY
       - name: Build desktop application
         env:
           NEUROREACH_VERSION: 0.2.${{ github.run_number }}

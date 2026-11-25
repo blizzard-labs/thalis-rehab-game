@@ -230,6 +230,7 @@ def main():
         import mne
         import sklearn
         import reportlab
+        from cryptography import x509
         from local_companion import DIST
         Path(sys.argv[2]).write_text(json.dumps({
             "frozen": bool(getattr(sys, "frozen", False)),
