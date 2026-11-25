@@ -24,12 +24,27 @@ jobs:
       - name: Require successful verification for this exact revision
         env:
           GH_TOKEN: ${{ github.token }}
+          VERIFICATION_RUN_ID: ${{ github.event.workflow_run.id }}
         run: |
           revision=$(git rev-parse HEAD)
           current=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha')
           test "$revision" = "$current"
-          passed=$(gh run list --workflow verify.yml --commit "$revision" --status success --json databaseId --jq 'length')
-          test "$passed" -gt 0
+          run_id="$VERIFICATION_RUN_ID"
+          if test -z "$run_id"; then
+            # Filter locally: GitHub's head_sha/status search can omit a run
+            # that the individual run endpoint already reports as successful.
+            run_id=$(gh run list --workflow verify.yml --branch main --event push --limit 100 --json databaseId,headSha,conclusion |
+              jq -r --arg revision "$revision" '[.[] | select(.headSha == $revision and .conclusion == "success")][0].databaseId // empty')
+          fi
+          test -n "$run_id"
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run_id" |
+            jq --exit-status --arg revision "$revision" '
+              .head_sha == $revision and
+              .head_branch == "main" and
+              .path == ".github/workflows/verify.yml" and
+              .event == "push" and
+              .status == "completed" and
+              .conclusion == "success"'
       - uses: actions/setup-node@v4
         with:
           node-version: 22

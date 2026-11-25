@@ -2,7 +2,7 @@
 
 ## Public website release
 
-The [public website](https://blizzard-labs.github.io/thalis-rehab-game/) serves revision `6c2f3aed6b6fe40d3fcd1fea6d26ca35e1151c4f`, verified on November 25, 2026. Its [full verification](https://github.com/blizzard-labs/thalis-rehab-game/actions/runs/45602854007) and [Pages publication](https://github.com/blizzard-labs/thalis-rehab-game/actions/runs/45604868554) both passed.
+The first release of the [public website](https://blizzard-labs.github.io/thalis-rehab-game/) was revision `6c2f3aed6b6fe40d3fcd1fea6d26ca35e1151c4f`, verified on November 25, 2026. The current deployed revision is available in [release.json](https://blizzard-labs.github.io/thalis-rehab-game/release.json). Its [full verification](https://github.com/blizzard-labs/thalis-rehab-game/actions/runs/45602854007) and [Pages publication](https://github.com/blizzard-labs/thalis-rehab-game/actions/runs/45604868554) both passed.
 
 - Full verification: five launcher/site-boundary checks, 155 patient unit tests, 178 console unit tests, 53 Chromium browser checks, five Firefox checks and five WebKit checks. The signal suite passed 152 tests with seven intentional skips (six hardware checks and opt-in cued training).
 - Packaged Windows: nine record/service checks, twelve session/browser checks, and three isolated monitor timing runs. The latter measured 48, 61 and 49 ms p95 displayed timestamp age, with 42, 40 and 41 distinct updates in two seconds. Upgrade and rollback from the prior verified installer preserved login, participant, events, feedback and report.
