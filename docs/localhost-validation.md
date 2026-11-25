@@ -1,4 +1,17 @@
-# Localhost verification
+# Software and deployment verification
+
+## Public website release
+
+The [public website](https://blizzard-labs.github.io/thalis-rehab-game/) serves revision `6c2f3aed6b6fe40d3fcd1fea6d26ca35e1151c4f`, verified on November 25, 2026. Its [full verification](https://github.com/blizzard-labs/thalis-rehab-game/actions/runs/45602854007) and [Pages publication](https://github.com/blizzard-labs/thalis-rehab-game/actions/runs/45604868554) both passed.
+
+- Full verification: five launcher/site-boundary checks, 155 patient unit tests, 178 console unit tests, 53 Chromium browser checks, five Firefox checks and five WebKit checks. The signal suite passed 152 tests with seven intentional skips (six hardware checks and opt-in cued training).
+- Packaged Windows: nine record/service checks, twelve session/browser checks, and three isolated monitor timing runs. The latter measured 48, 61 and 49 ms p95 displayed timestamp age, with 42, 40 and 41 distinct updates in two seconds. Upgrade and rollback from the prior verified installer preserved login, participant, events, feedback and report.
+- Production build: six Chromium website scenarios and two WebKit scenarios passed on GitHub's Linux runner before publication.
+- Live address: the same six Chromium scenarios and two WebKit scenarios passed without substituting the website responses. Coverage includes all five games, project-path assets, phone widths of 320/390/430px, notices/accessibility, staff/EEG companion entry, camera calibration and a star catch using recorded movement, offline play/PDF export, and input into a cross-origin game fixture through the real extension.
+- A separate native-browser check loaded the public controller in the actual extension sidebar, switched to the pop-up and back, and verified input and remembered layout. The public ZIP's nine files match the repository's extension 0.4.0 sources byte for byte; `release.json` matches the verified revision.
+- Live desktop and phone screens were visually reviewed. An independent guest round produced a valid two-page PDF, and its preview and exported first page were visually checked. No page-level JavaScript errors occurred in that walkthrough.
+
+These are software and emulated/recorded-input checks. Physical EEG validation is excluded from this website release; real camera/device combinations and separate-device clinic Wi-Fi timing still need their own observations. The public site supports independent play. Supervised records, pairing and EEG remain in the local companion, and its unsigned prototype installer is not presented as a generally released clinical product.
 
 ## Software acceptance
 
@@ -38,7 +51,7 @@ A seven-second localhost comparison used two separate Chromium browser contexts,
 
 A separate supervised Garden Grow run used a moving 15 fps pose fixture. The clinician saw 70 distinct preview images in seven seconds and a 95th-percentile game timestamp age of 122 ms. Physical patient-device performance and clinic Wi-Fi latency require measurement on site.
 
-The browser regression `moving patient screen updates in place at interactive speed` exercises the paired HTTPS workflow. The relay tests cover slow viewers, reconnecting to the latest scene, capture stopping when the last viewer leaves, and compatibility with older clients.
+The browser regression `moving patient screen updates in place at interactive speed` exercises the paired HTTPS workflow. The packaged Windows job repeats it three times in a separate worker invocation, requiring more than 14 displayed updates over two seconds, p95 timestamp age below 220 ms, and unchanged heading identity. Synthetic EEG tests run separately. Trace recording is disabled for this wall-clock benchmark because its screenshots and DOM snapshots add measurement overhead; failure screenshots and timing logs remain available. Other browser regressions retain failure traces. The relay tests cover slow viewers, reconnecting to the latest scene, capture stopping when the last viewer leaves, and compatibility with older clients.
 
 #### Camera game and clinician reach reading
 
