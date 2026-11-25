@@ -7,6 +7,19 @@ on:
 permissions:
   contents: read
 jobs:
+  companion-web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm --prefix patient-web ci
+      - run: npm run build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: neuroreach-web
+          path: patient-web/dist
   web:
     runs-on: ubuntu-latest
     steps:
@@ -41,10 +54,6 @@ jobs:
           name: browser-failure-diagnostics
           path: patient-web/test-results
           retention-days: 7
-      - uses: actions/upload-artifact@v4
-        with:
-          name: neuroreach-web
-          path: patient-web/dist
   signal-tests:
     runs-on: windows-latest
     steps:
@@ -59,7 +68,7 @@ jobs:
       actions: read
       contents: read
     runs-on: windows-latest
-    needs: web
+    needs: companion-web
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
@@ -69,7 +78,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.10'
-      - run: python -m pip install -r signal-engine/requirements-companion.txt pyinstaller==6.16.0 pytest
+      - run: python -m pip install -r packaging/requirements-build.txt pytest
       - run: python -m pytest -q signal-engine/tests/test_clinic_records.py signal-engine/tests/test_local_companion.py signal-engine/tests/test_display_pairing.py signal-engine/tests/test_personal_model.py
       - uses: actions/setup-node@v4
         with:
@@ -176,7 +185,7 @@ jobs:
           path: dist/NeuroReach-Setup.exe
 
   macos-companion:
-    needs: web
+    needs: companion-web
     strategy:
       fail-fast: false
       matrix:
@@ -195,7 +204,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.10'
-      - run: python -m pip install -r signal-engine/requirements-companion.txt pyinstaller==6.16.0 pillow
+      - run: python -m pip install -r packaging/requirements-build.txt
       - name: Prepare bundled LSL
         run: |
           brew install labstreaminglayer/tap/lsl

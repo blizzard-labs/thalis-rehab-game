@@ -168,7 +168,7 @@ The desktop launcher bundles Python, the built website, camera assets, report de
 | macOS Apple silicon | `macos-15` | `NeuroReach-macOS-Apple-Silicon.dmg` |
 | macOS Intel | `macos-15-intel` | `NeuroReach-macOS-Intel.dmg` |
 
-The declared Mac minimum is macOS 15. Build each architecture natively. Install companion requirements, **PyInstaller 6.16.0**, and Pillow in the build environment, then:
+The declared Mac minimum is macOS 15. Build each architecture natively. Install `packaging/requirements-build.txt` in the build environment (PyInstaller **6.17.0**, with its fix for bundled setuptools dependencies), then:
 
 1. Run `npm run build`.
 2. On Mac, install liblsl on the build machine and set `PYLSL_LIB` to its library path. The build copies it into the app; users do not install it.
