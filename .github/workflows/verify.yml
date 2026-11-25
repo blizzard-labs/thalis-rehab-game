@@ -78,8 +78,8 @@ jobs:
       - run: python -m PyInstaller --clean --noconfirm packaging/companion.spec
       - shell: pwsh
         run: |
-          & dist/NeuroReach/NeuroReach.exe --help
-          if ($LASTEXITCODE -ne 0) { throw "Frozen executable failed to import its runtime" }
+          $probe = Start-Process dist/NeuroReach/NeuroReach.exe -ArgumentList "--help" -Wait -PassThru
+          if ($probe.ExitCode -ne 0) { throw "Frozen executable failed to import its runtime" }
           $server = Start-Process -RedirectStandardError "$env:RUNNER_TEMP/companion-err.log" -RedirectStandardOutput "$env:RUNNER_TEMP/companion-out.log" dist/NeuroReach/NeuroReach.exe -ArgumentList "--port","18766" -PassThru
           try {
             $ready = $false
