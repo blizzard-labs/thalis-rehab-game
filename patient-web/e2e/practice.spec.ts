@@ -98,6 +98,14 @@ test.describe("touch play", () => {
           { x: basket.x + basket.width / 2, y: basket.y + basket.height / 2 },
         );
         await expect(page.getByText("1 fruit", { exact: true })).toBeVisible();
+        expect(
+          await page.evaluate(
+            () =>
+              (window as any).touchEvents.filter(
+                (event: any) => event.type === "touchend",
+              ).length,
+          ),
+        ).toBe(3); // Card, start button, then a complete fruit drag.
         const before = (await page.getByTestId("fruit-basket").boundingBox())!;
         await page.getByRole("button", { name: "Pick", exact: true }).tap();
         await test.info().attach("touch-events", {

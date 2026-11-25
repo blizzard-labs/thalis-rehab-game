@@ -136,7 +136,10 @@ test("external-game controller works with keyboard controls at 200% and 400% zoo
     );
     await expect
       .poll(() => worker.evaluate(() => (globalThis as any).status().reason))
-      .toContain("Controls stopped");
+      .toBe("Choose a new game area.");
+    expect(
+      await worker.evaluate(() => (globalThis as any).status().armed),
+    ).toBe(false);
     await expect(run.game.locator("[data-neuroreach-area]")).toBeVisible();
     await run.game.bringToFront();
     await run.game.keyboard.press("Escape");

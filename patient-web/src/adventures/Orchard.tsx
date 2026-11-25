@@ -255,25 +255,29 @@ export function OrchardArt({
         strokeLinecap="round"
       />
       <ellipse cx={tip.x} cy={tip.y} rx="11" ry="9" fill="#cf9874" />
-      {!held && (
-        <g
-          data-testid="ripe-fruit"
-          transform={`translate(${goalAt.x} ${goalAt.y})`}
-          onPointerDown={(e) => {
-            if (!onPick || !e.isPrimary || e.button !== 0) return;
-            // The fruit leaves the branch on pickup. Capture on its persistent
-            // scene so a finger can carry it all the way back to the cart.
-            e.currentTarget.ownerSVGElement?.setPointerCapture(e.pointerId);
-            picking.current = e.pointerId;
-            setHand(goal);
-            onPick();
-          }}
-          onClick={onPick}
-          style={{
-            cursor: onPick ? "grab" : undefined,
-            touchAction: onPick ? "none" : undefined,
-          }}
-        >
+      <g
+        data-testid="ripe-fruit"
+        transform={`translate(${goalAt.x} ${goalAt.y})`}
+        onPointerDown={(e) => {
+          if (!onPick || !e.isPrimary || e.button !== 0) return;
+          // The fruit leaves the branch on pickup. Capture on its persistent
+          // scene so a finger can carry it all the way back to the cart.
+          e.currentTarget.ownerSVGElement?.setPointerCapture(e.pointerId);
+          picking.current = e.pointerId;
+          setHand(goal);
+          onPick();
+        }}
+        onClick={onPick}
+        style={{
+          cursor: onPick ? "grab" : undefined,
+          touchAction: "none",
+          opacity: held ? 0 : 1,
+          pointerEvents: onPick && !held ? "auto" : "none",
+        }}
+      >
+        {/* Keep the hit surface mounted through touchend. Removing the touched
+              fruit on pointerdown can suppress the next tap in Chromium. */}
+        <g pointerEvents="none">
           <circle
             r="36"
             fill="#fff4cc"
@@ -294,7 +298,8 @@ export function OrchardArt({
             />
           )}
         </g>
-      )}
+        <circle r="38" fill="transparent" />
+      </g>
       <g
         pointerEvents={held ? "auto" : "none"}
         data-testid="fruit-basket"
