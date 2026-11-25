@@ -33,59 +33,45 @@ You can switch to one-button controls if camera setup is difficult. On a shared 
 
 The companion runs on your computer and provides the staff workspace, supervised session connections, and EEG access. **You do not need a headset for supervised button or camera games.**
 
-The current public setup uses the steps below. A general-purpose, signed installer is not available yet. A clinic's IT support can complete the one-time setup for you.
+### 1. Download for your computer
 
-### 1. Install the prerequisites — once
+| Computer | Download |
+| --- | --- |
+| Windows 10/11 · 64-bit Intel/AMD | **[Windows installer](https://github.com/blizzard-labs/thalis-rehab-game/releases/latest/download/NeuroReach-Windows-Setup.exe)** |
+| Mac with Apple silicon (M1 or newer) · macOS 15+ | **[Mac — Apple silicon](https://github.com/blizzard-labs/thalis-rehab-game/releases/latest/download/NeuroReach-macOS-Apple-Silicon.dmg)** |
+| Intel Mac · macOS 15+ | **[Mac — Intel](https://github.com/blizzard-labs/thalis-rehab-game/releases/latest/download/NeuroReach-macOS-Intel.dmg)** |
 
-- [Node.js](https://nodejs.org/en/download): select **22 LTS**, version **22.12 or later**. Its installer includes npm.
-- [Miniconda](https://www.anaconda.com/docs/getting-started/miniconda/install): provides the Python environment used by the companion.
-- [Download NeuroReach](https://github.com/blizzard-labs/thalis-rehab-game/archive/refs/heads/main.zip) and extract the ZIP. Keep the extracted folder somewhere permanent.
+**No Python, Node.js or terminal commands needed.** On a Mac, choose **Apple menu → About This Mac** to see your chip/processor. Phone and tablet users join from their browser; install the companion on the clinician's computer.
 
-### 2. Open the project folder in a command window
+### 2. Install — once
 
-On **Windows**, open **Anaconda Prompt** from the Start menu. On **macOS/Linux**, open **Terminal** after completing Miniconda setup.
+- **Windows:** open the downloaded installer, choose **Install**, then **Finish**. It installs for your user account.
+- **Mac:** open the downloaded disk image, drag **NeuroReach** onto **Applications**, then open NeuroReach from Applications.
 
-Type `cd `, followed by the full path to the extracted folder in quotation marks, then press Enter. For example, on Windows:
+**First-release approval:** these downloads are not yet publisher-signed, and the Mac app is not Apple-notarized. Your computer may show an unknown-developer warning. Use only the downloads linked here. On a managed computer, ask your IT team to approve the app.
 
-```text
-cd "C:\Users\YOUR-NAME\Downloads\thalis-rehab-game-main"
-```
+If your Mac cannot verify the developer, follow [Apple's app-specific approval steps](https://support.apple.com/en-us/102445): after attempting to open it, use **System Settings → Privacy & Security → Open Anyway** if you trust this download. Do not disable system-wide protection. [Release details and checksums](https://github.com/blizzard-labs/thalis-rehab-game/releases/latest) are available for IT.
 
-Replace the example path with your actual folder. Use the folder containing `package.json`, `patient-web`, and `signal-engine`; extraction may create an extra outer folder.
+### 3. Open NeuroReach — each time you use it
 
-### 3. Install NeuroReach — once
+1. Open **NeuroReach** from the Windows Start menu or Mac Applications folder.
+2. Wait for **Ready to use**. The staff workspace opens automatically in your browser.
+3. Use **Open staff workspace** or **Open games** in the companion window whenever needed.
+4. Keep that window open during sessions. Finish sessions before choosing **Quit**.
 
-Run these commands **one at a time**, waiting for each to finish before starting the next:
+Opening the app again reuses an already-running companion. Your saved station records stay on this computer when you quit.
 
-```sh
-npm --prefix patient-web ci
-conda create -n eeg python=3.10 -y
-conda run -n eeg python -m pip install -r signal-engine/requirements-companion.txt
-npm run build
-```
+### Update or remove it
 
-The first installation downloads several packages and may take a few minutes. If this computer already has the `eeg` environment, skip the `conda create` line.
+Export a station backup, finish sessions, and quit NeuroReach before updating. Download the new installer; on Mac, replace the existing app in Applications. Updates and uninstalling the app do not erase saved station records. Use the staff workspace's record controls to remove records intentionally.
 
-### 4. Start the companion — each time you use it
-
-From the same project folder, run:
-
-```sh
-npm run companion
-```
-
-Wait for **NeuroReach ready at http://127.0.0.1:8766**, then open **[NeuroReach on this computer](http://127.0.0.1:8766/)**.
-
-- Keep the command window open during play and supervision.
-- The website's **Open local staff workspace** and **Open local player** buttons now work on this computer too.
-- After ending any sessions, press **Ctrl+C** in the command window to stop the companion.
-- Next time, repeat **step 4**; you do not need to reinstall everything.
+Linux and developer setup are in the [developer guide](docs/development.md#local-development). Physical Unicorn EEG currently requires Windows and the manufacturer's software; Mac supports camera and button sessions.
 
 ## Start a supervised session
 
 **On the clinician's computer:**
 
-1. Start the companion, then open **[Staff workspace](http://127.0.0.1:8766/#staff)**.
+1. Open **NeuroReach**, wait for **Ready to use**, then choose **Open staff workspace**.
 2. On first use, create a staff password of at least 10 characters. Keep it somewhere secure; it protects this computer's records.
 3. Add a participant label and confirm their agreement to the session.
 4. Choose the game, practice arm, input, pace, and session length.
@@ -145,10 +131,10 @@ Guest history stays in the browser where it was saved. Supervised records stay o
 
 | What you see | What to do |
 | --- | --- |
-| “The local companion is unavailable” or a local page will not open | Start `npm run companion` on **this computer**, leave its window open, and wait for the ready message. The public website cannot start it for you. |
-| `npm` or `conda` is not recognized | Finish installing Node.js and Miniconda, then reopen the command window. On Windows, use Anaconda Prompt. |
-| `package.json` or a requirements file cannot be found | Return to setup step 2. You must run the commands inside the extracted project folder. |
-| “Run npm run build … first” | Run `npm run build` in the project folder, then restart the companion. |
+| “The local companion is unavailable” or a local page will not open | Open **NeuroReach** on **this computer** and wait for **Ready to use**. Keep its window open. The public website cannot start it for you. |
+| An unknown-developer warning appears | See **First-release approval** above. On a managed computer, ask IT to approve the download. |
+| The Mac app will not open | Check that you downloaded the right chip version and use macOS 15 or later. Use the app from Applications after installation. |
+| The companion says “Could not start” | Choose **Try again**. If another program is using its address, close that program first or ask IT for help. Diagnostic logs are under your user folder in `.neuroreach/logs`. |
 | Camera is blocked | Allow camera access in browser settings and close other apps using it. On a paired device, complete the station certificate setup with IT. |
 | The patient link will not connect | Check that both devices use the same network. Use the QR/session link, not the clinician's `127.0.0.1` address. Ask IT about firewall access or guest Wi-Fi device isolation. |
 | The invitation expired or was already used | Create a fresh invitation using the session controls. For an interrupted active visit, use **Reconnect patient device**. |

@@ -158,18 +158,35 @@ To check the live site, set `NEUROREACH_WEBSITE_URL` to `https://blizzard-labs.g
 
 GitHub Pages currently hosts independent play only. Staff and EEG entry points lead to the local companion. A hosted staff backend needs separate server hosting, authenticated workspaces, durable records, and updated data-practice disclosures; it is not enabled by the current deployment.
 
-## Windows prototype packaging
+## Desktop installers and public releases
 
-CI produces an unsigned prototype installer, with a distinct version per build. When a prior installer is available, verification upgrades and rolls back a disposable station and checks its saved records and reports. This is not a signed public installer release.
+The desktop launcher bundles Python, the built website, camera assets, report dependencies, Tcl/Tk, and LSL. It starts a loopback service, opens the staff workspace after readiness, and reuses an existing compatible station. Quitting stops only the service that window owns. The service CLI remains available for IT and automated checks.
 
-To build on Windows:
+| Build | Runner | Public asset |
+| --- | --- | --- |
+| Windows x64 | `windows-latest` | `NeuroReach-Windows-Setup.exe` |
+| macOS Apple silicon | `macos-15` | `NeuroReach-macOS-Apple-Silicon.dmg` |
+| macOS Intel | `macos-15-intel` | `NeuroReach-macOS-Intel.dmg` |
 
-1. Install the companion requirements and PyInstaller **6.16.0**.
-2. Run `npm run build`.
+The declared Mac minimum is macOS 15. Build each architecture natively. Install companion requirements, **PyInstaller 6.16.0**, and Pillow in the build environment, then:
+
+1. Run `npm run build`.
+2. On Mac, install liblsl on the build machine and set `PYLSL_LIB` to its library path. The build copies it into the app; users do not install it.
 3. Run `python -m PyInstaller --clean --noconfirm packaging/companion.spec`.
-4. Compile `packaging/windows.iss` with **Inno Setup 6**.
+4. On Windows, compile `packaging/windows.iss` with Inno Setup 6 and `/DCompanionVersion=0.2.BUILD`.
+5. On Mac, package `dist/NeuroReach.app` with an Applications shortcut using `hdiutil`; see the verification workflow.
 
-The installer does not include g.tec drivers. Records live outside the installation directory and survive replacement of the executable. General clinical distribution still requires code signing, operator review, and relevant physical validation.
+`packaging/verify-companion.py` starts the packaged desktop with Python and Node absent from `PATH`, checks bundled libraries/assets, saves a visit, exports reports, and checks the visit after restart. Windows additionally exercises actual installation, upgrade, rollback and uninstall. Desktop screenshots are retained as workflow artifacts.
+
+After the entire **Verify NeuroReach** workflow succeeds for current main, **Publish companion downloads** downloads those exact tested artifacts, creates SHA-256 checksums, uploads a draft GitHub release, and publishes it only when all three installers are present. Published assets are immutable. Stable `releases/latest/download/...` links serve users without GitHub login. Source tags use `companion-0.2.BUILD`; install only reviewed releases. To roll back, mark a prior verified release latest after assessing record-format compatibility; do not overwrite an existing release's files.
+
+### Signing and first-release limitations
+
+Current public downloads are unsigned by a publisher; Mac bundles have only PyInstaller's ad-hoc signature and are not notarized. OS approval may be needed. No workflow disables Gatekeeper or SmartScreen. The setup guide links Apple's app-specific approval flow; managed devices may require IT.
+
+For a signed release, provision the publisher's Windows signing certificate and Apple Developer ID/notarization credentials. `packaging/sign-windows.ps1` supports a certificate already installed on a release workstation. The Mac spec accepts `NEUROREACH_CODESIGN_IDENTITY`; notarization and stapling must follow signing before final checksums/publication. Signing credentials are not currently configured in CI.
+
+Installers do not include g.tec drivers. Physical Unicorn setup remains Windows-specific. Records live outside the application directory under `~/.neuroreach` and survive replacement/removal of the executable; the launcher records bounded diagnostic logs in `~/.neuroreach/logs`. General clinical distribution still requires operator review and relevant physical validation.
 
 ## Separate Electron engineering prototype
 

@@ -1,0 +1,73 @@
+name: Publish companion downloads
+on:
+  workflow_run:
+    workflows: [Verify NeuroReach]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: companion-release
+  cancel-in-progress: false
+jobs:
+  publish:
+    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+      - name: Identify the exact verified build
+        id: verified
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TRIGGER_RUN: ${{ github.event.workflow_run.id }}
+        run: |
+          revision=$(git rev-parse HEAD)
+          current=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha')
+          test "$revision" = "$current"
+          run_id="$TRIGGER_RUN"
+          if test -z "$run_id"; then
+            run_id=$(gh run list --workflow verify.yml --branch main --event push --limit 100 --json databaseId,headSha,conclusion |
+              jq -r --arg revision "$revision" '[.[] | select(.headSha == $revision and .conclusion == "success")][0].databaseId // empty')
+          fi
+          test -n "$run_id"
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run_id" > "$RUNNER_TEMP/verified.json"
+          jq -e --arg revision "$revision" '.head_sha == $revision and .head_branch == "main" and .path == ".github/workflows/verify.yml" and .event == "push" and .status == "completed" and .conclusion == "success"' "$RUNNER_TEMP/verified.json"
+          echo "run=$run_id" >> "$GITHUB_OUTPUT"
+          echo "tag=companion-0.2.$(jq -r .run_number "$RUNNER_TEMP/verified.json")" >> "$GITHUB_OUTPUT"
+      - uses: actions/download-artifact@v4
+        with:
+          name: neuroreach-windows-prototype
+          run-id: ${{ steps.verified.outputs.run }}
+          github-token: ${{ github.token }}
+          path: downloads
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: neuroreach-macos-*
+          merge-multiple: true
+          run-id: ${{ steps.verified.outputs.run }}
+          github-token: ${{ github.token }}
+          path: downloads
+      - name: Publish complete downloads and checksums
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.verified.outputs.tag }}
+        run: |
+          mv downloads/NeuroReach-Setup.exe downloads/NeuroReach-Windows-Setup.exe
+          test -s downloads/NeuroReach-Windows-Setup.exe
+          test -s downloads/NeuroReach-macOS-Apple-Silicon.dmg
+          test -s downloads/NeuroReach-macOS-Intel.dmg
+          (cd downloads && sha256sum *.exe *.dmg > SHA256SUMS.txt)
+          if gh release view "$TAG" --json isDraft > "$RUNNER_TEMP/release.json" 2>/dev/null; then
+            # Published installers are immutable. Retry uploads only to a draft.
+            test "$(jq -r .isDraft "$RUNNER_TEMP/release.json")" = true || exit 0
+          else
+            gh release create "$TAG" --target "$(git rev-parse HEAD)" --draft --title "NeuroReach Companion ${TAG#companion-}" --notes-file packaging/release-notes.md
+          fi
+          gh release upload "$TAG" downloads/* --clobber
+          gh release edit "$TAG" --draft=false --latest

@@ -6,6 +6,8 @@ import asyncio
 import threading
 import time
 import sys
+import socket
+import os
 import webbrowser
 from pathlib import Path
 from urllib.parse import urlparse
@@ -169,7 +171,7 @@ def create_app(port=8766, display_origin=None, patient_network=None):
     return app
 
 
-if __name__ == "__main__":
+def options(argv=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("--port", type=int, default=8766)
     parser.add_argument("--open-browser", action="store_true")
@@ -180,36 +182,48 @@ if __name__ == "__main__":
     parser.add_argument("--cert")
     parser.add_argument("--key")
     parser.add_argument("--local-only", action="store_true", help="Use same-computer patient links without opening a LAN listener")
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     if bool(args.cert) != bool(args.key):
         parser.error("--cert and --key must be supplied together")
+    return args
+
+
+async def serve(args, ready=None, shutdown=None):
     from server.patient_network import PatientNetwork
     network = None if args.local_only else PatientNetwork(args.display_port, args.display_host, args.cert, args.key)
-    app = create_app(args.port, patient_network=network)
-    if args.open_browser:
-
-        async def open_browser(app):
-            asyncio.get_running_loop().call_later(
-                0.5, webbrowser.open, f"http://127.0.0.1:{args.port}"
-            )
-
-        app.on_startup.append(open_browser)
-
-    async def serve():
+    # Reserve the address before opening records. A second launcher must not
+    # touch an active station's database if another process wins the port.
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as listener:
+        if os.name == "nt":
+            listener.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+        else:
+            listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        listener.bind(("127.0.0.1", args.port))
+        app = create_app(args.port, patient_network=network)
         runner = web.AppRunner(app)
         await runner.setup()
         if network:
             network.runner = runner
         try:
-            await web.TCPSite(runner, "127.0.0.1", args.port).start()
-            print(f"NeuroReach ready at http://127.0.0.1:{args.port}", flush=True)
+            await web.SockSite(runner, listener).start()
             if args.display_host and network:
-                print(f"Paired displays enabled at {await network.ensure()}", flush=True)
-            await asyncio.Event().wait()
+                await network.ensure()
+            print(f"NeuroReach ready at http://127.0.0.1:{args.port}", flush=True)
+            if ready:
+                ready()
+            if args.open_browser:
+                await asyncio.to_thread(webbrowser.open, f"http://127.0.0.1:{args.port}")
+            await (shutdown or asyncio.Event()).wait()
         finally:
             await runner.cleanup()
 
+
+def main(argv=None):
     try:
-        asyncio.run(serve())
+        asyncio.run(serve(options(argv)))
     except KeyboardInterrupt:
         pass
+
+
+if __name__ == "__main__":
+    main()

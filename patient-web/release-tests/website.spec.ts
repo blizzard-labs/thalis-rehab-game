@@ -122,6 +122,27 @@ test("public staff and EEG entry explain the companion without contacting privat
   await expect(
     page.getByRole("link", { name: "Open local staff workspace" }),
   ).toHaveAttribute("href", "http://127.0.0.1:8766/#staff");
+  await expect(
+    page.getByRole("link", { name: /Download for Windows/ }),
+  ).toHaveAttribute(
+    "href",
+    "https://github.com/blizzard-labs/thalis-rehab-game/releases/latest/download/NeuroReach-Windows-Setup.exe",
+  );
+  await expect(
+    page.getByRole("link", { name: /Download for Mac/ }),
+  ).toHaveCount(2);
+  await expect(
+    page.getByRole("link", { name: "Companion setup instructions" }),
+  ).toHaveAttribute(
+    "href",
+    "https://github.com/blizzard-labs/thalis-rehab-game#companion-setup",
+  );
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
   await page.screenshot({
     path: testInfo.outputPath("website-staff.png"),
     fullPage: true,

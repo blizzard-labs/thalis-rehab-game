@@ -1,0 +1,21 @@
+NeuroReach Companion
+
+1. Drag NeuroReach into the Applications shortcut beside it.
+2. Open Applications, then double-click NeuroReach.
+3. Wait for Ready to use. Your staff workspace opens in your browser.
+
+Keep the companion window open during sessions. Use Open games for independent
+play. Finish sessions before choosing Quit. Next time, simply open NeuroReach
+from Applications. No Python, Node.js or terminal commands are needed.
+
+First release: this app has not yet been notarized by Apple. macOS may ask for
+approval. Only use downloads from the NeuroReach GitHub release page. If macOS
+cannot verify the developer, follow Apple's app-specific approval guidance:
+https://support.apple.com/en-us/102445
+On a managed computer, ask your IT team. Do not disable system-wide protection.
+
+Updating: finish sessions and quit NeuroReach, then replace the app in
+Applications. Export a station backup first. Replacing/removing the app does
+not remove saved records from your user account.
+
+Setup help: https://github.com/blizzard-labs/thalis-rehab-game#companion-setup

@@ -123,9 +123,17 @@ jobs:
           name: packaged-browser-failure-diagnostics
           path: patient-web/test-results
           retention-days: 7
+      - name: Verify desktop and bundled runtime without developer tools
+        shell: pwsh
+        run: python packaging/verify-companion.py dist/NeuroReach/NeuroReach.exe --screenshot "$env:RUNNER_TEMP/desktop.png"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: windows-desktop-preview
+          path: ${{ runner.temp }}/desktop.png
       - name: Build versioned installer
         shell: pwsh
-        run: '& "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" "/DPrototypeVersion=0.1.$env:GITHUB_RUN_NUMBER" packaging/windows.iss'
+        run: '& "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" "/DCompanionVersion=0.2.$env:GITHUB_RUN_NUMBER" packaging/windows.iss'
       - name: Find the last available main-branch installer
         id: previous
         shell: pwsh
@@ -166,3 +174,63 @@ jobs:
         with:
           name: neuroreach-windows-prototype
           path: dist/NeuroReach-Setup.exe
+
+  macos-companion:
+    needs: web
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            architecture: Apple-Silicon
+          - runner: macos-15-intel
+            architecture: Intel
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: neuroreach-web
+          path: patient-web/dist
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - run: python -m pip install -r signal-engine/requirements-companion.txt pyinstaller==6.16.0 pillow
+      - name: Prepare bundled LSL
+        run: |
+          brew install labstreaminglayer/tap/lsl
+          echo "PYLSL_LIB=$(brew --prefix lsl)/lib/liblsl.dylib" >> "$GITHUB_ENV"
+      - name: Build desktop application
+        env:
+          NEUROREACH_VERSION: 0.2.${{ github.run_number }}
+        run: python -m PyInstaller --clean --noconfirm packaging/companion.spec
+      - name: Build drag-to-Applications installer
+        env:
+          ARCHITECTURE: ${{ matrix.architecture }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/dmg"
+          ditto dist/NeuroReach.app "$RUNNER_TEMP/dmg/NeuroReach.app"
+          ln -s /Applications "$RUNNER_TEMP/dmg/Applications"
+          cp packaging/INSTALL-MAC.txt "$RUNNER_TEMP/dmg/Start here.txt"
+          hdiutil create -volname NeuroReach -srcfolder "$RUNNER_TEMP/dmg" -ov -format UDZO "dist/NeuroReach-macOS-$ARCHITECTURE.dmg"
+          hdiutil verify "dist/NeuroReach-macOS-$ARCHITECTURE.dmg"
+      - name: Install from the disk image
+        env:
+          ARCHITECTURE: ${{ matrix.architecture }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/mounted" "$RUNNER_TEMP/installed"
+          hdiutil attach "dist/NeuroReach-macOS-$ARCHITECTURE.dmg" -readonly -nobrowse -mountpoint "$RUNNER_TEMP/mounted"
+          ditto "$RUNNER_TEMP/mounted/NeuroReach.app" "$RUNNER_TEMP/installed/NeuroReach.app"
+          hdiutil detach "$RUNNER_TEMP/mounted"
+          codesign --verify --deep --strict "$RUNNER_TEMP/installed/NeuroReach.app"
+      - name: Verify the bundled desktop and saved records
+        run: python packaging/verify-companion.py "$RUNNER_TEMP/installed/NeuroReach.app/Contents/MacOS/NeuroReach" --screenshot "$RUNNER_TEMP/desktop.png"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: macos-${{ matrix.architecture }}-desktop-preview
+          path: ${{ runner.temp }}/desktop.png
+      - uses: actions/upload-artifact@v4
+        with:
+          name: neuroreach-macos-${{ matrix.architecture }}
+          path: dist/*.dmg

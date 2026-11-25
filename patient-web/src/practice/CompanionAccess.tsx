@@ -16,8 +16,43 @@ export function CompanionAccess({
           ? "Supervised sessions and participant records run on your own computer through the NeuroReach companion."
           : "EEG play uses the NeuroReach companion on the computer connected to your headset. Camera and one-button games work directly on this website."}
       </p>
+      <div
+        className="companion-downloads"
+        role="group"
+        aria-label="Download the companion"
+      >
+        <a
+          className="primary"
+          href="https://github.com/blizzard-labs/thalis-rehab-game/releases/latest/download/NeuroReach-Windows-Setup.exe"
+        >
+          Download for Windows <small>Windows 10/11 · 64-bit Intel/AMD</small>
+        </a>
+        <a
+          className="primary"
+          href="https://github.com/blizzard-labs/thalis-rehab-game/releases/latest/download/NeuroReach-macOS-Apple-Silicon.dmg"
+        >
+          Download for Mac <small>Apple silicon · macOS 15+</small>
+        </a>
+        <a
+          className="primary"
+          href="https://github.com/blizzard-labs/thalis-rehab-game/releases/latest/download/NeuroReach-macOS-Intel.dmg"
+        >
+          Download for Mac <small>Intel · macOS 15+</small>
+        </a>
+      </div>
+      <p>
+        No Python installation or terminal commands needed. On a Mac, check
+        Apple menu → About This Mac to find your chip.
+      </p>
       <ol>
-        <li>Install and start the companion on that computer.</li>
+        <li>
+          Open the download. On Windows, follow the installer; on Mac, drag
+          NeuroReach to Applications.
+        </li>
+        <li>
+          Open NeuroReach and wait for “Ready to use.” Keep its window open
+          during sessions.
+        </li>
         <li>
           {staff
             ? "Open the local workspace below and unlock your station."
@@ -30,6 +65,12 @@ export function CompanionAccess({
           </li>
         )}
       </ol>
+      <p className="companion-install-note">
+        These initial downloads are not publisher-signed; the Mac app is not yet
+        Apple-notarized. Your computer may require approval before opening it.
+        The setup instructions explain this step; managed computers may need IT
+        approval.
+      </p>
       <p className="button-row">
         <a
           className="primary"

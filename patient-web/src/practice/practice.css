@@ -140,6 +140,25 @@
   outline: 3px solid var(--nr-violet);
   outline-offset: 3px;
 }
+.companion-downloads {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: 12px;
+  margin: 24px 0 16px;
+}
+.companion-downloads a.primary {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
+}
+.companion-downloads small {
+  font-size: 0.8rem;
+  font-weight: 400;
+}
+.companion-install-note {
+  font-size: 0.9rem;
+  color: var(--nr-ink);
+}
 .card-copy {
   position: relative;
   background: inherit;
