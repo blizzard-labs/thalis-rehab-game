@@ -16,6 +16,7 @@ export async function openGameFixture(
   origin = "http://127.0.0.1:5173",
   prepare?: (context: BrowserContext) => Promise<void>,
   nativeWindow = false,
+  serviceWorkers: "allow" | "block" = "allow",
 ) {
   const root = await mkdtemp(path.join(os.tmpdir(), "nr-game-controller-"));
   const extension = path.join(root, "extension");
@@ -35,6 +36,7 @@ export async function openGameFixture(
     {
       channel: "chromium",
       headless: true,
+      serviceWorkers,
       ...(nativeWindow ? { viewport: null } : {}),
       args: [
         ...(nativeWindow

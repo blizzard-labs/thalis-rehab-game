@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { Readings } from "../reports/measurements";
 import type { Side } from "./session";
+import { isLocalStation } from "../deployment";
 
 export type ModelProfile = string | (() => Promise<string>);
 
@@ -39,8 +40,7 @@ export function useHeadset(
     setPhase("connecting");
     setDevices([]);
     setMessage("Discovering Unicorn streams…");
-    const local =
-      location.hostname === "127.0.0.1" || location.hostname === "localhost";
+    const local = isLocalStation();
     const display = displayInput || location.hash.startsWith("#display=");
     if (!local && !display) {
       setPhase("error");

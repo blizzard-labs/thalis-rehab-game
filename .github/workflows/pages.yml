@@ -1,0 +1,73 @@
+name: Publish website
+on:
+  workflow_run:
+    workflows: [Verify NeuroReach]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
+jobs:
+  build:
+    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+      - name: Require successful verification for this exact revision
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          revision=$(git rev-parse HEAD)
+          current=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha')
+          test "$revision" = "$current"
+          passed=$(gh run list --workflow verify.yml --commit "$revision" --status success --json databaseId --jq 'length')
+          test "$passed" -gt 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm --prefix patient-web ci
+      - run: npm run build:website
+      - working-directory: patient-web
+        run: npx playwright install --with-deps chromium webkit
+      - name: Recorded camera fixture
+        run: curl --fail --location https://storage.googleapis.com/mediapipe-assets/pose.jpg --output "$RUNNER_TEMP/pose.jpg"
+      - name: Test production website
+        working-directory: patient-web
+        env:
+          NEUROREACH_POSE_FIXTURE: ${{ runner.temp }}/pose.jpg
+        run: npx playwright test --config playwright.website.config.ts
+      - name: Test Safari engine
+        working-directory: patient-web
+        env:
+          NEUROREACH_BROWSER: webkit
+        run: npx playwright test --config playwright.website.config.ts -g 'project paths|public staff'
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: website-failure-diagnostics
+          path: patient-web/test-results
+          retention-days: 7
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: patient-web/dist-site
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Publish verified website
+        id: deployment
+        uses: actions/deploy-pages@v4

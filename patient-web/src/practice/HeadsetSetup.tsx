@@ -1,5 +1,7 @@
 import { useState, type ReactNode } from "react";
 import type { useHeadset } from "./useHeadset";
+import { isLocalStation } from "../deployment";
+import { CompanionAccess } from "./CompanionAccess";
 
 export function HeadsetSetup({
   eeg,
@@ -13,6 +15,8 @@ export function HeadsetSetup({
   const [train, setTrain] = useState(false);
   const [remember, setRemember] = useState(false);
   const [chosen, setChosen] = useState("");
+  if (!isLocalStation() && !location.hash.startsWith("#display="))
+    return <CompanionAccess>{children}</CompanionAccess>;
   // A restarted LSL bridge has a new stream ID. Use the same current choice
   // for the visible select and the calibration command, never a stale ID.
   const selected = eeg.devices.some((device) => device.id === chosen)

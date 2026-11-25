@@ -109,6 +109,14 @@ export function LegalNotice({
             MIT License
           </a>{" "}
           · <a href="mailto:krishbhatt2019@gmail.com">Contact the project</a>
+          {" · "}
+          <a
+            href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            GitHub hosting privacy
+          </a>
         </p>
         <ResourceLink />
       </div>

@@ -4,6 +4,7 @@ import "./styles.css";
 import { readSessionCode } from "./config";
 import { NoticeGate, SafetyLink } from "./legal/LegalNotice";
 import { ResourceLink } from "./brand/ResourceLink";
+import { assetUrl } from "./deployment";
 
 async function start() {
   // Keep the paired calibration's 3D renderer out of the standalone startup path.
@@ -45,7 +46,7 @@ async function start() {
     !readSessionCode() &&
     "serviceWorker" in navigator
   ) {
-    void navigator.serviceWorker.register("/sw.js").catch(() => {
+    void navigator.serviceWorker.register(assetUrl("sw.js")).catch(() => {
       // Private browsing may disable offline caching. Online play still works.
     });
   }

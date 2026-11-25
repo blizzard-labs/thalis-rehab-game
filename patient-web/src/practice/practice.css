@@ -103,6 +103,7 @@
   gap: 24px;
 }
 .practice-app .game-card {
+  touch-action: manipulation;
   border-radius: 14px;
   overflow: hidden;
   text-align: left;
@@ -118,6 +119,23 @@
 .game-card .card-art {
   /* Decorative animated SVGs must not become touch targets inside the card. */
   pointer-events: none;
+}
+.companion-access a {
+  color: var(--nr-violet-deep);
+}
+.companion-access a.primary {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 10px 18px;
+  border-radius: 8px;
+  color: white;
+  font-weight: 600;
+  text-decoration: none;
+}
+.companion-access a:focus-visible {
+  outline: 3px solid var(--nr-violet);
+  outline-offset: 3px;
 }
 .card-copy {
   position: relative;

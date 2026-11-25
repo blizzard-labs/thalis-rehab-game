@@ -3,6 +3,7 @@ import react from "@vitejs/plugin-react";
 import { superviseCompanion } from "../scripts/companion.mjs";
 
 export default defineConfig({
+  base: process.env.NEUROREACH_BASE_PATH || "/",
   plugins: [
     react(),
     {

@@ -1,4 +1,5 @@
-// The bridge is present only on loopback. It never reads camera or EEG data.
+// The bridge is present only on the bundled website allowlist and loopback.
+// It never reads camera frames or raw EEG data.
 let port;
 const allowed = () => ["#library", "#game-controller"].includes(location.hash);
 function connect() {

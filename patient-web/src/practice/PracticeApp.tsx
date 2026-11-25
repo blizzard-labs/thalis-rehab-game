@@ -26,6 +26,8 @@ import {
 import { StaffWorkspace } from "./StaffWorkspace";
 import { SensorSession } from "./SensorSession";
 import { GameLibrary } from "../library/GameLibrary";
+import { CompanionAccess } from "./CompanionAccess";
+import { isLocalStation } from "../deployment";
 import "./practice.css";
 
 function History({
@@ -363,8 +365,7 @@ export function PracticeApp() {
     | "handoff"
     | "library"
   >(() =>
-    location.hash === "#staff" &&
-    ["localhost", "127.0.0.1"].includes(location.hostname)
+    location.hash === "#staff"
       ? "staff"
       : location.hash === "#library"
         ? "library"
@@ -379,6 +380,22 @@ export function PracticeApp() {
   const [resetting, setResetting] = useState(false);
   const [handoffError, setHandoffError] = useState("");
   const [handoffComplete, setHandoffComplete] = useState(false);
+
+  useEffect(() => {
+    const navigate = () => {
+      if (!["", "#library", "#staff"].includes(location.hash)) return;
+      setRound(null);
+      setPage(
+        location.hash === "#staff"
+          ? "staff"
+          : location.hash === "#library"
+            ? "library"
+            : "home",
+      );
+    };
+    window.addEventListener("hashchange", navigate);
+    return () => window.removeEventListener("hashchange", navigate);
+  }, []);
 
   const showGuest = useCallback((id: string) => {
     if (activeGuest.current && activeGuest.current !== id) {
@@ -497,11 +514,16 @@ export function PracticeApp() {
             </div>
           </>
         )}
-        {page === "staff" && (
-          <NoticeGate kind="staff" session onCancel={back}>
-            <StaffWorkspace onExit={back} />
-          </NoticeGate>
-        )}
+        {page === "staff" &&
+          (isLocalStation() ? (
+            <NoticeGate kind="staff" session onCancel={back}>
+              <StaffWorkspace onExit={back} />
+            </NoticeGate>
+          ) : (
+            <CompanionAccess staff>
+              <button onClick={back}>Back to games</button>
+            </CompanionAccess>
+          ))}
         {page === "library" && (
           <NoticeGate kind="external" onCancel={back}>
             <GameLibrary back={back} />
@@ -587,17 +609,16 @@ export function PracticeApp() {
             >
               Next guest
             </button>
-            {page === "home" &&
-              ["127.0.0.1", "localhost"].includes(location.hostname) && (
-                <button
-                  onClick={() => {
-                    history.replaceState(null, "", "#staff");
-                    setPage("staff");
-                  }}
-                >
-                  Staff workspace
-                </button>
-              )}
+            {page === "home" && (
+              <button
+                onClick={() => {
+                  history.replaceState(null, "", "#staff");
+                  setPage("staff");
+                }}
+              >
+                Staff workspace
+              </button>
+            )}
           </div>
         )}
       </footer>

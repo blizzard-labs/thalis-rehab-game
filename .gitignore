@@ -12,6 +12,7 @@ __pycache__/
 # Node / build artifacts
 node_modules/
 dist/
+dist-site/
 dist-main/
 *.log
 *.tsbuildinfo

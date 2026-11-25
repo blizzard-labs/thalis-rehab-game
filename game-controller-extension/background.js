@@ -1,3 +1,4 @@
+importScripts("sites.js");
 const hosts = [
   "poki.com",
   "coolmathgames.com",
@@ -28,7 +29,9 @@ let target = null,
 let station = null,
   reason = "Choose a game area using the extension button.";
 const stationReady = chrome.storage.session.get("station").then((stored) => {
-  station ??= stored.station ?? "http://127.0.0.1:8766";
+  station ??=
+    controllerSite((stored.station || "") + "/") ??
+    "https://blizzard-labs.github.io/thalis-rehab-game";
 });
 let queue = Promise.resolve();
 let pendingMotion = false;
@@ -560,19 +563,15 @@ chrome.runtime.onConnect.addListener((port) => {
     )
       return;
     const url = new URL(port.sender.url);
-    if (
-      url.protocol !== "http:" ||
-      !["localhost", "127.0.0.1"].includes(url.hostname) ||
-      !["#library", "#game-controller"].includes(url.hash)
-    )
-      return;
+    const site = controllerSite(url.href);
+    if (!site || !["#library", "#game-controller"].includes(url.hash)) return;
     controller = url.hash === "#game-controller";
     if (!controller) {
-      station = url.origin;
+      station = site;
       void chrome.storage.session.set({ station });
     }
     if (controller) controllerPorts.add(port);
-    if (controller && layout === "popup" && !owner && url.origin === station)
+    if (controller && layout === "popup" && !owner && site === station)
       owner = port;
   }
   ports.add(port);
@@ -605,7 +604,7 @@ chrome.runtime.onConnect.addListener((port) => {
         controller &&
         layout === "popup" &&
         !owner &&
-        new URL(port.sender.url).origin === station
+        controllerSite(port.sender.url) === station
       )
         owner = port;
       port.postMessage(status(port));

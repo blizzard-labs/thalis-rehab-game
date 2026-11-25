@@ -14,11 +14,16 @@ self.onmessage = async ({
   try {
     if (data.kind === "open") {
       const files = await FilesetResolver.forVisionTasks(
-        new URL("/vision-wasm/", self.location.origin).href,
+        new URL("./", self.location.href).href,
       );
       detector = await PoseLandmarker.createFromOptions(files, {
         canvas: new OffscreenCanvas(1, 1),
-        baseOptions: { modelAssetPath: "/models/pose_landmarker_lite.task" },
+        baseOptions: {
+          modelAssetPath: new URL(
+            "../models/pose_landmarker_lite.task",
+            self.location.href,
+          ).href,
+        },
         runningMode: "VIDEO",
         numPoses: 1,
       });

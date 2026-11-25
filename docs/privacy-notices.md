@@ -1,6 +1,6 @@
 # Safety and privacy notices
 
-Reviewed 2026-11-25. Copy lives in `patient-web/src/legal/notices.ts`; presentation and entry gates in `LegalNotice.tsx`. These are factual prototype-use notices and acknowledgments, not a signed clinical consent, research authorization, liability release or determination of legal compliance.
+Reviewed 2026-11-25. Copy lives in `patient-web/src/legal/notices.ts`; presentation and entry gates in `LegalNotice.tsx`. Notice version 2026-11-25.2 adds the GitHub Pages website’s hosting, retention, deletion and contact disclosures. These are factual prototype-use notices and acknowledgments, not a signed clinical consent, research authorization, liability release or determination of legal compliance.
 
 ## Where notices appear
 
@@ -20,7 +20,9 @@ Escape or Go back cancels the entry without starting its session, camera or EEG 
 
 The supplied **NeuroReach (2).pdf** describes a wellness/engagement adjunct and a first supervised pilot. The **sample Star Catcher report** says its metrics are not diagnoses or standalone recovery measures, distinguishes relative movement estimates, and explains session normalization. The **newsletter** describes preparation for first clinical pilots and supplies the project contact. These documents establish intended framing, not proof of efficacy, regulatory authorization or present implementation guarantees.
 
-The public [Notion resources](https://neuroreach.notion.site/NeuroReach-EEG-Assisted-Motor-Rehabilitation-RESOURCES-3ac0b3bfcc1381189586e200abe4d8cd), reviewed including “Safety, privacy and regulatory” and “Consent and data”, describe a participation-count-only, offline community program with no individual outcome records. **That description does not cover this app's optional individual guest history, supervised station records or internet-based external games.** The notices disclose the implemented behavior. Align public program materials with the actual deployment before using them as its privacy statement.
+The public [Notion resources](https://neuroreach.notion.site/NeuroReach-EEG-Assisted-Motor-Rehabilitation-RESOURCES-3ac0b3bfcc1381189586e200abe4d8cd), reviewed including “Safety, privacy and regulatory” and “Consent and data”, describe a participation-count-only, offline community program with no individual outcome records. **That description does not cover this app's optional individual guest history, supervised station records or internet-based external games.** The website’s own notice explicitly separates that program from this website and describes the implemented behavior. The external Notion document was not edited and must not serve as this website’s privacy statement.
+
+The website is hosted on GitHub Pages at the project path. GitHub [documents visitor IP logging for security](https://docs.github.com/en/pages/getting-started-with-github-pages/what-is-github-pages); the notice links its privacy statement. There are no public patient accounts or station APIs. Optional guest history remains in browser storage until deletion, guest handoff, site-data clearing or browser eviction; downloaded copies remain under the visitor’s control. Project/privacy contact uses the contact in the supplied newsletter. Clinical operators still set their own station access, record-retention and consent procedures; those cannot be determined by publishing a static website.
 
 Avoid carrying forward unverified claims such as “fully eliminates seizure risks”, automatic IRB compliance, guaranteed latency/results, or a blanket legal classification of the software as not a medical device. Software tests and sample reports do not establish those claims.
 

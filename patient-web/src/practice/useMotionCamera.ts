@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { assetUrl } from "../deployment";
 import { medianWrist, type MotionSample } from "./motion";
 import type { Readings } from "../reports/measurements";
 import type { Side } from "./session";
@@ -95,7 +96,7 @@ export function useMotionCamera(
       if (stopped) return;
       setStream(media);
       setStatus("Loading local pose tracking…");
-      worker = new Worker("/vision-wasm/pose-worker.js");
+      worker = new Worker(assetUrl("vision-wasm/pose-worker.js"));
       let busy = false,
         ready = false,
         lastVideoTime = -1;

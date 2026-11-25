@@ -4,20 +4,16 @@ let port;
 let station;
 function receive(message) {
   if (message.type === "panel") {
-    const url = message.station && new URL(message.station);
-    if (
-      !url ||
-      url.protocol !== "http:" ||
-      !["127.0.0.1", "localhost"].includes(url.hostname)
-    ) {
+    const site = message.station && controllerSite(message.station + "/");
+    if (!site || site !== message.station) {
       station = null;
       frame.hidden = true;
       frame.removeAttribute("src");
       notice.hidden = false;
       return;
     }
-    if (station !== url.origin) {
-      station = url.origin;
+    if (station !== site) {
+      station = site;
       frame.src = station + "/#game-controller";
     }
     notice.hidden = true;
@@ -27,14 +23,15 @@ function receive(message) {
   } else if (station) {
     frame.contentWindow.postMessage(
       { ...message, channel: "neuroreach-library", from: "extension" },
-      station,
+      new URL(station).origin,
     );
   }
 }
 window.addEventListener("message", (event) => {
   if (
+    station &&
     event.source === frame.contentWindow &&
-    event.origin === station &&
+    event.origin === new URL(station).origin &&
     event.data?.channel === "neuroreach-library" &&
     event.data.from === "app" &&
     event.data.type !== "panel-ready"

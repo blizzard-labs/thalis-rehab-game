@@ -40,84 +40,85 @@ test("guest grows a flower, rests, saves locally and clears the shared browser",
 
 test.describe("touch play", () => {
   test.use({ hasTouch: true });
-  test("a finger can carry fruit, steer a stroke and pilot a boat home", async ({
-    page,
-    browserName,
-  }) => {
-    test.skip(browserName !== "chromium", "Uses native Chromium touch events");
-    await page.setViewportSize({ width: 390, height: 844 });
-    const input = await page.context().newCDPSession(page);
-    const swipe = async (
-      from: { x: number; y: number },
-      to: { x: number; y: number },
-    ) => {
-      await input.send("Input.dispatchTouchEvent", {
-        type: "touchStart",
-        touchPoints: [from],
-      });
-      await input.send("Input.dispatchTouchEvent", {
-        type: "touchMove",
-        touchPoints: [to],
-      });
-      await input.send("Input.dispatchTouchEvent", {
-        type: "touchEnd",
-        touchPoints: [],
-      });
-    };
-    await page.goto("/");
-    await page.getByRole("button", { name: /Fruit Picking/ }).click();
-    await page.getByRole("button", { name: "Start game" }).click();
-    const fruit = (await page.getByTestId("ripe-fruit").boundingBox())!;
-    const basket = (await page.getByTestId("fruit-basket").boundingBox())!;
-    await swipe(
-      { x: fruit.x + fruit.width / 2, y: fruit.y + fruit.height / 2 },
-      { x: basket.x + basket.width / 2, y: basket.y + basket.height / 2 },
-    );
-    await expect(page.getByText("1 fruit", { exact: true })).toBeVisible();
-    await page.getByRole("button", { name: "End session" }).click();
-    await page.goto("/");
-    await page.getByRole("button", { name: /River Rowing/ }).click();
-    await page.getByRole("button", { name: "Start game" }).click();
-    const river = (await page.locator(".river-art").boundingBox())!;
-    const from = {
-      x: river.x + river.width * 0.45,
-      y: river.y + river.height * 0.55,
-    };
-    await swipe(from, { x: from.x + 83, y: from.y + 84 });
-    await expect(page.getByText("1 stroke", { exact: true })).toBeVisible();
-    await expect(page.locator(".river-sign strong")).toHaveText(
-      "The Old Bridge",
-    );
-    await page.getByRole("button", { name: "End session" }).click();
-    await page.goto("/");
-    await page.getByRole("button", { name: /Lighthouse Keeper/ }).tap();
-    await page.getByRole("button", { name: "Start game" }).tap();
-    const keeper = page.locator(".keeper-stage");
-    // Run in regular motion and pick up the vessel while it is still sailing.
-    for (let i = 0; i < 16; i++) await page.getByTestId("keeper-task").tap();
-    const point = (selector: string, x = 0, y = 0) =>
-      keeper.locator(selector).evaluate(
-        (el, position) => {
-          const p = new DOMPoint(position.x, position.y).matrixTransform(
-            (el as SVGGraphicsElement).getScreenCTM()!,
-          );
-          return { x: p.x, y: p.y };
-        },
-        { x, y },
+  for (const game of ["Fruit Picking", "River Rowing", "Lighthouse Keeper"])
+    test(`a finger can play ${game}`, async ({ page, browserName }) => {
+      test.skip(
+        browserName !== "chromium",
+        "Uses native Chromium touch events",
       );
-    await swipe(
-      await point("svg", 495, 146),
-      await point("[data-testid=keeper-task]"),
-    );
-    await expect(
-      page.getByRole("button", { name: "Pilot to berth" }),
-    ).toBeEnabled();
-    await swipe(
-      await point("[data-keeper-vessel]"),
-      await point("[data-testid=keeper-task]"),
-    );
-    await expect(page.locator(".keeper-log")).toContainText("2 boats home");
-  });
+      await page.setViewportSize({ width: 390, height: 844 });
+      const input = await page.context().newCDPSession(page);
+      const swipe = async (
+        from: { x: number; y: number },
+        to: { x: number; y: number },
+      ) => {
+        await input.send("Input.dispatchTouchEvent", {
+          type: "touchStart",
+          touchPoints: [from],
+        });
+        await input.send("Input.dispatchTouchEvent", {
+          type: "touchMove",
+          touchPoints: [to],
+        });
+        await input.send("Input.dispatchTouchEvent", {
+          type: "touchEnd",
+          touchPoints: [],
+        });
+      };
+      await page.goto("/");
+      await page.getByRole("button", { name: new RegExp(game) }).tap();
+      await page.getByRole("button", { name: "Start game" }).tap();
+      if (game === "Fruit Picking") {
+        const fruit = (await page.getByTestId("ripe-fruit").boundingBox())!;
+        const basket = (await page.getByTestId("fruit-basket").boundingBox())!;
+        await swipe(
+          { x: fruit.x + fruit.width / 2, y: fruit.y + fruit.height / 2 },
+          { x: basket.x + basket.width / 2, y: basket.y + basket.height / 2 },
+        );
+        await expect(page.getByText("1 fruit", { exact: true })).toBeVisible();
+        await page.getByRole("button", { name: "End session" }).click();
+        return;
+      }
+      if (game === "River Rowing") {
+        const river = (await page.locator(".river-art").boundingBox())!;
+        const from = {
+          x: river.x + river.width * 0.45,
+          y: river.y + river.height * 0.55,
+        };
+        await swipe(from, { x: from.x + 83, y: from.y + 84 });
+        await expect(page.getByText("1 stroke", { exact: true })).toBeVisible();
+        await expect(page.locator(".river-sign strong")).toHaveText(
+          "The Old Bridge",
+        );
+        await page.getByRole("button", { name: "End session" }).click();
+        return;
+      }
+      const keeper = page.locator(".keeper-stage");
+      // Run in regular motion and pick up the vessel while it is still sailing.
+      for (let i = 0; i < 16; i++) await page.getByTestId("keeper-task").tap();
+      const point = (selector: string, x = 0, y = 0) =>
+        keeper.locator(selector).evaluate(
+          (el, position) => {
+            const p = new DOMPoint(position.x, position.y).matrixTransform(
+              (el as SVGGraphicsElement).getScreenCTM()!,
+            );
+            return { x: p.x, y: p.y };
+          },
+          { x, y },
+        );
+      await swipe(
+        await point("svg", 495, 146),
+        await point("[data-testid=keeper-task]"),
+      );
+      await expect(
+        page.getByRole("button", { name: "Pilot to berth" }),
+      ).toBeEnabled();
+      await swipe(
+        await point("[data-keeper-vessel]"),
+        await point("[data-testid=keeper-task]"),
+      );
+      await expect(page.locator(".keeper-log")).toContainText("2 boats home");
+    });
   test("a phone player selects and catches a star by touch", async ({
     page,
   }) => {

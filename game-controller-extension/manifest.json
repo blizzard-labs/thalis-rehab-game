@@ -1,12 +1,16 @@
 {
   "manifest_version": 3,
   "name": "NeuroReach Game Controller",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Use NeuroReach camera and EEG controls with a game you choose on supported game websites.",
   "minimum_chrome_version": "125",
   "permissions": ["activeTab", "scripting", "debugger", "sidePanel", "storage"],
   "side_panel": { "default_path": "sidebar.html" },
-  "host_permissions": ["http://127.0.0.1/*", "http://localhost/*"],
+  "host_permissions": [
+    "http://127.0.0.1/*",
+    "http://localhost/*",
+    "https://blizzard-labs.github.io/thalis-rehab-game/*"
+  ],
   "background": { "service_worker": "background.js" },
   "action": {
     "default_popup": "popup.html",
@@ -20,7 +24,11 @@
   },
   "content_scripts": [
     {
-      "matches": ["http://127.0.0.1/*", "http://localhost/*"],
+      "matches": [
+        "http://127.0.0.1/*",
+        "http://localhost/*",
+        "https://blizzard-labs.github.io/thalis-rehab-game/*"
+      ],
       "js": ["bridge.js"],
       "run_at": "document_start"
     }

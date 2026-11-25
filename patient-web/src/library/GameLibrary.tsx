@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { assetUrl, isLocalStation, companionUrl } from "../deployment";
 import { familiarGames, services } from "./catalog";
 import { useGameController } from "./bridge";
 import "./library.css";
@@ -10,7 +11,7 @@ export function ExtensionHelp() {
       <ol>
         <li>Open NeuroReach in desktop Chrome or Edge.</li>
         <li>
-          <a href="/game-controller-extension.zip" download>
+          <a href={assetUrl("game-controller-extension.zip")} download>
             Download the Game Controller extension
           </a>{" "}
           and unzip it.
@@ -23,18 +24,33 @@ export function ExtensionHelp() {
         <li>
           Open a game below. Click the NeuroReach extension button and choose
           its playable area. The controller opens in the sidebar by default.
-          Choose <strong>Pop-up window</strong> in the extension for a separate window.
+          Choose <strong>Pop-up window</strong> in the extension for a separate
+          window.
         </li>
         <li>
           Set up your camera or EEG, then choose{" "}
-          <strong>Enable controls</strong>. With camera input, the game comes
-          to the front. Leave the controller open while you play.
+          <strong>Enable controls</strong>. With camera input, the game comes to
+          the front. Leave the controller open while you play.
         </li>
       </ol>
       <p>
         The extension requests browser debugging access to send controls to your
         selected game. <strong>Alt+Shift+S</strong> stops controls at any time.
       </p>
+      {!isLocalStation() && (
+        <p>
+          Camera controls work from this website. For EEG controls, start the
+          companion on your headset computer and{" "}
+          <a
+            href={companionUrl("#library")}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            open its local game library
+          </a>{" "}
+          before connecting a game.
+        </p>
+      )}
     </details>
   );
 }
@@ -87,7 +103,7 @@ export function GameLibrary({ back }: { back: () => void }) {
           >
             <img
               className="library-icon"
-              src={service.logo}
+              src={assetUrl(service.logo)}
               alt=""
               width={65}
               height={65}
@@ -121,7 +137,7 @@ export function GameLibrary({ back }: { back: () => void }) {
           >
             <img
               className="library-game-icon"
-              src={game.logo}
+              src={assetUrl(game.logo)}
               alt=""
               width={86}
               height={86}

@@ -1,7 +1,7 @@
 import type { Source } from "../practice/session";
 
 // Bump when the meaning or data practices change, so previous readers see it again.
-export const NOTICE_VERSION = "2026-11-25.1";
+export const NOTICE_VERSION = "2026-11-25.2";
 export const NOTICE_KEY = "neuroreach-notice-acknowledgments";
 export const NOTICE_EVENT = "neuroreach-notice-open";
 export const NOTICE_CLOSE_EVENT = "neuroreach-notice-close";
@@ -65,6 +65,10 @@ export const storageNotice: NoticeSection = {
   title: "Storage, exports & privacy limits",
   text: "The browser stores a random guest identifier, device preferences, notice acknowledgments and cached app assets. This build has no built-in advertising analytics or cloud account sync. App hosting can still receive ordinary web requests and network information; outside links use their own services. Local storage is not automatically anonymous or encrypted by NeuroReach. Protect the device, station account, network and exported files. The station operator controls access and retention of supervised records and backups. Deleting a record cannot recall exported or shared copies. HIPAA, GDPR or other compliance is not certified by this notice and depends on the actual deployment and operator’s obligations.",
 };
+export const websitePrivacy: NoticeSection = {
+  title: "Public website & hosting",
+  text: "The NeuroReach project publishes this independent-play website on GitHub Pages. Project and privacy contact: Krishna Bhatt, krishbhatt2019@gmail.com. GitHub receives web requests and logs visitor IP addresses for security, even if you are not signed in. The website does not upload your camera video, practice history or reports to GitHub and has no cloud patient account or advertising analytics. Saved guest sessions remain in this browser until you delete them, use Next guest, or clear site data; your browser may also evict local data. Downloads remain wherever you keep them. GitHub controls its hosting logs under its own Privacy Statement. Outside game providers have separate practices. Staff records and EEG run through the local companion, not on GitHub Pages. Community-program resource pages describe a separate program; this notice describes the website’s actual data use.",
+};
 export const researchNotice: NoticeSection = {
   title: "Research & photographs are separate choices",
   text: "Agreeing to play does not authorize research, publication, marketing, photography or video recording. Obtain separate, appropriate consent and institutional review before collecting individual data for research. A demonstration, a technical test or a sample report is not proof of clinical efficacy or regulatory authorization. This app’s optional individual records go beyond the participation-count-only community pilot described in the project resources.",
@@ -88,6 +92,7 @@ export const fullNotice = [
   externalNotice,
   controllerNotice,
   storageNotice,
+  websitePrivacy,
   researchNotice,
   liabilityNotice,
   contactNotice,

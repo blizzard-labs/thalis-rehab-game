@@ -50,7 +50,11 @@ test("toolbar defaults to sidebar and switches an active game between both remem
     browserName !== "chromium",
     "The extension uses Chromium's native side panel",
   );
-  const run = await openGameFixture(undefined, undefined, true);
+  const run = await openGameFixture(
+    process.env.NEUROREACH_WEBSITE_URL?.replace(/\/$/, ""),
+    undefined,
+    true,
+  );
   try {
     const { worker, game, context } = run;
     const client = await context.browser()!.newBrowserCDPSession();

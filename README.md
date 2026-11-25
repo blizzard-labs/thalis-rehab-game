@@ -9,6 +9,16 @@ NeuroReach is an open-source wellness and engagement prototype for seated upper-
 
 Safety and privacy notices appear before play, sensor use, supervised sharing and external-game controls. The shield beside the resources icon reopens the full notice. See [notice scope and deployment review](docs/privacy-notices.md); acknowledgments do not replace clinical/research consent or an operator-specific privacy policy.
 
+## Public website
+
+The website release targets **https://blizzard-labs.github.io/thalis-rehab-game/** on GitHub Pages. All five independent games support touch, keyboard and camera there. Reports and optional saved history stay in the browser. The downloadable extension recognizes this exact project path and supports camera controls for external games in Chrome/Edge; reload an existing unpacked extension after replacing its files with the current download.
+
+Staff workspace and EEG entries explain how to open the local companion. The website does not host participant records, proxy a public connection into a station, or discover devices on a visitor’s network. Staff create patient links on the companion for devices on the same LAN. EEG validation is outside the website release scope.
+
+`npm run build:website` creates `patient-web/dist-site`, separately from the companion’s `patient-web/dist`. The project path applies to camera assets, logos, downloads and service-worker scope. The website’s content policy permits local scripts/model assets and blocks unrelated network destinations. GitHub Pages hosting logs are disclosed in Safety & privacy. The public resource page describes a separate community program, not the website’s privacy policy.
+
+The `Publish website` workflow runs after successful verification of the same commit, builds and tests the production site, then publishes its Pages artifact. A failed check prevents publication. To roll back, revert the faulty commit on main and allow verification and publication to finish; never mix files from different builds. `release.json` identifies the published commit. To verify the live site, run `NEUROREACH_WEBSITE_URL=https://blizzard-labs.github.io/thalis-rehab-game/ NEUROREACH_POSE_FIXTURE=/path/to/pose.jpg npm --prefix patient-web run test:e2e -- --config playwright.website.config.ts`. A downloaded MediaPipe test image supplies recorded movement; this is not physical hardware validation.
+
 * **Brief Introduction: [https://youtu.be/hHVyAqoD-6w](https://youtu.be/hHVyAqoD-6w)**
 * **System Walkthrough: [https://youtu.be/Uo2iDNLLS2w](https://youtu.be/Uo2iDNLLS2w)**
 
