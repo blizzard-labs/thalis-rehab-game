@@ -40,8 +40,16 @@ test("guest grows a flower, rests, saves locally and clears the shared browser",
 
 test.describe("touch play", () => {
   test.use({ hasTouch: true });
-  for (const game of ["Fruit Picking", "River Rowing", "Lighthouse Keeper"])
-    test(`a finger can play ${game}`, async ({ page, browserName }) => {
+  for (const [game, quick] of [
+    ["Fruit Picking", false],
+    ["Fruit Picking", true],
+    ["River Rowing", false],
+    ["Lighthouse Keeper", false],
+  ] as const)
+    test(`a finger can play ${game}${quick ? " with a quick drop" : ""}`, async ({
+      page,
+      browserName,
+    }) => {
       test.skip(
         browserName !== "chromium",
         "Uses native Chromium touch events",
@@ -73,6 +81,7 @@ test.describe("touch play", () => {
       const swipe = async (
         from: { x: number; y: number },
         to: { x: number; y: number },
+        settle = true,
       ) => {
         await input.send("Input.dispatchTouchEvent", {
           type: "touchStart",
@@ -82,6 +91,16 @@ test.describe("touch play", () => {
           type: "touchMove",
           touchPoints: [to],
         });
+        if (settle) {
+          // Model a finger stopping at its drop target. Linux Chromium turns
+          // a single fast CDP move into a fling even with touch-action:none,
+          // then consumes the next tap to cancel it (also on a plain HTML page).
+          await page.waitForTimeout(150);
+          await input.send("Input.dispatchTouchEvent", {
+            type: "touchMove",
+            touchPoints: [to],
+          });
+        }
         await input.send("Input.dispatchTouchEvent", {
           type: "touchEnd",
           touchPoints: [],
@@ -96,6 +115,7 @@ test.describe("touch play", () => {
         await swipe(
           { x: fruit.x + fruit.width / 2, y: fruit.y + fruit.height / 2 },
           { x: basket.x + basket.width / 2, y: basket.y + basket.height / 2 },
+          !quick,
         );
         await expect(page.getByText("1 fruit", { exact: true })).toBeVisible();
         expect(
@@ -106,6 +126,14 @@ test.describe("touch play", () => {
               ).length,
           ),
         ).toBe(3); // Card, start button, then a complete fruit drag.
+        if (quick) {
+          // Keep coverage of a drop before the pickup redraw. CDP's artificial
+          // fling is immaterial to scoring; finish this separate run by keyboard.
+          await page
+            .getByRole("button", { name: "End session" })
+            .press("Enter");
+          return;
+        }
         const before = (await page.getByTestId("fruit-basket").boundingBox())!;
         await page.getByRole("button", { name: "Pick", exact: true }).tap();
         await test.info().attach("touch-events", {
@@ -124,7 +152,7 @@ test.describe("touch play", () => {
           .getByRole("button", { name: "Place in basket", exact: true })
           .tap();
         await expect(page.getByText("2 fruit", { exact: true })).toBeVisible();
-        await page.getByRole("button", { name: "End session" }).click();
+        await page.getByRole("button", { name: "End session" }).tap();
         return;
       }
       if (game === "River Rowing") {
