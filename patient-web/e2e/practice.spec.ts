@@ -47,6 +47,28 @@ test.describe("touch play", () => {
         "Uses native Chromium touch events",
       );
       await page.setViewportSize({ width: 390, height: 844 });
+      await page.addInitScript(() => {
+        const events: unknown[] = [];
+        (window as any).touchEvents = events;
+        for (const type of [
+          "pointerdown",
+          "pointerup",
+          "pointercancel",
+          "click",
+          "touchstart",
+          "touchend",
+        ])
+          document.addEventListener(
+            type,
+            (event) =>
+              events.push({
+                type,
+                at: performance.now(),
+                target: (event.target as Element).outerHTML?.slice(0, 250),
+              }),
+            true,
+          );
+      });
       const input = await page.context().newCDPSession(page);
       const swipe = async (
         from: { x: number; y: number },
@@ -78,6 +100,14 @@ test.describe("touch play", () => {
         await expect(page.getByText("1 fruit", { exact: true })).toBeVisible();
         const before = (await page.getByTestId("fruit-basket").boundingBox())!;
         await page.getByRole("button", { name: "Pick", exact: true }).tap();
+        await test.info().attach("touch-events", {
+          body: JSON.stringify(
+            await page.evaluate(() => (window as any).touchEvents),
+            null,
+            2,
+          ),
+          contentType: "application/json",
+        });
         const after = (await page.getByTestId("fruit-basket").boundingBox())!;
         expect(
           Math.abs(after.y + after.height / 2 - (before.y + before.height / 2)),

@@ -116,7 +116,7 @@ async function setSurface(next, windowId) {
         port.sender.url.startsWith(station + "/"),
       ) ?? null;
 }
-// Calibration stays on localhost. Only the one-time handoff token crosses the bridge.
+// Calibration stays on the selected NeuroReach site. Only its handoff token crosses the bridge.
 async function prepareTransfer() {
   const token = crypto.randomUUID();
   const port = owner;
@@ -256,12 +256,12 @@ async function release() {
     } catch {}
   }
 }
-async function stop(
-  message = "Controls stopped. Press Enable controls when you are ready.",
-  detach = false,
-) {
+async function stop(message, detach = false) {
   armed = false;
-  reason = message;
+  // A controller's cleanup must not replace a useful disconnect explanation.
+  if (message) reason = message;
+  else if (target?.rect)
+    reason = "Controls stopped. Press Enable controls when you are ready.";
   paintAim(false);
   showAim = false;
   await releaseKey().catch(() => {});
@@ -348,8 +348,16 @@ async function chooseArea() {
     )
       previousFocus.focus({ preventScroll: true });
   };
+  let selectedLayout = null;
   const layoutChanged = () => {
-    chrome.runtime.sendMessage({ type: "layout-changed" }).catch(() => {});
+    if (
+      selectedLayout &&
+      (innerWidth !== selectedLayout.width ||
+        innerHeight !== selectedLayout.height ||
+        scrollX !== selectedLayout.x ||
+        scrollY !== selectedLayout.y)
+    )
+      chrome.runtime.sendMessage({ type: "layout-changed" }).catch(() => {});
   };
   // Keep the game underneath the marker clickable, including nested game frames.
   const aim = document.createElement("div");
@@ -427,9 +435,15 @@ async function chooseArea() {
     }
     removePicker();
     chrome.runtime.onMessage.addListener(drawAim);
+    selectedLayout = {
+      width: innerWidth,
+      height: innerHeight,
+      x: scrollX,
+      y: scrollY,
+    };
     chrome.runtime.sendMessage({ type: "area", rect }).catch(() => {});
-    window.addEventListener("resize", layoutChanged, { once: true });
-    window.addEventListener("scroll", layoutChanged, { once: true });
+    window.addEventListener("resize", layoutChanged);
+    window.addEventListener("scroll", layoutChanged);
   };
 }
 
@@ -442,11 +456,23 @@ async function beginSelection(tabId, nextLayout = "sidebar") {
     nextLayout !== layout &&
     selectedGame?.id === tabId &&
     selectedGame.url === tab.url;
-  await stop("Choose a new game area.", true);
+  const previous = target;
+  const reuse = previous?.tabId === tabId && previous.url === tab.url;
+  // Keep the debugger notice in place when reselecting the same game. Detaching
+  // and reattaching makes Chrome resize the game twice during the view handoff.
+  if (reuse) {
+    await chrome.scripting.executeScript({
+      target: { tabId },
+      func: () => window.__neuroreachAreaCleanup?.(),
+    });
+    previous.rect = null;
+  }
+  await stop("Choose a new game area.", !reuse);
   transferToken = switching ? await prepareTransfer() : null;
   selectedGame = { id: tabId, url: tab.url };
   await setSurface(nextLayout, tab.windowId);
-  await chrome.debugger.attach({ tabId }, "1.3");
+  if (!reuse || target !== previous)
+    await chrome.debugger.attach({ tabId }, "1.3");
   const selection = {
     tabId,
     url: tab.url,

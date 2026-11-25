@@ -68,6 +68,9 @@
   font-weight: 600;
 }
 .practice-app button {
+  /* Repeated game actions should not become delayed double-tap zoom gestures.
+     Panning and pinch zoom remain available. */
+  touch-action: manipulation;
   color: var(--nr-violet);
   font: inherit;
   font-weight: 600;

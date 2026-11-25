@@ -55,6 +55,20 @@ test("toolbar defaults to sidebar and switches an active game between both remem
     undefined,
     true,
   );
+  await run.worker.evaluate(`
+    globalThis.controllerEvents = [];
+    const record = (event, detail) => controllerEvents.push({event, detail, at: Date.now()});
+    const originalStop = stop;
+    stop = async (...args) => { record("stop", args); return originalStop(...args); };
+    chrome.runtime.onMessage.addListener((message) => record("message", message));
+    chrome.debugger.onDetach.addListener((source, reason) => record("detach", {source, reason}));
+    chrome.runtime.onConnect.addListener(port => {
+      record("connect", {name: port.name, url: port.sender.url});
+      port.onMessage.addListener(message => {
+        if (!["heartbeat", "hello", "move"].includes(message.type)) record("port", message);
+      });
+    });
+  `);
   try {
     const { worker, game, context } = run;
     const client = await context.browser()!.newBrowserCDPSession();
@@ -103,6 +117,10 @@ test("toolbar defaults to sidebar and switches an active game between both remem
 
     await openToolbar("sidebar");
     await choose();
+    await panelHas("Game connected");
+    // Native UI can report a resize without a changed viewport. It must not
+    // discard the rectangle; a real resize still invalidates it below.
+    await game.evaluate(() => window.dispatchEvent(new Event("resize")));
     await panelHas("Game connected");
     expect(await panel("document.featurePolicy.allowsFeature('camera')")).toBe(
       true,
@@ -162,7 +180,21 @@ test("toolbar defaults to sidebar and switches an active game between both remem
       )
       .toBe(true);
     await openToolbar("sidebar");
+    const size = await game.evaluate(() => ({
+      width: innerWidth,
+      height: innerHeight,
+    }));
+    await game.setViewportSize({ width: size.width - 70, height: size.height });
+    await panelHas("The game layout moved. Choose its play area again.");
   } finally {
+    await test.info().attach("controller-events", {
+      body: JSON.stringify(
+        await run.worker.evaluate("controllerEvents"),
+        null,
+        2,
+      ),
+      contentType: "application/json",
+    });
     await run.close();
   }
 });
