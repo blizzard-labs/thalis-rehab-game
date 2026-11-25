@@ -1,4 +1,4 @@
-import { useMemo, type ReactNode, type RefObject } from "react";
+import { type ReactNode, type RefObject } from "react";
 import { gameDetails, gameNames } from "../practice/catalog";
 import {
   sourceNames,
@@ -6,9 +6,6 @@ import {
   type Side,
 } from "../practice/session";
 import type { CameraAim } from "../practice/StarPlay";
-import { LighthouseArt } from "./Lighthouse";
-import { harborPassage } from "./harborPassage";
-import { keeperStory } from "./keeperStory";
 import { crateSize, harvestAt, orchardStop } from "./orchardTrail";
 import { trailSeed } from "./trail";
 import { OrchardArt } from "./Orchard";
@@ -93,30 +90,6 @@ export function AdventurePlay({
           ? "Imagine reaching for the ripe fruit, then relax."
           : "Guide your hand to the ripe fruit and hold briefly.";
   }
-  const keeper = game === "keeper";
-  const work = (round.record.harborBase ?? 0) + rewards;
-  const story = useMemo(() => keeperStory(work), [work]);
-  const lastBoat = useMemo(
-    () =>
-      keeper && story.shipsHome > 0 ? harborPassage(story.shipsHome - 1) : null,
-    [keeper, story.shipsHome],
-  );
-  if (keeper)
-    cue = manual
-      ? story.cue
-      : round.needsRest
-        ? "Relax before the next task."
-        : round.source === "eeg"
-          ? "Imagine moving your hand to help the keeper."
-          : "Reach to help the keeper, then rest.";
-  if (keeper && story.built === 12) {
-    if (!manual)
-      cue = round.needsRest ? "Relax before the next signal." : story.cue;
-    else if (story.target === "guide")
-      cue = "Drag the boat to the marked spot, or tap the marker.";
-    else if (story.target === "buoy")
-      cue = "Sweep the lantern beam to the marked buoy, or tap it to light it.";
-  }
   if (round.celebrating) {
     if (game === "river" && strokes === 0)
       cue = `Logged at ${current.name} · ${current.discovery}`;
@@ -124,8 +97,6 @@ export function AdventurePlay({
       const delivered = orchardStop(seed, leg - 1, forks.includes(leg - 1));
       cue = `${delivered.name} stocked with fresh ${delivered.product}!`;
     }
-    if (lastBoat && work % 3 === 0)
-      cue = `${lastBoat.ship} is safely home with ${lastBoat.cargo}.`;
   }
   return (
     <section className="live-game adventure" data-paused={round.paused}>
@@ -144,31 +115,7 @@ export function AdventurePlay({
       <p className="game-cue" role="status">
         {round.paused ? "Paused" : cue}
       </p>
-      {keeper ? (
-        <div className="adventure-scene keeper-stage">
-          <LighthouseArt
-            work={work}
-            visualWork={(round.record.harborBase ?? 0) + distance}
-            effort={phase}
-            onWork={manual && !round.paused ? pull : undefined}
-          />
-          {story.built < 12 ? (
-            <span className="scene-caption">
-              {story.title} · {story.step + 1} of 3
-            </span>
-          ) : (
-            <div className="trail-sign keeper-sign">
-              <small>
-                Passage {story.shipsHome + 1} · {story.passage.title}
-              </small>
-              <strong>{story.title}</strong>
-              <span>
-                {story.step + 1} of 3 · {story.action}
-              </span>
-            </div>
-          )}
-        </div>
-      ) : fruit ? (
+      {fruit ? (
         <div className="adventure-scene orchard-stage">
           <OrchardArt
             count={rewards}
@@ -301,17 +248,6 @@ export function AdventurePlay({
             ))}
           </fieldset>
         )}
-        {keeper && (
-          <div className="keeper-log" aria-live="polite">
-            <strong>Keeper’s log</strong> · {story.built}/12 repairs ·{" "}
-            {story.shipsHome} {story.shipsHome === 1 ? "boat" : "boats"} home
-            {lastBoat && (
-              <span className="keeper-arrival">
-                Last delivery · {lastBoat.cargo}
-              </span>
-            )}
-          </div>
-        )}
         <div className="button-row">
           {manual && (
             <button
@@ -323,25 +259,14 @@ export function AdventurePlay({
               }}
               onClick={pull}
             >
-              {!keeper && (
-                <span aria-hidden="true">
-                  {fruit ? (round.carryingFruit ? "🧺 " : "🍎 ") : "🚣 "}
-                </span>
-              )}
-              {keeper ? (
-                <>
-                  <span aria-hidden="true">{story.icon} </span>
-                  {story.action}
-                </>
-              ) : fruit ? (
-                round.carryingFruit ? (
-                  "Place in basket"
-                ) : (
-                  "Pick"
-                )
-              ) : (
-                "Row"
-              )}
+              <span aria-hidden="true">
+                {fruit ? (round.carryingFruit ? "🧺 " : "🍎 ") : "🚣 "}
+              </span>
+              {fruit
+                ? round.carryingFruit
+                  ? "Place in basket"
+                  : "Pick"
+                : "Row"}
             </button>
           )}
           <button

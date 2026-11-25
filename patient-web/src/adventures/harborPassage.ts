@@ -158,6 +158,9 @@ const hulls = [
   "#537c88",
 ];
 export type HarborPoint = { x: number; y: number };
+export function harborBerth(arrival: number) {
+  return { x: 420 + (arrival % 4) * 38, y: 406 - (arrival % 4) * 4 };
+}
 export function harborPassage(boatIndex: number) {
   // Address a passage by the saved boat count. Returning to a half-finished
   // watch restores its weather, vessel and channel without saving a second map.
@@ -177,7 +180,7 @@ export function harborPassage(boatIndex: number) {
     channel = variation(45, boatIndex, 2);
   const outer = { x: 729 + approach * 40, y: 287 + channel * 23 };
   const inner = { x: 674 + channel * 18, y: 353 + approach * 13 };
-  const berth = { x: 420 + (boatIndex % 4) * 38, y: 406 - (boatIndex % 4) * 4 };
+  const berth = harborBerth(boatIndex);
   return {
     ...watch,
     ship,

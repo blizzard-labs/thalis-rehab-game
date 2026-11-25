@@ -279,7 +279,7 @@ function GameSetup({
             ? "Opening your keeper’s log…"
             : historyError
               ? "Saved progress is unavailable. You can play a new harbor story."
-              : `${keeperStory(base).title} · ${base} saved tasks and supplies. Each saved outing brings up to three supplies, and every saved keeper task carries forward.`}
+              : `${base ? `Continue · ${keeperStory(base).title}.` : "The lights of Greyhaven · Eight chapters, one harbor to bring home."} ${base} saved tasks and supplies. Save your session to continue the story on this device.`}
         </p>
       )}
       <fieldset>

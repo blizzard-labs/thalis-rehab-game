@@ -15,8 +15,12 @@ import {
   ChannelMarks,
   harborColors,
 } from "./Harbor";
-import { passagePosition, type HarborPoint } from "./harborPassage";
-import { keeperStory } from "./keeperStory";
+import {
+  harborBerth,
+  passagePosition,
+  type HarborPoint,
+} from "./harborPassage";
+import { keeperHarborState } from "./keeperStory";
 
 const lantern = { x: 495, y: 146 },
   bell = { x: 435, y: 229 };
@@ -33,18 +37,34 @@ export function LighthouseArt({
   effort = 0,
   visualWork = work,
   onWork,
+  home,
+  fleet,
+  northLight = false,
+  night = false,
 }: {
   work?: number;
   effort?: number;
   visualWork?: number;
   onWork?: () => void;
+  home?: number;
+  fleet?: number[];
+  northLight?: boolean;
+  night?: boolean;
 }) {
   const landscape = useLandscape(570, 555);
   const id = useId(),
-    { built, shipsHome, step, target, passage } = useMemo(
-      () => keeperStory(work),
-      [work],
-    );
+    { built, shipsHome, step, target, passage } = useMemo(() => {
+      const harbor = keeperHarborState(work);
+      if (home !== undefined) {
+        const berth = harborBerth(home);
+        harbor.passage = {
+          ...harbor.passage,
+          berth,
+          route: [...harbor.passage.route.slice(0, 3), berth],
+        };
+      }
+      return harbor;
+    }, [work, home]);
   const complete = built === 12,
     progress = work % 3;
   const piers = Math.min(3, built),
@@ -85,7 +105,10 @@ export function LighthouseArt({
   const hotspot = complete
     ? targets[target]
     : repairTargets[Math.floor(built / 3)];
-  const colors = harborColors(complete ? passage.weather : "clear");
+  const isNight = night || passage.weather === "night";
+  const colors = harborColors(
+    isNight ? "night" : complete ? passage.weather : "clear",
+  );
   const dragKind =
     complete &&
     (target === "guide" ? "boat" : target === "buoy" ? "lamp" : null);
@@ -174,7 +197,7 @@ export function LighthouseArt({
       onLostPointerCapture={endDrag}
       {...landscape}
       role="img"
-      aria-label={`Lighthouse with ${built} of 12 repairs and ${shipsHome} ${shipsHome === 1 ? "boat" : "boats"} home`}
+      aria-label={`Lighthouse with ${built} of 12 repairs and ${home ?? shipsHome} ${(home ?? shipsHome) === 1 ? "boat" : "boats"} home`}
     >
       <defs>
         <linearGradient
@@ -218,7 +241,7 @@ export function LighthouseArt({
         )}
       </defs>
       <rect y="-1400" width="960" height="3000" fill={`url(#${id}sky)`} />
-      {complete && passage.weather === "night" && (
+      {complete && isNight && (
         <g fill="#f7ddb5">
           {Array.from({ length: 20 }, (_, i) => (
             <circle
@@ -233,7 +256,7 @@ export function LighthouseArt({
       <circle
         cx={complete ? 635 + ((shipsHome * 73) % 200) : 784}
         cy={complete ? 67 + ((shipsHome * 17) % 45) : 93}
-        r={passage.weather === "night" ? 19 : 27}
+        r={isNight ? 19 : 27}
         fill="#ffdfb1"
       />
       <path
@@ -408,7 +431,25 @@ export function LighthouseArt({
           ))}
         </g>
       )}
-      <HarborTown home={shipsHome} />
+      <HarborTown home={home ?? shipsHome} />
+      {northLight && (
+        <g transform="translate(826 236)" aria-hidden="true">
+          <path d="m0 0-85 75 115-50Z" fill="#ffe6a0" opacity=".23" />
+          <path
+            d="M-10 23-7-9H7l6 32Z"
+            fill="#c9c7ac"
+            stroke="#718077"
+            strokeWidth="1.5"
+          />
+          <path
+            d="M-7-9v-14H7v14Z"
+            fill="#ffdfa2"
+            stroke="#7e8064"
+            strokeWidth="2"
+          />
+          <path d="m-10-24 10-9 10 9Z" fill="#9a7560" />
+        </g>
+      )}
       <path d="M420 256v-39h28" fill="none" stroke="#6c5945" strokeWidth="5" />
       <path d="M426 237q4-30 16-17l5 18Z" fill="#c49c55" />
       {complete && (
@@ -429,7 +470,11 @@ export function LighthouseArt({
             strokeLinecap="round"
           />
           <ChannelMarks passage={passage} progress={stage} />
-          <DockedBoats home={shipsHome} visualHomeWork={visualHomeWork} />
+          <DockedBoats
+            home={home ?? shipsHome}
+            visualHomeWork={visualHomeWork}
+            fleet={fleet}
+          />
           {target === "guide" && (
             <g transform={`translate(${next.x} ${next.y})`}>
               <ellipse

@@ -1,3 +1,4 @@
+import { KeeperPlay } from "../adventures/KeeperPlay";
 import type { Readings } from "../reports/measurements";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { scanningWrist, withinNet } from "../reach/starGeometry";
@@ -183,6 +184,22 @@ export function Play({
   const aligned = withinNet(scan, layout.goal);
   const redrawRound = () => redraw((n) => n + 1);
   const camera = stream && <CameraFeed recording sourceStream={stream} />;
+  if (round.record.game === "keeper")
+    return (
+      <KeeperPlay
+        reducedMotion={reduced}
+        round={round}
+        sourceLabel={sourceLabel}
+        status={status}
+        controls={children}
+        camera={camera}
+        action={action}
+        redraw={redrawRound}
+        onEnd={onEnd}
+        lockedPause={lockedPause}
+        clock={duration(round.record.elapsed)}
+      />
+    );
   if (!garden && round.record.game !== "stars")
     return (
       <AdventurePlay

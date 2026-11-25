@@ -425,17 +425,14 @@ test("saved outings supply the keeper and the lamp stays repaired across visits"
     await page.getByRole("button", { name: "Start game" }).click();
   };
   await open();
-  await expect(
-    page.getByRole("img", {
-      name: "Lighthouse with 3 of 12 repairs and 0 boats home",
-    }),
-  ).toBeVisible();
-  for (let i = 0; i < 3; i++)
-    await page.getByRole("button", { name: /Fix step/ }).click();
-  for (let i = 0; i < 3; i++) await page.getByTestId("keeper-task").click();
-  for (let i = 0; i < 3; i++)
-    await page.getByRole("button", { name: /Wind lamp/ }).click();
-  await expect(page.getByText(/Wren returns/)).toBeVisible();
+  await expect(page.locator(".keeper-sign")).toContainText(
+    "The key to Greyhaven",
+  );
+  await expect(page.locator(".keeper-action")).toHaveText(/Open the journal/);
+  for (let i = 0; i < 9; i++) await page.locator(".keeper-action").click();
+  await expect(page.locator(".keeper-sign")).toContainText(
+    "A voice in the fog",
+  );
   await save();
   await open();
   await expect(
@@ -451,7 +448,7 @@ test("saved outings supply the keeper and the lamp stays repaired across visits"
       name: "Lighthouse with 12 of 12 repairs and 1 boat home",
     }),
   ).toBeVisible();
-  await expect(page.locator(".keeper-sign")).toContainText("Through the fog");
+  await expect(page.locator(".keeper-action")).toHaveText(/Sound fog bell/);
   await expect(page.locator("[data-harbor-town]")).toHaveAttribute(
     "data-harbor-town",
     "1",
@@ -459,9 +456,7 @@ test("saved outings supply the keeper and the lamp stays repaired across visits"
   await page.getByRole("button", { name: "Sound fog bell" }).click();
   await save();
   await open();
-  await expect(page.locator(".keeper-sign")).toContainText(
-    "2 of 3 · Light fog buoy",
-  );
+  await expect(page.locator(".keeper-action")).toHaveText(/Light fog buoy/);
   await page.emulateMedia({ reducedMotion: "reduce" });
   const art = page.locator(".lighthouse-art");
   const screen = (x: number, y: number) =>
@@ -508,24 +503,40 @@ test("saved outings supply the keeper and the lamp stays repaired across visits"
     return { x: p.x, y: p.y };
   });
   await steer(boat);
-  await expect(page.locator(".keeper-sign")).toContainText("The tide gate");
-  await expect(page.locator(".keeper-arrival")).toContainText("fish baskets");
+  await expect(page.locator(".keeper-sign")).toContainText("The missing light");
+  await expect(page.locator(".keeper-log")).toContainText("2 boats home");
   await page.setViewportSize({ width: 390, height: 844 });
-  for (const watch of [
-    "The tide gate",
-    "Ferry crossing",
-    "The reef passage",
-    "Night pilot",
+  for (const chapter of [
+    "The missing light",
+    "Before the weather turns",
+    "The night watch",
+    "The way home",
+    "A harbor of lights",
   ]) {
-    await expect(page.locator(".keeper-sign")).toContainText(watch);
-    for (let i = 0; i < 3; i++) await marker.click();
+    await expect(page.locator(".keeper-sign")).toContainText(chapter);
+    for (let i = 0; i < 6; i++) await page.locator(".keeper-action").click();
   }
-  await expect(page.locator(".keeper-sign")).toContainText("Passage 7");
-  await expect(art).toHaveAccessibleName(
-    "Lighthouse with 12 of 12 repairs and 6 boats home",
+  await expect(page.locator(".keeper-sign")).toContainText(
+    "Keeper of Greyhaven",
   );
-  await expect(page.locator("[data-harbor-town]")).toHaveAttribute(
-    "data-harbor-town",
-    "4",
+  await expect(page.locator(".keeper-log")).toContainText("6 boats home");
+  await page.getByRole("button", { name: "Story journal" }).click();
+  const journal = page.getByRole("dialog", { name: "The keeper’s journal" });
+  await expect(journal).toContainText("48 of 48 story tasks completed");
+  await expect(journal.locator("details")).toHaveCount(8);
+  await expect(page.locator(".keeper-action")).toBeDisabled();
+  await page.keyboard.press("Escape");
+  await expect(journal).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Story journal" }),
+  ).toBeFocused();
+  await page.getByRole("button", { name: "Resume" }).click();
+  for (let i = 0; i < 3; i++) await page.locator(".keeper-action").click();
+  await expect(page.locator(".keeper-log")).toContainText("7 boats home");
+  await save();
+  await open();
+  await expect(page.locator(".keeper-log")).toContainText("7 boats home");
+  await expect(page.locator(".keeper-sign")).toContainText(
+    "Keeper of Greyhaven",
   );
 });

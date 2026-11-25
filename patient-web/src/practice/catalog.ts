@@ -36,7 +36,7 @@ export const gameDetails = {
   keeper: {
     icon: "⚓",
     description:
-      "Repair the lighthouse, then pilot boats through fog, tide gates and night crossings as your harbor grows.",
+      "Become the keeper of Greyhaven. Meet your crew, uncover a forgotten beacon and guide the harbor through eight story chapters.",
     unit: "task",
     units: "tasks",
   },

@@ -13,7 +13,9 @@ for (const zoom of [2, 4]) {
     const run = await zoomHarness(zoom);
     const { page } = run;
     try {
-      await page.getByRole("heading", { name: "NeuroReach", level: 1, exact: true }).waitFor();
+      await page
+        .getByRole("heading", { name: "NeuroReach", level: 1, exact: true })
+        .waitFor();
       for (const game of [
         "Garden Grow",
         "Star Catcher",
@@ -31,7 +33,9 @@ for (const zoom of [2, 4]) {
           page,
           page.getByRole("button", { name: "Start game", exact: true }),
         );
-        const action = page.locator(".game-dock .button-row .primary");
+        const action = page.locator(
+          ".game-dock .button-row .primary, .keeper-action",
+        );
         await expect(action).toBeFocused();
         await expect(action).toBeInViewport();
         await page.keyboard.press("Space");

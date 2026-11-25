@@ -1,5 +1,6 @@
 import {
   harborPassage,
+  harborBerth,
   passagePosition,
   type HarborPassage,
 } from "./harborPassage";
@@ -235,18 +236,24 @@ export function ChannelMarks({
 export function DockedBoats({
   home,
   visualHomeWork,
+  fleet,
 }: {
   home: number;
   visualHomeWork: number;
+  fleet?: number[];
 }) {
   const visible = Math.min(4, home);
   return (
     <g aria-hidden="true" pointerEvents="none">
       {Array.from({ length: visible }, (_, i) => {
-        const boatIndex = home - visible + i;
+        const boatIndex = fleet?.[i] ?? home - visible + i;
         const boat = harborPassage(boatIndex);
-        const progress = Math.min(3, visualHomeWork - boatIndex * 3);
-        const pos = passagePosition(boat.route, progress);
+        const progress = fleet
+          ? 3
+          : Math.min(3, visualHomeWork - boatIndex * 3);
+        const pos = fleet
+          ? harborBerth(home - visible + i)
+          : passagePosition(boat.route, progress);
         const scale = 0.42 + 0.34 * (3 - progress);
         return (
           <g

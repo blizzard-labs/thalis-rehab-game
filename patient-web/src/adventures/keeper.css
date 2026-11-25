@@ -1,0 +1,510 @@
+.practice-app .adventure.keeper-story {
+  background: #f7f0e3;
+  color: #36434a;
+  min-height: 100svh;
+}
+.keeper-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  padding: 19px clamp(18px, 3.3vw, 52px);
+  border-bottom: 1px solid #d9ceba;
+}
+.practice-app .keeper-heading h1 {
+  font:
+    600 clamp(26px, 2.6vw, 40px) / 1.12 Georgia,
+    serif;
+  margin: 0 0 3px;
+  color: #344b51;
+}
+.keeper-heading > div > span {
+  font-size: 14px;
+  color: #6a665f;
+}
+.keeper-session {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+}
+.keeper-story .game-score {
+  padding: 8px 15px;
+  font-size: 17px;
+  border: 1px solid #b6ac98;
+  border-radius: 24px;
+  white-space: nowrap;
+}
+.keeper-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 355px);
+  flex: 1;
+  min-height: 580px;
+}
+.keeper-world {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: #e7e2d1;
+}
+.keeper-scene-caption {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 24px;
+  color: #4a5856;
+  background: #e9e6d9;
+  font-size: 13px;
+  border-bottom: 1px solid #bcc4b788;
+}
+.keeper-scene-caption span:first-child {
+  font-weight: 650;
+}
+.keeper-story .keeper-stage {
+  min-height: 390px;
+  flex: 1;
+  background: #b5c7ba;
+}
+.keeper-illustration {
+  position: absolute;
+  inset: 0;
+}
+.keeper-story .keeper-illustration > .adventure-art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-height: none;
+  min-height: 0;
+}
+.keeper-story .keeper-log {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px 24px;
+  font-size: 13px;
+  border-top: 1px solid #c1c8b7;
+  background: #e9e6d9;
+  color: #455653;
+}
+.keeper-story-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 23px;
+  padding: 26px 26px 24px;
+  background: #fcf6e9;
+  border-left: 1px solid #d4c9b4;
+}
+.keeper-eyebrow {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: #77624d;
+}
+.practice-app .keeper-sign h2 {
+  font:
+    500 31px/1.12 Georgia,
+    serif;
+  margin: 8px 0 16px;
+  color: #3e5056;
+}
+.keeper-chapter-track {
+  display: flex;
+  gap: 4px;
+}
+.keeper-chapter-track i {
+  flex: 1;
+  height: 4px;
+  border-radius: 3px;
+  background: #e5dbc7;
+}
+.keeper-chapter-track i.complete {
+  background: #648985;
+}
+.keeper-chapter-track i.current {
+  background: #bc8d50;
+}
+.keeper-speaker {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+}
+.keeper-portrait {
+  width: 58px;
+  height: 63px;
+  flex-shrink: 0;
+  border-radius: 11px;
+}
+.keeper-speaker strong {
+  display: block;
+  font:
+    600 22px/1.2 Georgia,
+    serif;
+}
+.keeper-speaker span {
+  font-size: 12px;
+  color: #766a5b;
+}
+.keeper-line {
+  font:
+    400 19px/1.5 Georgia,
+    serif;
+  margin: 16px 0 18px;
+  color: #3e4648;
+}
+.keeper-reply {
+  border-left: 2px solid #c4b38e;
+  padding-left: 14px;
+}
+.keeper-reply > span {
+  font-size: 12px;
+  font-weight: 650;
+  color: #527777;
+}
+.keeper-reply p {
+  font:
+    400 17px/1.45 Georgia,
+    serif;
+  margin: 4px 0 0;
+  color: #5c625d;
+}
+.keeper-objective {
+  border-top: 1px solid #dfd2b9;
+  padding-top: 18px;
+  margin-top: auto;
+}
+.keeper-objective > strong {
+  display: block;
+  font-size: 14px;
+  line-height: 1.45;
+}
+.keeper-goal-progress {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-block: 10px 14px;
+  color: #756b5e;
+  font-size: 12px;
+}
+.keeper-story progress {
+  display: block;
+  appearance: none;
+  border: 0;
+  border-radius: 8px;
+  height: 6px;
+  flex: 1;
+  width: 100%;
+  overflow: hidden;
+  color: #708e83;
+  background: #e3dbc9;
+}
+.keeper-story progress::-webkit-progress-bar {
+  background: #e3dbc9;
+}
+.keeper-story progress::-webkit-progress-value {
+  background: #708e83;
+  border-radius: 8px;
+}
+.keeper-story progress::-moz-progress-bar {
+  background: #708e83;
+  border-radius: 8px;
+}
+.keeper-goal-progress > span {
+  white-space: nowrap;
+}
+.adventure.keeper-story .game-cue {
+  margin: 0 0 12px;
+  font-size: 13px;
+  line-height: 1.5;
+  min-height: 0;
+  text-align: left;
+  color: #625e53;
+}
+.practice-app .keeper-action.primary {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: #486b70;
+  border: 1px solid #3c5f64;
+  color: #fff8e8;
+  font-size: 16px;
+  padding: 13px 17px;
+  border-radius: 7px;
+  min-height: 50px;
+}
+.practice-app .keeper-action.primary:hover:enabled {
+  background: #3d5f64;
+}
+.keeper-action:disabled {
+  opacity: 0.55;
+}
+.keeper-effort {
+  font-size: 16px;
+  font-weight: 650;
+  color: #3d6367;
+}
+.keeper-effort progress {
+  margin-top: 12px;
+  height: 10px;
+}
+.keeper-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px 42px;
+  gap: 22px;
+  border-top: 1px solid #d5c9b6;
+  background: #f7f0e3;
+}
+.keeper-controls .button-row {
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.keeper-controls button {
+  font-size: 14px;
+  min-height: 44px;
+}
+.keeper-control-content {
+  text-align: center;
+}
+.keeper-control-content p {
+  margin: 7px 0;
+  font-size: 13px;
+}
+.keeper-camera {
+  flex: 0 0 120px;
+  width: 120px;
+}
+.keeper-camera .cal-camera {
+  width: 120px;
+  max-height: 98px;
+  margin: 0;
+}
+.keeper-camera video {
+  max-height: 98px;
+  object-fit: cover;
+}
+.keeper-journal {
+  color: #3d4d50;
+  background: #fbf4e5;
+  width: min(760px, calc(100vw - 32px));
+  max-height: calc(100svh - 32px);
+  box-sizing: border-box;
+  padding: clamp(16px, 4vw, 36px);
+  border: 1px solid #bcaa88;
+  border-radius: 14px;
+  box-shadow: 0 18px 60px #263b4940;
+}
+.keeper-journal::backdrop {
+  background: #263b4977;
+}
+.keeper-journal > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+.keeper-journal h2 {
+  font:
+    400 30px/1.15 Georgia,
+    serif;
+  margin: 8px 0;
+}
+.keeper-journal button {
+  min-height: 44px;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+.keeper-journal > p {
+  font-size: 14px;
+  color: #6b6559;
+}
+.keeper-journal details {
+  border-top: 1px solid #d9ccb2;
+}
+.keeper-journal summary {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  cursor: pointer;
+  padding: 18px 0;
+  font-weight: 600;
+  font-size: 16px;
+}
+.keeper-journal summary small {
+  font-weight: 400;
+  color: #5a726d;
+  white-space: nowrap;
+}
+.keeper-journal ol {
+  padding-left: 24px;
+}
+.keeper-journal li {
+  margin-block: 20px;
+  padding-left: 7px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.keeper-journal li p {
+  margin: 8px 0;
+}
+.keeper-memory {
+  background: #e7e6d3;
+  padding: 15px 18px;
+  border-radius: 7px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.keeper-memory p {
+  margin-bottom: 0;
+}
+.keeper-unread {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 0;
+  border-top: 1px solid #ded2bc;
+  font-size: 14px;
+  color: #716b61;
+}
+.keeper-unread span {
+  font-size: 12px;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .keeper-rain {
+    animation: keeper-rainfall 1.5s linear infinite;
+  }
+  @keyframes keeper-rainfall {
+    to {
+      transform: translate(-10px, 24px);
+    }
+  }
+  .keeper-story[data-paused="true"] .keeper-rain {
+    animation-play-state: paused;
+  }
+  .keeper-illustration {
+    animation: keeper-arrive 0.45s ease-out both;
+  }
+  @keyframes keeper-arrive {
+    from {
+      opacity: 0.3;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+}
+@media (max-width: 850px) {
+  .keeper-layout {
+    grid-template-columns: 1fr;
+    min-height: 0;
+  }
+  .keeper-story .keeper-stage {
+    height: clamp(290px, 53vw, 470px);
+    min-height: 290px;
+    flex: none;
+  }
+  .keeper-story-panel {
+    border-left: 0;
+    border-top: 1px solid #d4c9b4;
+    gap: 18px;
+    padding: 22px 24px;
+  }
+  .practice-app .keeper-sign h2 {
+    font-size: 28px;
+    margin-bottom: 12px;
+  }
+  .keeper-dialogue {
+    display: grid;
+    grid-template-columns: 60px 1fr;
+    column-gap: 14px;
+  }
+  .keeper-speaker {
+    grid-row: span 2;
+    flex-direction: column;
+    gap: 6px;
+    align-items: flex-start;
+  }
+  .keeper-speaker strong {
+    font-size: 17px;
+  }
+  .keeper-speaker span {
+    display: none;
+  }
+  .keeper-line {
+    margin: 0 0 13px;
+    font-size: 18px;
+  }
+  .keeper-reply {
+    grid-column: 2;
+  }
+  .keeper-objective {
+    margin-top: 0;
+  }
+  .keeper-heading {
+    padding: 16px 20px;
+    gap: 12px;
+  }
+  .keeper-session {
+    flex-direction: column-reverse;
+    align-items: flex-end;
+    gap: 6px;
+  }
+  .keeper-session > span {
+    font-size: 11px !important;
+  }
+  .keeper-heading > div > span {
+    font-size: 12px;
+  }
+  .keeper-controls {
+    padding: 13px 30px 20px 16px;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .keeper-scene-caption,
+  .keeper-story .keeper-log {
+    padding: 10px 16px;
+    font-size: 12px;
+  }
+}
+@media (max-width: 440px) {
+  .practice-app .keeper-heading h1 {
+    font-size: 26px;
+    max-width: 200px;
+  }
+  .keeper-story .game-score {
+    font-size: 14px;
+    padding: 6px 10px;
+  }
+  .keeper-journal > header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .keeper-journal summary {
+    font-size: 14px;
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+  .keeper-camera {
+    flex-basis: 92px;
+    width: 92px;
+  }
+  .keeper-camera .cal-camera {
+    width: 92px;
+  }
+}
+/* Keep the scene available while a phone reader scrolls the conversation. */
+@media (max-width: 850px) and (min-height: 650px) {
+  .keeper-layout {
+    display: block;
+  }
+  .keeper-world {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+  }
+}

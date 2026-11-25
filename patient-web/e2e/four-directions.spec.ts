@@ -210,7 +210,7 @@ test("three camera reaches guide a boat into a repaired harbor", async ({
   for (let i = 1; i <= 3; i++) {
     await wrist(page, 0, 0);
     await expect(page.locator(".game-cue")).not.toHaveText(
-      "Relax before the next signal.",
+      "Relax before the next task.",
     );
     await wrist(page, 1, 0);
     await expect(page.locator(".game-score")).toHaveText(
@@ -218,5 +218,5 @@ test("three camera reaches guide a boat into a repaired harbor", async ({
     );
   }
   await expect(page.locator(".keeper-log")).toContainText("1 boat home");
-  await expect(page.locator(".keeper-sign")).toContainText("Through the fog");
+  await expect(page.locator(".keeper-effort")).toContainText("Sound fog bell");
 });

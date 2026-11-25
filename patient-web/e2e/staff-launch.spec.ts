@@ -246,6 +246,7 @@ test("each game opens only on the paired patient screen and appears in the clini
   page,
   browser,
 }) => {
+  test.setTimeout(45000);
   await openStaff(page);
   for (const [game, title] of [
     ["garden", "Garden Grow"],
@@ -266,6 +267,27 @@ test("each game opens only on the paired patient screen and appears in the clini
       preview(page).locator("h1").filter({ hasText: title }),
     ).toBeVisible();
     expect((await current(page)).game).toBe(game);
+    if (game === "keeper") {
+      for (let i = 0; i < 3; i++)
+        await player.locator(".keeper-action").click();
+      await expect(preview(page).locator("[data-scene=cottage]")).toBeVisible();
+      await expect(preview(page).locator(".keeper-line")).toHaveText(
+        await player.locator(".keeper-line").innerText(),
+      );
+      await player.getByRole("button", { name: "Story journal" }).click();
+      await expect(preview(page).locator("dialog[open]")).toBeVisible();
+      await player.getByRole("button", { name: "Close journal" }).click();
+      await expect(player.locator(".keeper-action")).toBeDisabled();
+      await player.getByRole("button", { name: "Resume", exact: true }).click();
+      for (let i = 3; i < 48; i++)
+        await player.locator(".keeper-action").click();
+      await expect(preview(page).locator(".keeper-sign")).toContainText(
+        "Keeper of Greyhaven",
+      );
+      await expect(preview(page).locator(".keeper-log")).toContainText(
+        "6 boats home",
+      );
+    }
     await finish(page);
     await player.context().close();
   }
