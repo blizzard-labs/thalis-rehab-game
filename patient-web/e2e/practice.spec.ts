@@ -76,6 +76,16 @@ test.describe("touch play", () => {
           { x: basket.x + basket.width / 2, y: basket.y + basket.height / 2 },
         );
         await expect(page.getByText("1 fruit", { exact: true })).toBeVisible();
+        const before = (await page.getByTestId("fruit-basket").boundingBox())!;
+        await page.getByRole("button", { name: "Pick", exact: true }).tap();
+        const after = (await page.getByTestId("fruit-basket").boundingBox())!;
+        expect(
+          Math.abs(after.y + after.height / 2 - (before.y + before.height / 2)),
+        ).toBeLessThan(3);
+        await page
+          .getByRole("button", { name: "Place in basket", exact: true })
+          .tap();
+        await expect(page.getByText("2 fruit", { exact: true })).toBeVisible();
         await page.getByRole("button", { name: "End session" }).click();
         return;
       }

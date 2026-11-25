@@ -99,7 +99,10 @@ export function AdventurePlay({
     }
   }
   return (
-    <section className="live-game adventure" data-paused={round.paused}>
+    <section
+      className={`live-game adventure${fruit ? " fruit-game" : ""}`}
+      data-paused={round.paused}
+    >
       <header className="game-heading">
         <div>
           <h1>{gameNames[game]}</h1>
@@ -129,7 +132,13 @@ export function AdventurePlay({
               manual && !round.paused && !round.carryingFruit ? pull : undefined
             }
             onDeposit={
-              manual && !round.paused && round.carryingFruit ? pull : undefined
+              manual && !round.paused
+                ? () => {
+                    // A quick drag may end before React paints the picked fruit.
+                    // Check the live round instead of the previous render's props.
+                    if (round.carryingFruit) pull();
+                  }
+                : undefined
             }
           />
           <div
@@ -252,21 +261,28 @@ export function AdventurePlay({
           {manual && (
             <button
               ref={action}
-              className="primary"
+              className={`primary${fruit ? " fruit-action" : ""}`}
               disabled={round.paused}
               onKeyDown={(e) => {
                 if (e.repeat) e.preventDefault();
               }}
               onClick={pull}
             >
-              <span aria-hidden="true">
-                {fruit ? (round.carryingFruit ? "🧺 " : "🍎 ") : "🚣 "}
+              {fruit && (
+                <span className="fruit-action-size" aria-hidden="true">
+                  🧺 Place in basket
+                </span>
+              )}
+              <span className="action-label">
+                <span aria-hidden="true">
+                  {fruit ? (round.carryingFruit ? "🧺 " : "🍎 ") : "🚣 "}
+                </span>
+                {fruit
+                  ? round.carryingFruit
+                    ? "Place in basket"
+                    : "Pick"
+                  : "Row"}
               </span>
-              {fruit
-                ? round.carryingFruit
-                  ? "Place in basket"
-                  : "Pick"
-                : "Row"}
             </button>
           )}
           <button

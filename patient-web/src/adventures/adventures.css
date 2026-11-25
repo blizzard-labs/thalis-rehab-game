@@ -94,6 +94,20 @@
   min-height: 24px;
   margin-bottom: 12px;
 }
+.fruit-game .game-cue {
+  /* Pickup instructions and delivery instructions keep the same scene height. */
+  min-height: 2lh;
+}
+.fruit-game .fruit-action {
+  display: inline-grid;
+}
+.fruit-action .fruit-action-size,
+.fruit-action .action-label {
+  grid-area: 1 / 1;
+}
+.fruit-action .fruit-action-size {
+  visibility: hidden;
+}
 .adventure .game-dock {
   display: flex;
   flex-direction: column;
