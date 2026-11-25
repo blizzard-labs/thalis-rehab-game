@@ -40,7 +40,7 @@ export function CompanionAccess({
           {staff ? "Open local staff workspace" : "Open local player"}
         </a>
         <a
-          href="https://github.com/blizzard-labs/thalis-rehab-game#local-eeg-companion"
+          href="https://github.com/blizzard-labs/thalis-rehab-game#companion-setup"
           target="_blank"
           rel="noopener noreferrer"
         >

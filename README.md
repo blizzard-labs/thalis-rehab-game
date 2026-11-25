@@ -1,133 +1,163 @@
-# NeuroReach: EEG-Assisted Motor Rehabilitation
-> Repository: `thalis-rehab-game`
+# NeuroReach: EEG-Assisted Rehab
 
-<div align="center">
-  <img src="patient-web/img/logo-small.png" alt="NeuroReach Logo" width="500">
-</div>
+<img src="patient-web/img/logo-small.png" alt="NeuroReach" width="360">
 
-NeuroReach is an open-source wellness and engagement prototype for seated upper-limb practice. All five built-in games accept keyboard, switch, touch, webcam movement, or motor-imagery input from a supported Unicorn EEG headset. The public player runs in a browser. The optional local companion handles EEG and supervised records. Camera video and raw EEG stay on the acquisition device or the clinic LAN.
+Welcoming games for seated upper-limb practice. Play with buttons, touch, a camera, or a supported EEG headset.
 
-Safety and privacy notices appear before play, sensor use, supervised sharing and external-game controls. The shield beside the resources icon reopens the full notice. See [notice scope and deployment review](docs/privacy-notices.md); acknowledgments do not replace clinical/research consent or an operator-specific privacy policy.
+**[Open NeuroReach](https://blizzard-labs.github.io/thalis-rehab-game/)** · [Companion setup](#companion-setup) · [Help](#troubleshooting) · [Developer guide](docs/development.md)
 
-## Public website
+## Choose how to play
 
-The website is live at **[blizzard-labs.github.io/thalis-rehab-game](https://blizzard-labs.github.io/thalis-rehab-game/)** on GitHub Pages. All five independent games support touch, keyboard and camera there. Reports and optional saved history stay in the browser. The downloadable extension recognizes this exact project path and supports camera controls for external games in Chrome/Edge; reload an existing unpacked extension after replacing its files with the current download.
+| I want to… | What I need |
+| --- | --- |
+| Play independently with buttons, touch, or a camera | [Open the website](https://blizzard-labs.github.io/thalis-rehab-game/). No installation or EEG headset needed. |
+| Start and monitor a supervised patient session | Set up the [companion](#companion-setup) on the clinician's computer. |
+| Play with a Unicorn EEG headset | Set up the [companion](#companion-setup), then follow [EEG setup](#play-with-an-eeg-headset). |
+| Use camera controls with familiar outside games | Install the [Game Controller extension](#play-familiar-games) in desktop Chrome or Edge. |
 
-Staff workspace and EEG entries explain how to open the local companion. The website does not host participant records, proxy a public connection into a station, or discover devices on a visitor’s network. Staff create patient links on the companion for devices on the same LAN. EEG validation is outside the website release scope.
+**Current availability:** the public website supports independent play. Hosted staff sessions are not available yet; supervised sessions currently use the companion.
 
-`npm run build:website` creates `patient-web/dist-site`, separately from the companion’s `patient-web/dist`. The project path applies to camera assets, logos, downloads and service-worker scope. The website’s content policy permits local scripts/model assets and blocks unrelated network destinations. GitHub Pages hosting logs are disclosed in Safety & privacy. The public resource page describes a separate community program, not the website’s privacy policy.
+## Start playing
 
-The `Publish website` workflow runs after successful verification of the same commit, builds and tests the production site, then publishes its Pages artifact. A failed check prevents publication. To roll back, revert the faulty commit on main and allow verification and publication to finish; never mix files from different builds. `release.json` identifies the published commit. To verify the live site, run `NEUROREACH_WEBSITE_URL=https://blizzard-labs.github.io/thalis-rehab-game/ NEUROREACH_POSE_FIXTURE=/path/to/pose.jpg npm --prefix patient-web run test:e2e -- --config playwright.website.config.ts`. A downloaded MediaPipe test image supplies recorded movement; this is not physical hardware validation. See [published release verification](docs/localhost-validation.md#public-website-release) for the tested revision and live-site coverage.
+1. Open the website and choose **Garden Grow**, **Star Catcher**, **River Rowing**, **Fruit Picking**, or **Lighthouse Keeper**.
+2. Choose **One button** or **Camera**, then **Start game**.
+3. Read the first-use notice. For camera play, allow camera access and follow the on-screen steps to set comfortable resting and reaching positions.
+4. Use **Pause** or **End session** whenever you need to.
+5. At the end, choose **Session report** to view your results. Choose **Save on this device** if you want them included in future progress reports.
 
-* **Brief Introduction: [https://youtu.be/hHVyAqoD-6w](https://youtu.be/hHVyAqoD-6w)**
-* **System Walkthrough: [https://youtu.be/Uo2iDNLLS2w](https://youtu.be/Uo2iDNLLS2w)**
+You can switch to one-button controls if camera setup is difficult. On a shared device, use **Next guest** before another person plays; it clears that browser's saved guest history and starts a fresh player.
 
+<a id="local-eeg-companion"></a>
 
----
+## Companion setup
 
-## Play on localhost
+The companion runs on your computer and provides the staff workspace, supervised session connections, and EEG access. **You do not need a headset for supervised button or camera games.**
 
-Use Node.js 22.12 or later. From the repository root, run `npm --prefix patient-web ci` once, then `npm start` and open **http://127.0.0.1:5173**. Choose Garden Grow, Star Catcher, River Rowing, Fruit Picking, or Lighthouse Keeper. All five support touch, keyboard, and an adaptive switch. Pause or end a round at any time. Saving a summary is optional and local to the browser. Before handing a shared device to another player, choose **Next guest** from the game menu or session summary. Confirming clears guest history, starts a fresh lighthouse, and disconnects the former guest’s saved calibration on that browser. Choose **Camera** to set a resting position and a comfortable reach for either arm. The browser processes frames in a local worker. In Star Catcher, save up to four comfortable directions and hold the net over a star until its ring fills. Move clear of that catch to collect the next one. In Garden Grow, return to rest between actions. You can switch to one-button input during setup or play. QR links from the clinician console still open the paired workflow.
+The current public setup uses the steps below. A general-purpose, signed installer is not available yet. A clinic's IT support can complete the one-time setup for you.
 
-River Rowing offers one-arm or coordinated two-arm camera strokes. Fruit Picking uses a reach to pick and a return to the basket to deliver. Lighthouse Keeper follows an eight-chapter harbor story, with characters, changing tasks and scenes, then continuing watches. Saved guest outings contribute up to three supplies each, and each saved keeper task adds one. Supervised progress is scoped to the participant. The Electron console keeps keeper tasks on the workstation and separates simulated and live sessions.
+### 1. Install the prerequisites — once
 
-### Local EEG companion
+- [Node.js](https://nodejs.org/en/download): select **22 LTS**, version **22.12 or later**. Its installer includes npm.
+- [Miniconda](https://www.anaconda.com/docs/getting-started/miniconda/install): provides the Python environment used by the companion.
+- [Download NeuroReach](https://github.com/blizzard-labs/thalis-rehab-game/archive/refs/heads/main.zip) and extract the ZIP. Keep the extracted folder somewhere permanent.
 
-Start the g.tec Unicorn Suite LSL bridge with your headset streaming. Both `npm start` and `npm --prefix patient-web run dev` start the companion if the `eeg` Conda environment is installed. Local startup waits for the companion, reuses an existing service, and restarts a companion it launched if that process stops. The staff access screen reconnects automatically while the service is becoming available. Closing the web development server stops only the companion it owns. Set `NEUROREACH_PYTHON` to select another Python environment. Set `NEUROREACH_AUTO_COMPANION=0` to manage the service yourself; the browser-test server uses this setting to avoid opening real station records. For a standalone companion with the built web app, run `npm run companion`. The companion binds to **127.0.0.1:8766**. You can also run `npm run build` and open **http://127.0.0.1:8766** to use the built app without Vite. On the game setup screen choose **EEG headset** or **Camera + EEG**, choose the arm and device, and follow the resting instructions. No headset is required to start either server.
+### 2. Open the project folder in a command window
 
-The companion recognizes 17-channel, 250 Hz Unicorn streams whose names start with `UN-`. It requires 60 clean seconds of rest and excludes motion artifacts, invalid contact, and sample gaps. Optional cued training uses ten rest and ten imagined-hand trials. A model that clears the held-out quality threshold can be saved locally by choosing the calibration checkbox on a personal computer. Otherwise play uses rest-calibrated band power. Blended mode needs fresh input from both sources; a user can explicitly switch to button input. No raw EEG or video is written to session history.
+On **Windows**, open **Anaconda Prompt** from the Start menu. On **macOS/Linux**, open **Terminal** after completing Miniconda setup.
 
-Install the companion dependencies with Python 3.10. On macOS, install liblsl and set `PYLSL_LIB` to its library path if your environment cannot locate it. Windows wheels for pylsl normally include the LSL runtime. Install g.tec's software separately on the headset computer.
+Type `cd `, followed by the full path to the extracted folder in quotation marks, then press Enter. For example, on Windows:
+
+```text
+cd "C:\Users\YOUR-NAME\Downloads\thalis-rehab-game-main"
+```
+
+Replace the example path with your actual folder. Use the folder containing `package.json`, `patient-web`, and `signal-engine`; extraction may create an extra outer folder.
+
+### 3. Install NeuroReach — once
+
+Run these commands **one at a time**, waiting for each to finish before starting the next:
 
 ```sh
+npm --prefix patient-web ci
 conda create -n eeg python=3.10 -y
 conda run -n eeg python -m pip install -r signal-engine/requirements-companion.txt
-```
-
-### Supervised sessions
-
-Open **Staff workspace** from the home screen with the companion running. Set the station password, add a participant label with consent, and choose the game, arm, input, pace and session length. **Start supervised session** creates a session-specific link and QR code. The patient opens the link on a device connected to the same network, selects **Pair this display**, and waits for staff to start the game. Independent players can continue choosing games directly from the home screen.
-
-The clinician console shows a live, read-only mirror of the patient's game, including setup, animations and the camera preview when enabled. It also shows measured input, active time, outcomes, coverage and recent events. Screen frames are relayed in memory and excluded from saved reports and backups. Staff can pause, resume, finish, or switch a sensor run to one-button play. Refreshing the clinician console restores monitoring while the patient continues playing. Locking it pauses the patient's game. If a patient loses the original browser tab, **Reconnect patient device** issues a new link for the same paused visit once the old connection has timed out.
-
-One station owns one active supervised run. The station checkpoints progress, records pauses and produces CSV and PDF reports. Select a five-minute round or two nine-minute blocks separated by a rest. Staff can save participant feedback and assessments, remove participants, and export or restore a station backup. Restore requires an empty roster. Locking the workspace protects record access; an OS account with encrypted storage protects the files on disk. Browser guest history is independent.
-
-The default SQLite database is `~/.neuroreach/clinic.sqlite3`. Set `NEUROREACH_DATA_DIR` to use another local directory. Back up the database or export a backup from the workspace before moving stations.
-
-The bundled model is Google's [MediaPipe Pose Landmarker Lite, float16, version 1](https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task), SHA-256 `59929e1d1ee95287735ddd833b19cf4ac46d29bc7afddbbf6753c459690d574a`. The build copies the pinned MediaPipe WebAssembly runtime locally.
-
-
-## Existing games with camera or EEG
-
-Choose **Play familiar games** on the independent home screen to open complete game libraries and favorites such as the original Fruit Ninja, Angry Birds Friends and 2048. Games run on their providers’ websites. For camera/EEG controls, install the downloadable **NeuroReach Game Controller** extension in desktop Chrome or Edge, reload the library, and use its toolbar button to select a game's playable area. A separate controller provides arrow, pointer, drag, slice and hold presets. Camera play brings the selected game to the front and tracks movement with the controller open behind it. **Alt+Shift+S** stops forwarding.
-
-External games need internet; compatibility varies by title. They are independent play only and do not produce clinical reports. Ordinary touch/keyboard play remains available without the extension. See [setup, controls and research](docs/game-library.md) for permissions, limitations and verification.
-
-## Run the paired-screen Electron prototype
-
-The Electron console hosts a separate HTTPS LAN workflow for a patient display. It includes the original developer roster, signal monitor, WebRTC camera processing, and an explicitly simulated signal source by default. The localhost **Staff workspace** above holds the real participant records and automatic reports.
-
-```sh
-conda run -n eeg python -m pip install -r signal-engine/requirements.txt
 npm run build
-npm --prefix clinician-console ci
-npm --prefix clinician-console run dev
 ```
 
-Use `EEG_SOURCE=live` and `UNICORN_STREAM_NAME` to select a physical bridge for this engineering workflow. Use the localhost companion for resting and classifier calibration. For a second device, provision a certificate trusted by the patient browser using your clinic's IT process.
+The first installation downloads several packages and may take a few minutes. If this computer already has the `eeg` environment, skip the `conda create` line.
 
-## Build and verification
+### 4. Start the companion — each time you use it
+
+From the same project folder, run:
 
 ```sh
-npm test
-npm run build
-npm --prefix clinician-console test
-conda run -n eeg python -m pip install pytest
-conda run -n eeg python -m pytest signal-engine/tests
-npm --prefix patient-web run test:e2e
+npm run companion
 ```
 
-The browser tests use installed Chrome by default. Set `NEUROREACH_BROWSER=chromium` for Playwright's installed Chromium. The optional EEG browser test launches an isolated companion, takes about 80 seconds, and needs `NEUROREACH_TEST_PYTHON` pointing to the EEG environment's Python executable. The positive camera test accepts `NEUROREACH_POSE_FIXTURE`, the path to [MediaPipe's test image](https://storage.googleapis.com/mediapipe-assets/pose.jpg). Both use test signals or images. Physical on-head validation uses `THALIS_LIVE_UNICORN=1` with the existing `signal-engine/tests/test_live_unicorn.py` hardware checks.
+Wait for **NeuroReach ready at http://127.0.0.1:8766**, then open **[NeuroReach on this computer](http://127.0.0.1:8766/)**.
 
-See [localhost verification](docs/localhost-validation.md) for the acceptance scenarios, latency definition and physical pilot checks.
+- Keep the command window open during play and supervision.
+- The website's **Open local staff workspace** and **Open local player** buttons now work on this computer too.
+- After ending any sessions, press **Ctrl+C** in the command window to stop the companion.
+- Next time, repeat **step 4**; you do not need to reinstall everything.
 
-The production web build in `patient-web/dist` can be served at the root of an HTTPS site. The service worker caches versioned app, model, and runtime assets after the first load. Guest sessions work offline; EEG and staff features use a running local companion. Publish a complete build atomically and keep the previous version for rollback. The included GitHub Actions workflow builds and tests the web archive and packages a Windows prototype installer. Each Windows CI build has its own version. When a previous installer is available, CI upgrades and rolls back a disposable station and verifies its saved session and report. The installer does not bundle g.tec drivers. Deployments for general distribution still require code signing and on-head validation.
+## Start a supervised session
 
-To create the Windows prototype installer locally, build the web app, install the companion requirements and PyInstaller 6.16, run `python -m PyInstaller packaging/companion.spec`, then compile `packaging/windows.iss` with Inno Setup 6. User records live outside the application installation and survive replacement of the executable. Download a station backup before upgrading.
+**On the clinician's computer:**
 
-### Session and longitudinal reports
+1. Start the companion, then open **[Staff workspace](http://127.0.0.1:8766/#staff)**.
+2. On first use, create a staff password of at least 10 characters. Keep it somewhere secure; it protects this computer's records.
+3. Add a participant label and confirm their agreement to the session.
+4. Choose the game, practice arm, input, pace, and session length.
+5. Select **Start supervised session** to display a QR code and private patient link.
 
-Open **Session report** from a finished round or from session history. Open **Progress report** in **Saved sessions** or after selecting a participant in the staff workspace. Choose a 4-, 12-, or 52-week period, a game, and an optional through date. These selections apply to the on-screen report and its PDF and CSV downloads. A session report includes a four-week comparison when an earlier week has saved visits for the same game. Guests can view the current round without saving it. The guest report uses this browser’s saved rounds and works offline. Staff reports include that participant’s assessments and visit notes. The existing station event CSV remains available for auditing individual actions.
+**On the patient's device:**
 
-New sensor rounds keep 30-second summaries of observed input, cortical mu ERD, classifier output when available, and camera-derived arm angles and trunk tilt. Frame-level EEG, images and pose coordinates are never written into reports. Charts show missing observations as gaps. Historical records retain their event timelines and original totals. Weekly comparisons use completed visits with comparable game, input path, arm and pace; simulated EEG and interrupted visits are excluded. Joint angles are relative camera estimates. FMA-UE and ARAT scores come from staff entries.
+1. Connect to the **same Wi-Fi/network** as the clinician's computer.
+2. Scan the QR code or open the patient link. Select **Pair this display**.
+3. Wait for the clinician to select **Start patient game**. For camera play, allow camera access and complete the movement setup.
 
-The [sample session report](NeuroReach-StarCatcher-Session-Report-Sample.pdf) is a design reference. Generated reports contain the measurements actually recorded for that session.
+The clinician sees the game and, when enabled, the live camera preview. They can pause, resume, switch to button input, and end the session. One companion supports one active supervised session at a time.
 
-## Repository layout
+**Trying it on one computer?** Select **Open on this computer** in the invitation panel to open a separate patient window.
 
-```
-thalis-rehab-game/
-├── docs/
-│   ├── specs.md           # full engineering specification (v2 architecture)
-│   ├── todos.md           # whole-project status board + test inventory
-│   ├── gardengrow.md      # Garden Grow game design
-│   ├── reachcollect.md    # Reach & Collect / Star Catcher design + ROM roadmap
-│   └── wireframes/        # UI wireframes (C1–C5 console, P1–P6 patient)
-├── signal-engine/         # Python real-time service (see subsystems table)
-├── clinician-console/     # Electron + React console + LAN server
-└── patient-web/           # React + Vite patient game
-```
+**First connection on another device:** your clinic may need to trust the station's security certificate before the game or camera works. Use **First-time device connection** in the invitation panel and ask IT to complete certificate setup. See the [network setup guide](docs/development.md#patient-device-network-and-certificates) for technical details.
 
-### Pair a separate supervised display
+## Play with an EEG headset
 
-The companion opens a patient-only HTTPS listener when staff create a supervised session. The invitation uses this computer's network address on port 8443, and expires in ten minutes until claimed. Connect both devices to the same network and allow the companion through the computer's firewall if prompted. Staff records and controls remain available through the loopback clinician console. The patient's link grants access to the selected visit.
+Supported device: **g.tec Unicorn Hybrid Black**, using the [manufacturer's software and setup guidance](https://www.gtec.at/unicorn-faq/) and LSL bridge. Other EEG headsets are not currently supported.
 
-The default listener creates a station certificate under the local NeuroReach data directory. A first-time device may need to trust that certificate before opening the game or using its camera. **First-time device connection** in the invitation panel provides the certificate download. Once installed and trusted on the patient device, the same station authority works across later sessions. **Open on this computer** opens a separate patient page for trying the two-screen workflow locally.
+1. Complete [companion setup](#companion-setup) on the headset computer. For the current Unicorn setup, use Windows with g.tec's software installed.
+2. Connect the headset and start its stream in the **Unicorn Suite LSL bridge**.
+3. Open the **local** NeuroReach player, choose a game, and select **EEG headset** or **Camera + EEG**.
+4. Select the device and practice arm. Follow the resting calibration, which requires **60 seconds of clean signal**.
+5. Complete any additional on-screen setup, then begin. You can fall back to button input if needed.
 
-A clinic can provide its own trusted certificate and hostname:
+For platform-specific LSL installation and technical checks, see [EEG developer notes](docs/development.md#eeg-runtime-and-calibration).
 
-```sh
-conda run --no-capture-output -n eeg python signal-engine/local_companion.py --display-host station.clinic.example --display-port 8443 --cert station-chain.pem --key station-key.pem
-```
+## Play familiar games
 
-Substitute the station's real DNS name and certificate files. The QR code and link use that address. Use `--local-only` when intentionally testing only separate windows on the same computer. That option produces loopback links and leaves the network listener closed.
+Choose **Play familiar games** on the website to explore titles such as Fruit Ninja and 2048. Ordinary touch or keyboard play does not need an extension.
+
+For camera controls in **desktop Chrome or Edge**:
+
+1. Download the **NeuroReach Game Controller** from the library and unzip it.
+2. Open your browser's Extensions page, turn on **Developer mode**, and select **Load unpacked**. Choose the extracted `neuroreach-game-controller` folder containing `manifest.json`.
+3. Reload the NeuroReach library, open a game, then use the extension's toolbar button to choose the playable area.
+4. Keep the default **Sidebar**, choose your input, complete setup, and select **Enable controls**.
+
+**Alt+Shift+S** stops game input. Keep the controller open while using camera controls. After downloading an updated extension, replace its files and select **Reload** on the browser's Extensions page.
+
+Outside games are for independent play, need internet, and use their providers' terms. They do not generate NeuroReach session reports. EEG controls require the local companion's library. See the [full extension instructions](game-controller-extension/README.md).
+
+## Reports and saved information
+
+| To… | Choose… |
+| --- | --- |
+| Review one round | **Session report** after play or in session history. |
+| Review changes over time | **Saved sessions → Progress report**, or select a participant in Staff workspace. |
+| Keep a copy | **Download PDF** or **Export CSV** in the report. |
+| Include a guest round in future trends | **Save on this device** after that round. |
+
+Guest history stays in the browser where it was saved. Supervised records stay on the companion computer. Export a station backup before moving or updating that computer; exported files are separate copies.
+
+## Troubleshooting
+
+| What you see | What to do |
+| --- | --- |
+| “The local companion is unavailable” or a local page will not open | Start `npm run companion` on **this computer**, leave its window open, and wait for the ready message. The public website cannot start it for you. |
+| `npm` or `conda` is not recognized | Finish installing Node.js and Miniconda, then reopen the command window. On Windows, use Anaconda Prompt. |
+| `package.json` or a requirements file cannot be found | Return to setup step 2. You must run the commands inside the extracted project folder. |
+| “Run npm run build … first” | Run `npm run build` in the project folder, then restart the companion. |
+| Camera is blocked | Allow camera access in browser settings and close other apps using it. On a paired device, complete the station certificate setup with IT. |
+| The patient link will not connect | Check that both devices use the same network. Use the QR/session link, not the clinician's `127.0.0.1` address. Ask IT about firewall access or guest Wi-Fi device isolation. |
+| The invitation expired or was already used | Create a fresh invitation using the session controls. For an interrupted active visit, use **Reconnect patient device**. |
+| No EEG device appears | Confirm that the Unicorn LSL bridge is streaming on the companion computer. Use button or camera play while resolving headset setup. |
+
+## About NeuroReach
+
+NeuroReach is an experimental wellness and engagement tool. It does not replace therapy or diagnose a condition. Reports describe practice, not proven recovery. Read **Safety & privacy** in the app and use comfortable movements within your clinician's guidance.
+
+[Introduction video](https://youtu.be/hHVyAqoD-6w) · [System walkthrough](https://youtu.be/Uo2iDNLLS2w) · [Project resources](https://neuroreach.notion.site/NeuroReach-EEG-Assisted-Motor-Rehabilitation-RESOURCES-3ac0b3bfcc1381189586e200abe4d8cd)
+
+**Developers and IT:** build commands, configuration, tests, deployment, packaging, and architecture are in the **[developer guide](docs/development.md)**.
