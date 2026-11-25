@@ -105,7 +105,22 @@ jobs:
         run: |
           $env:NEUROREACH_TEST_PYTHON = (Get-Command python).Source
           $env:NEUROREACH_COMPANION_EXE = (Resolve-Path ../dist/NeuroReach/NeuroReach.exe).Path
-          npm run test:e2e -- headset.spec.ts staff.spec.ts staff-launch.spec.ts --workers=2
+          npm run test:e2e -- headset.spec.ts staff.spec.ts staff-launch.spec.ts --workers=2 --grep-invert "moving patient screen"
+      # Keep the latency budget meaningful: synthetic EEG/BLAS processing in
+      # another test worker must not compete with this wall-clock benchmark.
+      - name: Check live monitor timing in isolation
+        working-directory: patient-web
+        shell: pwsh
+        run: |
+          $env:NEUROREACH_TEST_PYTHON = (Get-Command python).Source
+          $env:NEUROREACH_COMPANION_EXE = (Resolve-Path ../dist/NeuroReach/NeuroReach.exe).Path
+          npm run test:e2e -- staff-launch.spec.ts -g "moving patient screen" --workers=1
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: packaged-browser-failure-diagnostics
+          path: patient-web/test-results
+          retention-days: 7
       - name: Build versioned installer
         shell: pwsh
         run: '& "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" "/DPrototypeVersion=0.1.$env:GITHUB_RUN_NUMBER" packaging/windows.iss'

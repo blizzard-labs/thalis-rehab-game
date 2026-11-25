@@ -238,6 +238,7 @@ test("moving patient screen updates in place at interactive speed", async ({
           requestAnimationFrame(sample);
         }),
     );
+  console.info("Live monitor timing", result);
   expect(result.sameHeading).toBe(true);
   expect(result.changes).toBeGreaterThan(14);
   expect(result.p95Age).toBeLessThan(220);
