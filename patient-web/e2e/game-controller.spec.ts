@@ -10,6 +10,41 @@ test.beforeEach(({ browserName }) => {
   );
 });
 
+test("reselecting a game area releases an active drag before clearing its coordinates", async () => {
+  const run = await controllerHarness();
+  try {
+    await run.controller.getByLabel("Control preset").selectOption("drag");
+    await run.controller.getByRole("button", { name: "Set up input" }).click();
+    await enable(run.controller);
+    await run.controller
+      .getByRole("button", { name: "Hold / release", exact: true })
+      .click();
+    await expect
+      .poll(
+        async () =>
+          (await run.events()).filter((e) => e.type === "mousedown").length,
+      )
+      .toBe(1);
+    await run.worker.evaluate(async () => {
+      const worker = globalThis as any;
+      const [game] = await worker.chrome.tabs.query({
+        url: "https://poki.com/neuroreach-test",
+      });
+      await worker.enqueue(() => worker.beginSelection(game.id, "popup"));
+    });
+    await expect
+      .poll(
+        async () =>
+          (await run.events()).filter((e) => e.type === "mouseup" && e.trusted)
+            .length,
+      )
+      .toBe(1);
+    await expect(run.game.locator("[data-neuroreach-area]")).toBeVisible();
+  } finally {
+    await run.close();
+  }
+});
+
 test("extension sends trusted keys and pointer events into a cross-origin game and stops on tab switches", async () => {
   const run = await controllerHarness();
   try {

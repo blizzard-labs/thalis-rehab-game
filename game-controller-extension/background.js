@@ -460,14 +460,16 @@ async function beginSelection(tabId, nextLayout = "sidebar") {
   const reuse = previous?.tabId === tabId && previous.url === tab.url;
   // Keep the debugger notice in place when reselecting the same game. Detaching
   // and reattaching makes Chrome resize the game twice during the view handoff.
+  // Release held input while its old rectangle still exists.
+  await stop("Choose a new game area.", !reuse);
   if (reuse) {
     await chrome.scripting.executeScript({
       target: { tabId },
       func: () => window.__neuroreachAreaCleanup?.(),
     });
     previous.rect = null;
+    tell();
   }
-  await stop("Choose a new game area.", !reuse);
   transferToken = switching ? await prepareTransfer() : null;
   selectedGame = { id: tabId, url: tab.url };
   await setSurface(nextLayout, tab.windowId);
