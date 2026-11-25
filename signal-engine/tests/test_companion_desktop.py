@@ -3,10 +3,28 @@ import json
 import socket
 import threading
 import time
+import sys
+import pytest
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from urllib.request import urlopen
 
 from companion_desktop import Companion
+from companion_desktop import ensure_standard_streams
+
+
+def test_windowed_help_does_not_require_console_streams(monkeypatch):
+    from local_companion import options
+    with monkeypatch.context() as patch:
+        patch.setattr(sys, "stdout", None)
+        patch.setattr(sys, "stderr", None)
+        ensure_standard_streams()
+        try:
+            with pytest.raises(SystemExit) as result:
+                options(["--help"])
+            assert result.value.code == 0
+        finally:
+            sys.stdout.close()
+            sys.stderr.close()
 
 
 def free_port():

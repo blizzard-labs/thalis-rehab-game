@@ -212,7 +212,16 @@ def desktop(port=8766, smoke=False):
         raise RuntimeError(f"Desktop launch check failed: {failure}; see {logs}")
 
 
+def ensure_standard_streams():
+    # Windows GUI executables have no console streams. argparse and some
+    # runtime libraries still call write()/flush() on them, including --help.
+    for name in ("stdout", "stderr"):
+        if getattr(sys, name) is None:
+            setattr(sys, name, open(os.devnull, "w"))
+
+
 def main():
+    ensure_standard_streams()
     # Retain the service CLI for existing installations, tests and clinic IT.
     # Finder and Start menu launches have no arguments and show the desktop UI.
     if len(sys.argv) == 3 and sys.argv[1] == "--runtime-check":

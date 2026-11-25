@@ -85,7 +85,9 @@ jobs:
           node-version: 22
       - run: npm --prefix patient-web ci
       - run: python -m PyInstaller --clean --noconfirm packaging/companion.spec
-      - shell: pwsh
+      - name: Check packaged startup and assets
+        timeout-minutes: 2
+        shell: pwsh
         run: |
           $probe = Start-Process dist/NeuroReach/NeuroReach.exe -ArgumentList "--help" -Wait -PassThru
           if ($probe.ExitCode -ne 0) { throw "Frozen executable failed to import its runtime" }
