@@ -64,10 +64,13 @@ export class StationError extends Error {
   }
 }
 
+export class StationUnavailable extends Error {}
+
 export async function api<T>(
   path: string,
   method = "GET",
   body?: unknown,
+  signal?: AbortSignal,
 ): Promise<T> {
   let response: Response;
   try {
@@ -75,16 +78,23 @@ export async function api<T>(
       method,
       headers: { "Content-Type": "application/json" },
       cache: "no-store",
-      signal: AbortSignal.timeout(10000),
+      signal: signal ?? AbortSignal.timeout(10000),
       body: body === undefined ? undefined : JSON.stringify(body),
     });
   } catch {
-    throw new Error(
-      "The station could not be reached. Check the local companion and retry.",
+    throw new StationUnavailable(
+      "The staff workspace is waiting for the NeuroReach companion.",
     );
   }
   if (!response.ok) {
     const message = (await response.text()).trim();
+    if (
+      [502, 503, 504].includes(response.status) ||
+      (response.status === 500 && (!message || message.startsWith("<")))
+    )
+      throw new StationUnavailable(
+        "The staff workspace is waiting for the NeuroReach companion.",
+      );
     throw new StationError(
       message && !message.startsWith("<")
         ? message.slice(0, 200)
@@ -93,7 +103,9 @@ export async function api<T>(
     );
   }
   if (!response.headers.get("content-type")?.includes("application/json"))
-    throw new Error("Start the local companion to use the staff workspace.");
+    throw new StationUnavailable(
+      "The staff workspace is waiting for the NeuroReach companion.",
+    );
   return response.json();
 }
 export const errorText = (err: unknown) =>

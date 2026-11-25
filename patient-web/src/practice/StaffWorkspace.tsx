@@ -7,6 +7,7 @@ import {
   api,
   errorText,
   StationError,
+  StationUnavailable,
   type Auth,
   type Participant,
   type Visit,
@@ -15,6 +16,9 @@ import {
 
 export function StaffWorkspace({ onExit }: { onExit: () => void }) {
   const [auth, setAuth] = useState<Auth | null>(null);
+  const [connecting, setConnecting] = useState(true);
+  const [retrying, setRetrying] = useState(false);
+  const [reconnect, setReconnect] = useState(0);
   const [password, setPassword] = useState("");
   const [people, setPeople] = useState<Participant[]>([]);
   const [selected, setSelected] = useState("");
@@ -33,22 +37,34 @@ export function StaffWorkspace({ onExit }: { onExit: () => void }) {
   const [loadedParticipant, setLoadedParticipant] = useState("");
   const [game, setGame] = useState<Game>("garden");
   const participant = people.find((p) => p.id === selected);
-  async function load() {
-    const session = await api<Auth>("state");
+  async function load(signal?: AbortSignal) {
+    const session = await api<Auth>("state", "GET", undefined, signal);
+    if (signal?.aborted) return;
     setAuth(session);
     if (session.authenticated) {
-      const roster = await api<Participant[]>("participants");
+      const roster = await api<Participant[]>(
+        "participants",
+        "GET",
+        undefined,
+        signal,
+      );
+      if (signal?.aborted) return;
       setPeople(roster);
       setSelected((id) =>
         roster.some((p) => p.id === id) ? id : (roster[0]?.id ?? ""),
       );
-      const active = await api<DisplayState | null>("display");
+      const active = await api<DisplayState | null>(
+        "display",
+        "GET",
+        undefined,
+        signal,
+      );
+      if (signal?.aborted) return;
       if (active && active.state !== "complete") {
         if (!active.participant || !active.target) {
-          setError(
+          throw new Error(
             "Restart the local NeuroReach companion before opening this session.",
           );
-          return;
         }
         setSelected(active.participant);
         setDisplay(active);
@@ -81,8 +97,37 @@ export function StaffWorkspace({ onExit }: { onExit: () => void }) {
     }
   }
   useEffect(() => {
-    void load().catch((err) => setError(errorText(err)));
-  }, []);
+    let closed = false;
+    let timer: ReturnType<typeof setTimeout>;
+    let request: AbortController;
+    let timeout: ReturnType<typeof setTimeout>;
+    async function connect() {
+      request = new AbortController();
+      timeout = setTimeout(() => request.abort(), 10000);
+      setConnecting(true);
+      try {
+        await load(request.signal);
+        if (!closed) setError("");
+      } catch (err) {
+        if (closed) return;
+        setError(errorText(err));
+        setRetrying(err instanceof StationUnavailable);
+        // Retry reads only. Never replay a registration, password or session action.
+        if (err instanceof StationUnavailable)
+          timer = setTimeout(connect, 3000);
+      } finally {
+        clearTimeout(timeout);
+        if (!closed) setConnecting(false);
+      }
+    }
+    void connect();
+    return () => {
+      closed = true;
+      clearTimeout(timer);
+      clearTimeout(timeout);
+      request?.abort();
+    };
+  }, [reconnect]);
   useEffect(() => {
     let current = true;
     setVisits([]);
@@ -168,13 +213,24 @@ export function StaffWorkspace({ onExit }: { onExit: () => void }) {
         </StationHeader>
         <div className="cl-access">
           <div className="cl-access-rule" />
-          <p className="cl-overline">Local workstation</p>
           <h1>Staff workspace</h1>
           {error && <p role="alert">{error}</p>}
           {!auth ? (
-            <button onClick={() => act(load)}>
-              Connect to local companion
-            </button>
+            <>
+              <p role="status">
+                {connecting
+                  ? "Connecting to the staff workspace…"
+                  : retrying
+                    ? "Open the NeuroReach companion on this computer. This page will reconnect automatically."
+                    : "Check the station settings, then try again."}
+              </p>
+              <button
+                disabled={connecting}
+                onClick={() => setReconnect((n) => n + 1)}
+              >
+                {connecting ? "Connecting…" : "Try again"}
+              </button>
+            </>
           ) : (
             <form
               onSubmit={(e) => {

@@ -37,41 +37,7 @@ process.on("SIGTERM", () => stop(0));
 
 await import("../patient-web/scripts/prepare-camera.mjs");
 await import("../patient-web/scripts/package-controller.mjs");
-let companionRunning = false;
-try {
-  const response = await fetch("http://127.0.0.1:8766/api/health", {
-    signal: AbortSignal.timeout(500),
-  });
-  companionRunning =
-    response.ok && (await response.json()).app === "NeuroReach";
-} catch {
-  /* No companion listening yet. */
-}
-
-if (!companionRunning) {
-  const python = process.env.NEUROREACH_PYTHON;
-  const args = python
-    ? ["signal-engine/local_companion.py"]
-    : [
-        "run",
-        "--no-capture-output",
-        "-n",
-        "eeg",
-        "python",
-        "signal-engine/local_companion.py",
-      ];
-  const companion = start(python || process.env.CONDA_EXE || "conda", args);
-  const hint = () => {
-    if (!stopping)
-      console.warn(
-        "EEG and staff records need the Python companion. Button and camera games remain available. See README.md for setup.",
-      );
-  };
-  companion.once("error", hint);
-  companion.once("exit", (code) => {
-    if (code) hint();
-  });
-}
+// Vite owns companion startup/recovery for both this launcher and direct web dev.
 const vite = start(
   process.execPath,
   [

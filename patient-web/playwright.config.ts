@@ -5,5 +5,5 @@ export default defineConfig({
   use: { baseURL: "http://127.0.0.1:5173",
     browserName: browser === "webkit" || browser === "firefox" ? browser : "chromium",
     channel: browser ? undefined : "chrome" },
-  webServer: { command: "npm run dev -- --host 127.0.0.1 --strictPort", url: "http://127.0.0.1:5173", reuseExistingServer: !process.env.CI }
+  webServer: { env: { NEUROREACH_AUTO_COMPANION: "0" }, command: "npm run dev -- --host 127.0.0.1 --strictPort", url: "http://127.0.0.1:5173", reuseExistingServer: !process.env.CI }
 });

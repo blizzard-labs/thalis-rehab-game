@@ -4,7 +4,7 @@
   "scripts": {
     "start": "node scripts/start-local.mjs",
     "build": "npm --prefix patient-web run build",
-    "test": "npm --prefix patient-web test",
+    "test": "node --test scripts/companion.test.mjs && npm --prefix patient-web test",
     "companion": "conda run --no-capture-output -n eeg python signal-engine/local_companion.py"
   }
 }
