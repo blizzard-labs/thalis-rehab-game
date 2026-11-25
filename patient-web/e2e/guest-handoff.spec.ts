@@ -104,6 +104,10 @@ test("a guest tab that missed the handoff cannot write its old round into the ne
 }) => {
   await context.addInitScript(() => {
     Object.defineProperty(window, "BroadcastChannel", { value: undefined });
+    // Model a suspended tab missing both handoff transports. The separate
+    // notice tests cover live storage-event resets; this exercises the final
+    // transaction guard even when no notification reached the old player.
+    window.addEventListener("storage", (event) => event.stopImmediatePropagation(), true);
   });
   await page.goto("/");
   await page.getByRole("button", { name: /Garden Grow/ }).click();

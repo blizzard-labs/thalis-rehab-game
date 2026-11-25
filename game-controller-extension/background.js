@@ -123,7 +123,9 @@ async function prepareTransfer() {
       confirmTransfer = null;
       resolve(saved ? token : null);
     };
-    const timeout = setTimeout(() => finish(false), 750);
+    // A background controller may need a disk read before acknowledging.
+    // Keep controls stopped while allowing a bounded handoff on slower devices.
+    const timeout = setTimeout(() => finish(false), 3000);
     confirmTransfer = (sender, message) => {
       if (port === sender && message.token === token) finish(message.saved);
     };

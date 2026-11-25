@@ -36,6 +36,12 @@ jobs:
           NEUROREACH_BROWSER: webkit
         run: npm run test:e2e -- practice.spec.ts guest-handoff.spec.ts -g "guest grows|phone player|camera denial|the next guest|a guest tab"
       - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: browser-failure-diagnostics
+          path: patient-web/test-results
+          retention-days: 7
+      - uses: actions/upload-artifact@v4
         with:
           name: neuroreach-web
           path: patient-web/dist

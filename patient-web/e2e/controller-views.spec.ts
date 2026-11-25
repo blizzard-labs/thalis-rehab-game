@@ -116,6 +116,18 @@ test("toolbar defaults to sidebar and switches an active game between both remem
       )
       .toBe(true);
 
+    // A covered controller can acknowledge after a slow storage read. Its
+    // settings must survive without carrying an armed input into the new view.
+    await panel(`
+      window.addEventListener("message", event => {
+        if (event.data?.type !== "save-setup" || event.data.testDelayed) return;
+        event.stopImmediatePropagation();
+        setTimeout(() => window.dispatchEvent(new MessageEvent("message", {
+          source: event.source, origin: event.origin,
+          data: {...event.data, testDelayed: true}
+        })), 1100);
+      }, true);
+    `);
     await openToolbar("sidebar");
     const opened = context.waitForEvent("page");
     await choose("popup");

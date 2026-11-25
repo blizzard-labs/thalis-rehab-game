@@ -115,6 +115,10 @@
   border-color: #bfa1c4;
   background: #fffcf8;
 }
+.game-card .card-art {
+  /* Decorative animated SVGs must not become touch targets inside the card. */
+  pointer-events: none;
+}
 .card-copy {
   position: relative;
   background: inherit;
