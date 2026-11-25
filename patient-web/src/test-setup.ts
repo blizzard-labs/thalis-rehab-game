@@ -7,3 +7,8 @@ import { vi } from "vitest";
 vi.mock("@react-three/fiber", () => ({
   Canvas: () => null,
 }));
+
+// jsdom omits the native dialog API; browser tests verify focus trapping and
+// cancellation against real modal dialogs.
+HTMLDialogElement.prototype.showModal = function () { this.setAttribute("open", ""); };
+HTMLDialogElement.prototype.close = function () { this.removeAttribute("open"); };

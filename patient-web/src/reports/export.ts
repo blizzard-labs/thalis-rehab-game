@@ -1,4 +1,5 @@
 import type { Report } from "./report";
+import { reliabilityNote } from "./sheet";
 
 export function csvReport(report: Report): string {
   const rows: string[][] = [
@@ -20,6 +21,7 @@ export function csvReport(report: Report): string {
       );
     }
   }
+  rows.push([], ["Report limitations", reliabilityNote]);
   function quote(text: string) {
     // Numeric readings can be negative. Protect nonnumeric, user-entered text in spreadsheet apps.
     if (

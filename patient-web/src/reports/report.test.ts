@@ -110,6 +110,7 @@ it("escapes user text, distinguishes no visits and avoids invented zero measurem
   expect(csvReport(sessionReport(v, reader))).toContain(
     `"'=HYPERLINK(""a,b"")\nsecond line"`,
   );
+  expect(csvReport(sessionReport(v, reader))).toContain("not diagnoses, proof of recovery");
   const r = progressReport([], { name: "Guest" }, 4, undefined, "2026-10-12");
   expect(r.sections.some((s) => s.title === "Sensor trends")).toBe(false);
   expect(r.sections[0].table?.rows).toHaveLength(4);

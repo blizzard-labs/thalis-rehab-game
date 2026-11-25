@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { spawn } from "node:child_process";
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./noticesHarness";
 
 for (const [title, reward, port, streamName] of [
   ["Star Catcher", "1 star", "18768", "UN-validation-fixture"],

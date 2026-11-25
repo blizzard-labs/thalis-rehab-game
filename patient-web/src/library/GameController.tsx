@@ -1,3 +1,4 @@
+import { NOTICE_EVENT } from "../legal/notices";
 import { useEffect, useRef, useState } from "react";
 import { Brand } from "../brand/Brand";
 import { HeadsetSetup } from "../practice/HeadsetSetup";
@@ -210,10 +211,12 @@ export function GameController() {
         selectRef.current(choice.current);
       }
     };
+    window.addEventListener(NOTICE_EVENT, stop);
     document.addEventListener("visibilitychange", visibility);
     window.addEventListener("keydown", key);
     return () => {
       stop();
+      window.removeEventListener(NOTICE_EVENT, stop);
       document.removeEventListener("visibilitychange", visibility);
       window.removeEventListener("keydown", key);
     };

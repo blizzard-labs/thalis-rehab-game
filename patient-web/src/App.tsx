@@ -1,3 +1,4 @@
+import { NOTICE_EVENT, NOTICE_CLOSE_EVENT } from "./legal/notices";
 import { useEffect, useMemo, useState } from "react";
 import { LinkedAdventure } from "./adventures/LinkedAdventure";
 import { games, type Game } from "./practice/catalog";
@@ -33,6 +34,17 @@ function ClinicApp() {
   // Publish the patient camera over the paired socket's WebRTC signaling once
   // paired and connected. Local/dev (no code) stays preview-only.
 
+  const [noticePaused, setNoticePaused] = useState(false);
+  useEffect(() => {
+    const opened = () => setNoticePaused(true);
+    const closed = () => setNoticePaused(false);
+    window.addEventListener(NOTICE_EVENT, opened);
+    window.addEventListener(NOTICE_CLOSE_EVENT, closed);
+    return () => {
+      window.removeEventListener(NOTICE_EVENT, opened);
+      window.removeEventListener(NOTICE_CLOSE_EVENT, closed);
+    };
+  }, []);
   const paired = link.session;
   const [view, setView] = useState<View>(code ? "pairing" : "welcome");
   const cameraActive = ["calibration","modeselect",...games].includes(view) && !link.ended;
@@ -74,7 +86,7 @@ function ClinicApp() {
         return (
           <GardenScene
             stats={stats}
-            paused={link.paused || link.conn !== "open"}
+            paused={noticePaused || link.paused || link.conn !== "open"}
             engagementThreshold={config.engagementThreshold}
             store={link.store}
             conn={link.conn}
@@ -86,7 +98,7 @@ function ClinicApp() {
           <StarCatchScene
             wristTargets={link.wristTargets}
             stats={stats}
-            paused={link.paused || link.conn !== "open"}
+            paused={noticePaused || link.paused || link.conn !== "open"}
             engagementThreshold={config.engagementThreshold}
             affectedSide={identity.affectedSide}
             store={link.store}
@@ -101,7 +113,7 @@ function ClinicApp() {
           <LinkedAdventure
             game={view}
             side={identity.affectedSide}
-            paused={link.paused || link.conn !== "open"}
+            paused={noticePaused || link.paused || link.conn !== "open"}
             harborBase={paired?.harborBase}
             saveKeeper={link.saveKeeper}
             keeperError={link.keeperError}

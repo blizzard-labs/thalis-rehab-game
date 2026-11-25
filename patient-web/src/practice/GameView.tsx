@@ -1,3 +1,4 @@
+import { NOTICE_EVENT } from "../legal/notices";
 import { KeeperPlay } from "../adventures/KeeperPlay";
 import type { Readings } from "../reports/measurements";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
@@ -128,40 +129,50 @@ export function Play({
   const action = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     let last = performance.now();
-    const timer = window.setInterval(() => {
-      const now = performance.now();
-      if (!round.paused) {
-        const observation = observe.current();
-        aim.current = observation.aim;
-        const before = round.record.elapsed;
-        round.tick(
-          (now - last) / 1000,
-          observation.level,
-          observation.onTarget &&
-            (round.record.game !== "stars" || !round.celebrating),
-          observation.cameraHold,
-          observation.readings,
-        );
-        tickObserver.current?.(
-          round.record.elapsed - before,
-          observation.level,
-        );
-      }
-      last = now;
-      if (round.scheduleFinished) {
-        clearInterval(timer);
-        finish.current();
-        return;
-      }
-      redraw((n) => n + 1);
-    }, stream ? 33 : 80);
+    const timer = window.setInterval(
+      () => {
+        const now = performance.now();
+        if (document.querySelector(".nr-notice[open]")) round.setPaused(true);
+        if (!round.paused) {
+          const observation = observe.current();
+          aim.current = observation.aim;
+          const before = round.record.elapsed;
+          round.tick(
+            (now - last) / 1000,
+            observation.level,
+            observation.onTarget &&
+              (round.record.game !== "stars" || !round.celebrating),
+            observation.cameraHold,
+            observation.readings,
+          );
+          tickObserver.current?.(
+            round.record.elapsed - before,
+            observation.level,
+          );
+        }
+        last = now;
+        if (round.scheduleFinished) {
+          clearInterval(timer);
+          finish.current();
+          return;
+        }
+        redraw((n) => n + 1);
+      },
+      stream ? 33 : 80,
+    );
     const visibility = () => {
       if (document.hidden) round.setPaused(true);
     };
+    const notice = () => {
+      round.setPaused(true);
+      redraw((n) => n + 1);
+    };
+    window.addEventListener(NOTICE_EVENT, notice);
     document.addEventListener("visibilitychange", visibility);
     return () => {
       clearInterval(timer);
       document.removeEventListener("visibilitychange", visibility);
+      window.removeEventListener(NOTICE_EVENT, notice);
     };
   }, [round, stream]);
   useEffect(() => {

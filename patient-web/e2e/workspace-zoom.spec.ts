@@ -1,4 +1,5 @@
-import { expect, test } from "@playwright/test";
+import { returningReader } from "./noticesHarness";
+import { expect, test } from "./noticesHarness";
 import { spawn } from "node:child_process";
 import { mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
@@ -251,6 +252,7 @@ for (const zoom of [2, 4]) {
     );
     let run: Awaited<ReturnType<typeof zoomHarness>> | undefined;
     const patient = await browser.newContext();
+    await returningReader(patient);
     try {
       await expect
         .poll(

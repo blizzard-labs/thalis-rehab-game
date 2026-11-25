@@ -2,6 +2,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import "./styles.css";
 import { readSessionCode } from "./config";
+import { NoticeGate, SafetyLink } from "./legal/LegalNotice";
 import { ResourceLink } from "./brand/ResourceLink";
 
 async function start() {
@@ -14,10 +15,29 @@ async function start() {
         : readSessionCode()
           ? (await import("./App")).default
           : (await import("./practice/PracticeApp")).PracticeApp;
+  const supervised =
+    location.hash.startsWith("#display=") || !!readSessionCode();
+  const controlled = location.hash === "#game-controller";
+  const player =
+    supervised || controlled ? (
+      <NoticeGate
+        kind={supervised ? "supervised" : "controller"}
+        session={supervised}
+        scope={location.hash || location.search}
+        onCancel={() => {
+          location.href = location.pathname;
+        }}
+      >
+        <App />
+      </NoticeGate>
+    ) : (
+      <App />
+    );
   createRoot(document.getElementById("root")!).render(
     <StrictMode>
-      <App />
+      {player}
       <ResourceLink />
+      <SafetyLink />
     </StrictMode>,
   );
   if (

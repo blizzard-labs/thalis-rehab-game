@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./noticesHarness";
 import AxeBuilder from "@axe-core/playwright";
 
 test("core player screens have no automated WCAG A/AA findings at phone width", async ({

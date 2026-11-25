@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./noticesHarness";
 import AxeBuilder from "@axe-core/playwright";
 
 test("independent game library opens official services and is usable on a phone", async ({

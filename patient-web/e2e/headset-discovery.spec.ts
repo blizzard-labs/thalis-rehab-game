@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./noticesHarness";
 
 // Discovery uses stream instance IDs: a restarted vendor bridge has a new ID
 // even when the headset's visible serial/name is unchanged.

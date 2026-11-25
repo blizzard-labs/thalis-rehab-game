@@ -38,7 +38,7 @@ export function sheetSections(report: Report): Section[] {
   ];
 }
 export const reliabilityNote =
-  "NeuroReach measures describe practice, engagement and movement over time. Clinical interpretation belongs with the supervising clinician and formal assessments.";
+  "NeuroReach is an experimental wellness and biofeedback tool. These automatically generated measures describe practice, engagement and movement; they are not diagnoses, proof of recovery or a basis for autonomous treatment decisions. Observations may be incomplete or inaccurate. Interpret with the supervising clinician and formal assessments.";
 
 export function isStatusCell(value: string) {
   return [

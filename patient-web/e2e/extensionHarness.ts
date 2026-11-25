@@ -1,3 +1,4 @@
+import { returningReader } from "./noticesHarness";
 import {
   chromium,
   expect,
@@ -44,6 +45,7 @@ export async function openGameFixture(
       ],
     },
   );
+  await returningReader(context);
   try {
     if (prepare) await prepare(context);
     await context.route("https://poki.com/neuroreach-test", (route) =>

@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Page } from "./noticesHarness";
 import { attachPoseFixture } from "./poseFixture";
 
 function pose(page: Page, angle: number) {

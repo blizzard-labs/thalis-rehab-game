@@ -1,3 +1,4 @@
+import { returningReader } from "./noticesHarness";
 import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -84,6 +85,7 @@ export async function zoomHarness(
       ],
     },
   );
+  await returningReader(context);
   try {
     const worker =
       context.serviceWorkers()[0] ??

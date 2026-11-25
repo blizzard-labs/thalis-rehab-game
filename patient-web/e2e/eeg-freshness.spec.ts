@@ -1,5 +1,5 @@
-import { expect, test } from "@playwright/test";
-import type { WebSocketRoute } from "@playwright/test";
+import { expect, test } from "./noticesHarness";
+import type { WebSocketRoute } from "./noticesHarness";
 
 test("delayed EEG cannot earn strokes and fresh samples resume the same round", async ({
   page,

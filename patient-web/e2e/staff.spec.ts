@@ -1,4 +1,5 @@
-import { expect, test } from "@playwright/test";
+import { returningReader } from "./noticesHarness";
+import { expect, test } from "./noticesHarness";
 import { spawn } from "node:child_process";
 import { mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
@@ -46,6 +47,7 @@ test("isolated staff station records actions, exports reports and locks the rost
       .getByRole("button", { name: "Start supervised session" })
       .click();
     const patient = await browser.newContext();
+    await returningReader(patient);
     const player = await patient.newPage();
     await player.goto(
       (await page
@@ -113,6 +115,7 @@ test("staff controls a separate patient screen and receives its final trial coun
     { env: { ...process.env, NEUROREACH_DATA_DIR: root }, stdio: "ignore" },
   );
   const patient = await browser.newContext();
+  await returningReader(patient);
   try {
     const host = "http://127.0.0.1:18767";
     await expect

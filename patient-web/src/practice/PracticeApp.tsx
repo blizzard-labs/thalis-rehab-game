@@ -1,3 +1,4 @@
+import { NoticeGate } from "../legal/LegalNotice";
 import { ReportButton } from "../reports/ReportReader";
 import { Brand } from "../brand/Brand";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -496,8 +497,16 @@ export function PracticeApp() {
             </div>
           </>
         )}
-        {page === "staff" && <StaffWorkspace onExit={back} />}
-        {page === "library" && <GameLibrary back={back} />}
+        {page === "staff" && (
+          <NoticeGate kind="staff" session onCancel={back}>
+            <StaffWorkspace onExit={back} />
+          </NoticeGate>
+        )}
+        {page === "library" && (
+          <NoticeGate kind="external" onCancel={back}>
+            <GameLibrary back={back} />
+          </NoticeGate>
+        )}
         {page === "history" && <History guest={guest} onBack={back} />}
         {page === "handoff" && (
           <section className="practice-panel">
@@ -547,12 +556,14 @@ export function PracticeApp() {
           />
         )}
         {page === "play" && round && (
-          <SensorSession
-            round={round}
-            side={side}
-            modelProfile={guest ? () => currentGuest(guest) : undefined}
-            end={() => setPage("summary")}
-          />
+          <NoticeGate kind="play" source={round.source} onCancel={back}>
+            <SensorSession
+              round={round}
+              side={side}
+              modelProfile={guest ? () => currentGuest(guest) : undefined}
+              end={() => setPage("summary")}
+            />
+          </NoticeGate>
         )}
         {(page === "summary" || page === "handoff") && round && (
           <div hidden={page === "handoff"}>

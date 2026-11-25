@@ -22,6 +22,7 @@ describe("App flow", () => {
     render(<App />);
     await user.click(screen.getByRole("button", { name: /garden grow/i }));
     await user.click(screen.getByRole("button", { name: /start game/i }));
+    await user.click(screen.getByRole("button", { name: "I understand · continue" }));
     for (let i = 0; i < 4; i++) await user.click(screen.getByRole("button", { name: "Water" }));
     expect(screen.getByText(/1 bloom/)).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "End session" }));

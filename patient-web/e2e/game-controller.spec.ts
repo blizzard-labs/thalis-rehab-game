@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./noticesHarness";
 import AxeBuilder from "@axe-core/playwright";
 import { controllerHarness, enable } from "./extensionHarness";
 import { attachPoseFixture } from "./poseFixture";
@@ -585,13 +585,21 @@ test("blended control uses camera aim with EEG selection and clears sensors for 
       channel.close();
     });
     await expect(
-      controller.getByRole("heading", { name: "Choose your controls" }),
+      controller.getByRole("dialog", {
+        name: "Before you connect game controls",
+      }),
     ).toBeVisible();
     await expect
       .poll(() =>
         controller.evaluate(() => (window as any).cameraTrack.readyState),
       )
       .toBe("ended");
+    await controller
+      .getByRole("button", { name: "I understand · continue" })
+      .click();
+    await expect(
+      controller.getByRole("heading", { name: "Choose your controls" }),
+    ).toBeVisible();
   } finally {
     clearInterval(timer);
     await run.close();

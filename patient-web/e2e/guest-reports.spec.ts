@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./noticesHarness";
 
 test("a guest can review the current visit alongside a previous week without saving it", async ({
   page,

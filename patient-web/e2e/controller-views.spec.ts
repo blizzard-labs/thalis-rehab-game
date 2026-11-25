@@ -1,4 +1,4 @@
-import { expect, test, type CDPSession } from "@playwright/test";
+import { expect, test, type CDPSession } from "./noticesHarness";
 import { openGameFixture, enable } from "./extensionHarness";
 
 // Native toolbar and side-panel documents are browser UI. Playwright's page

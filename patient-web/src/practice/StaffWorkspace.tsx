@@ -431,6 +431,12 @@ export function StaffWorkspace({ onExit }: { onExit: () => void }) {
                   />
                   Participant agreed to save sessions on this station
                 </label>
+                <p className="cl-muted">
+                  Use a participant code where possible. Explain live
+                  screen/camera sharing and stored measurements before recording
+                  agreement. Research and media permission require separate
+                  consent.
+                </p>
                 <button className="cl-primary" disabled={busy}>
                   Add participant
                 </button>

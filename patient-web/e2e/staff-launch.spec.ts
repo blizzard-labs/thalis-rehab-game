@@ -1,3 +1,4 @@
+import { returningReader } from "./noticesHarness";
 import { attachPoseFixture } from "./poseFixture";
 import {
   test,
@@ -5,7 +6,7 @@ import {
   type Page,
   type Browser,
   type BrowserContext,
-} from "@playwright/test";
+} from "./noticesHarness";
 import { spawn, type ChildProcess } from "node:child_process";
 import { mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
@@ -82,6 +83,7 @@ async function join(
   prepare?: (patient: Page) => Promise<void>,
 ) {
   const context = await browser.newContext({ ignoreHTTPSErrors: true });
+  await returningReader(context);
   patients.push(context);
   const player = await context.newPage();
   if (prepare) await prepare(player);
@@ -575,6 +577,7 @@ test("a replacement patient link recovers a disconnected device without creating
     .getByRole("button", { name: "Reconnect patient device" })
     .click({ timeout: 12000 });
   const context = await browser.newContext({ ignoreHTTPSErrors: true });
+  await returningReader(context);
   patients.push(context);
   const replacement = await context.newPage();
   await replacement.goto(
@@ -599,6 +602,7 @@ test("untrusted patient markup stays inside a noninteractive mirror with scripts
   await page.getByRole("button", { name: "Start supervised session" }).click();
   const url = await page.getByLabel("Patient session link").inputValue();
   const context = await browser.newContext({ ignoreHTTPSErrors: true });
+  await returningReader(context);
   patients.push(context);
   const player = await context.newPage();
   await player.goto(url);

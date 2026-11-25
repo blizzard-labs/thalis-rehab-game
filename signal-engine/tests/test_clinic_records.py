@@ -96,6 +96,7 @@ def test_feedback_roundtrips_in_backup_and_report(tmp_path):
             )
             csv = await (await client.get(f"/api/staff/reports/{r['id']}.csv")).text()
             assert "Wanted a larger button." in csv
+            assert "not a diagnosis or proof of recovery" in csv
             backup = await (await client.get("/api/staff/backup")).json()
             assert backup["sessions"][0]["note"] == "Wanted a larger button."
 

@@ -1,5 +1,5 @@
 import { activate, fits, tabTo, zoomHarness } from "./keyboardHarness";
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./noticesHarness";
 
 for (const zoom of [2, 4]) {
   test(`keyboard play and reports remain reachable at ${zoom * 100}% browser zoom`, async ({

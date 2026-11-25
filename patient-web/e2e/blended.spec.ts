@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./noticesHarness";
 import { readFile } from "node:fs/promises";
 import { attachPoseFixture } from "./poseFixture";
 

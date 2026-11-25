@@ -1,3 +1,4 @@
+import { resetNoticeAcknowledgments } from "../legal/notices";
 import type { PracticeRecord } from "./session";
 
 const legacyProfileKey = "neuroreach-eeg-profile";
@@ -88,6 +89,9 @@ export function nextGuest(id: string) {
     const next = crypto.randomUUID();
     tx.objectStore("rounds").clear();
     tx.objectStore("guest").put(next, ownerKey);
+    return next;
+  }).then((next) => {
+    resetNoticeAcknowledgments();
     return next;
   });
 }

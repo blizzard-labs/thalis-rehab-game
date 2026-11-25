@@ -251,6 +251,10 @@ def render_report(row, participant, fmt):
         )
     if row["note"]:
         measures.append(("Participant or staff feedback", row["note"]))
+    measures.append(("Report limitations", "NeuroReach is an experimental wellness and biofeedback tool. "
+        "These automatically generated observations may be incomplete or inaccurate. They describe practice, "
+        "not a diagnosis or proof of recovery, and must not drive autonomous treatment decisions. "
+        "Interpret with the supervising clinician and formal assessments."))
     events = [[e["seconds"], e["kind"], SOURCES[e["source"]]] for e in r["events"]]
     if fmt == "csv":
         buf = io.StringIO()

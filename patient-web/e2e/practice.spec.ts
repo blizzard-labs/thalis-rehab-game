@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./noticesHarness";
 
 test("guest grows a flower, rests, saves locally and clears the shared browser", async ({
   page,

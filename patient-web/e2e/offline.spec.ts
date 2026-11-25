@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./noticesHarness";
 import { preview } from "vite";
 
 test("built guest app plays offline and caches build assets only", async ({

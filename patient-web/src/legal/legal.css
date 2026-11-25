@@ -1,0 +1,167 @@
+dialog.nr-notice {
+  box-sizing: border-box;
+  width: min(720px, calc(100% - 24px));
+  max-height: calc(100dvh - 24px);
+  margin: auto;
+  padding: 0;
+  overflow: auto;
+  border: 1px solid #cec1d1;
+  border-radius: 20px;
+  color: #38323e;
+  background: #fffbf5;
+  box-shadow: 0 20px 80px #2c203c33;
+  font: 17px/1.55 var(--nr-body-font, sans-serif);
+}
+dialog.nr-notice::backdrop {
+  background: #29203675;
+}
+.nr-notice-heading {
+  padding: 26px 30px 20px;
+  background: linear-gradient(120deg, #f3eaf2, #fff0dc);
+  border-bottom: 1px solid #e3d9e0;
+}
+.nr-notice-eyebrow {
+  font-size: 13px;
+  font-weight: 600;
+  color: #675074;
+  letter-spacing: 0.04em;
+}
+dialog.nr-notice h1 {
+  font:
+    600 clamp(27px, 4vw, 34px) / 1.15 Georgia,
+    serif;
+  color: #57415f;
+  margin: 12px 0;
+  letter-spacing: -0.02em;
+}
+dialog.nr-notice h1:focus {
+  outline: none;
+}
+dialog.nr-notice h2 {
+  font: 600 18px/1.35 var(--nr-body-font, sans-serif);
+  margin: 0 0 6px;
+  color: #57415f;
+  letter-spacing: normal;
+}
+dialog.nr-notice p {
+  margin: 0;
+}
+.nr-notice-body {
+  padding: 24px 30px;
+}
+dialog.nr-notice section + section {
+  margin-top: 20px;
+}
+dialog.nr-notice details {
+  margin-top: 20px;
+  border: 1px solid #d8cadb;
+  border-radius: 10px;
+  padding: 12px 16px;
+}
+dialog.nr-notice summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: #57415f;
+  min-height: 28px;
+}
+dialog.nr-notice details[open] summary {
+  margin-bottom: 16px;
+}
+dialog.nr-notice .nr-notice-rights {
+  margin-top: 20px;
+  padding: 14px;
+  border-radius: 10px;
+  background: #f0edf6;
+}
+dialog.nr-notice .nr-notice-small {
+  font-size: 14px;
+  margin-top: 18px;
+  color: #62576a;
+}
+dialog.nr-notice a {
+  color: #59416d;
+  text-decoration: underline;
+}
+dialog.nr-notice .nr-notice-actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 16px 30px;
+  background: #fffbf5;
+  border-top: 1px solid #e3d9e0;
+  position: sticky;
+  bottom: 0;
+}
+dialog.nr-notice .nr-notice-actions button {
+  min-height: 48px;
+  padding: 10px 18px;
+  border-radius: 9px;
+  border: 1px solid #b6a2c0;
+  background: #fff;
+  color: #57415f;
+  font: 600 16px/1.4 var(--nr-body-font, sans-serif);
+  cursor: pointer;
+}
+dialog.nr-notice .nr-notice-actions .nr-notice-continue {
+  background: #6b507b;
+  color: #fff;
+  border-color: #6b507b;
+}
+dialog.nr-notice :is(button, summary, a):focus-visible {
+  outline: 3px solid #86629b;
+  outline-offset: 3px;
+}
+dialog.nr-notice .nr-resource-link {
+  position: static;
+  margin: 10px 0 0 auto;
+}
+.nr-notice-waiting {
+  min-height: 45vh;
+}
+.nr-safety-link {
+  position: fixed;
+  right: max(6px, env(safe-area-inset-right));
+  bottom: max(50px, calc(env(safe-area-inset-bottom) + 44px));
+  z-index: 1001;
+  border: 0;
+  background: transparent;
+  color: #696868;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  cursor: pointer;
+  border-radius: 50%;
+}
+.nr-safety-link:focus-visible {
+  outline: 2px solid var(--nr-link);
+}
+body:has(.nr-notice[open], .nr-report[open]) > #root > .nr-safety-link,
+body:has(.nr-notice[open]) > #root > .nr-resource-link {
+  display: none;
+}
+@media (max-width: 480px) {
+  .nr-notice-heading,
+  .nr-notice-body {
+    padding: 20px;
+  }
+  dialog.nr-notice .nr-notice-actions {
+    padding: 12px 20px;
+  }
+  dialog.nr-notice .nr-notice-actions button {
+    flex: 1 1 100%;
+  }
+}
+@media (max-height: 450px) {
+  dialog.nr-notice .nr-notice-actions {
+    position: static;
+  }
+}
+@media print {
+  .nr-safety-link,
+  dialog.nr-notice {
+    display: none;
+  }
+}

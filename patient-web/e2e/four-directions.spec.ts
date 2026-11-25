@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Page } from "./noticesHarness";
 
 // Feed repeatable wrist coordinates through video frames. The camera-positive
 // suite separately exercises the production landmark detector on real footage.

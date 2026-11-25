@@ -7,6 +7,8 @@
 
 NeuroReach is an open-source wellness and engagement prototype for seated upper-limb practice. Garden Grow and Star Catcher accept keyboard, switch, touch, webcam movement, or motor-imagery input from a supported Unicorn EEG headset. The public player runs in a browser. The optional local companion handles EEG and supervised records. Camera video and raw EEG stay on the acquisition device or the clinic LAN.
 
+Safety and privacy notices appear before play, sensor use, supervised sharing and external-game controls. The shield beside the resources icon reopens the full notice. See [notice scope and deployment review](docs/privacy-notices.md); acknowledgments do not replace clinical/research consent or an operator-specific privacy policy.
+
 * **Brief Introduction: [https://youtu.be/hHVyAqoD-6w](https://youtu.be/hHVyAqoD-6w)**
 * **System Walkthrough: [https://youtu.be/Uo2iDNLLS2w](https://youtu.be/Uo2iDNLLS2w)**
 
