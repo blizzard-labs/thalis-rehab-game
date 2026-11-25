@@ -29,7 +29,14 @@ with TemporaryDirectory(prefix='neuroreach-installer-check-') as temporary:
         port = sock.getsockname()[1]
     if args.screenshot:
         env['NEUROREACH_DESKTOP_SCREENSHOT'] = str(args.screenshot.resolve())
-    subprocess.run([executable, '--desktop-smoke-check', '--port', str(port)], env=env, check=True, timeout=90)
+    try:
+        subprocess.run([executable, '--desktop-smoke-check', '--port', str(port)], env=env, check=True, timeout=90)
+    except subprocess.SubprocessError:
+        # This is an isolated synthetic station. Emit its diagnostic log before
+        # TemporaryDirectory removes it, so failures identify their cause.
+        for log in (folder / 'station' / 'logs').glob('*.log'):
+            print(log.read_text(), flush=True)
+        raise
     # Check the real browser entry, records and exports in the packaged service.
     spec = importlib.util.spec_from_file_location('records_check', Path(__file__).with_name('verify-windows-upgrade.py'))
     checks = importlib.util.module_from_spec(spec)
