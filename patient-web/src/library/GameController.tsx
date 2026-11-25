@@ -42,6 +42,8 @@ export function GameController() {
   const [source, setSource] = useState<Source>("button");
   const [side, setSide] = useState<Side>("right");
   const [preset, setPreset] = useState<ControlPreset>("arrows");
+  const presetEdited = useRef(false);
+  const presetConnection = useRef("");
   const [range, setRange] = useState<PointerRange | null>(null);
   const [configured, setConfigured] = useState(false);
   const [played, setPlayed] = useState(false);
@@ -60,7 +62,16 @@ export function GameController() {
   const eegNeeded = configured && (source === "eeg" || source === "blended");
   // A new selected game gets its own mapping. A player can override it in setup.
   useEffect(() => {
-    if (status.connectionId) setPreset(favorite?.preset ?? "arrows");
+    if (!status.connectionId) return;
+    // A delayed first status must not undo a choice already made in setup.
+    // Selecting a different game still starts with that game's suggested map.
+    if (
+      presetConnection.current &&
+      presetConnection.current !== status.connectionId
+    )
+      presetEdited.current = false;
+    presetConnection.current = status.connectionId;
+    if (!presetEdited.current) setPreset(favorite?.preset ?? "arrows");
   }, [status.connectionId, favorite]);
   // Keep the player's setup on localhost when a view change recreates this page.
   // The new view still needs a fresh game rectangle, live input and explicit arming.
@@ -110,6 +121,7 @@ export function GameController() {
         if (setup.expires < Date.now() || setup.guest !== guest) return;
         setSource(setup.source);
         setSide(setup.side);
+        presetEdited.current = true;
         setPreset(setup.preset);
         setRange(setup.range);
         setConfigured(setup.configured);
@@ -566,9 +578,10 @@ export function GameController() {
               Control preset{" "}
               <select
                 value={preset}
-                onChange={(event) =>
-                  setPreset(event.target.value as ControlPreset)
-                }
+                onChange={(event) => {
+                  presetEdited.current = true;
+                  setPreset(event.target.value as ControlPreset);
+                }}
               >
                 <option value="arrows">Arrow keys · 2048, Crossy Road</option>
                 <option value="steer">

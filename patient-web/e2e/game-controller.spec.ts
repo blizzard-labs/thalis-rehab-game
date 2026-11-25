@@ -11,9 +11,37 @@ test.beforeEach(({ browserName }) => {
 });
 
 test("reselecting a game area releases an active drag before clearing its coordinates", async () => {
-  const run = await controllerHarness();
+  const run = await controllerHarness(undefined, async (context) => {
+    // Hold back the first connection notification to reproduce a slow bridge
+    // arriving after the player has already chosen a preset.
+    await context.addInitScript(() => {
+      window.addEventListener("message", (event) => {
+        if (
+          location.hash === "#game-controller" &&
+          !(window as any).releaseConnectionStatus &&
+          event.data?.channel === "neuroreach-library" &&
+          event.data.from === "extension" &&
+          event.data.type === "status"
+        )
+          event.stopImmediatePropagation();
+      });
+    });
+  });
   try {
     await run.controller.getByLabel("Control preset").selectOption("drag");
+    await run.controller.evaluate(() => {
+      (window as any).releaseConnectionStatus = true;
+      window.postMessage(
+        { channel: "neuroreach-library", from: "app", type: "hello" },
+        location.origin,
+      );
+    });
+    await expect(
+      run.controller.getByText("External game fixture", { exact: true }),
+    ).toBeVisible();
+    await expect(run.controller.getByLabel("Control preset")).toHaveValue(
+      "drag",
+    );
     await run.controller.getByRole("button", { name: "Set up input" }).click();
     await enable(run.controller);
     await run.controller
