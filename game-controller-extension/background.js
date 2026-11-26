@@ -574,12 +574,20 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
     );
     return true;
   }
+  // Keep the entire handoff in the worker: opening Chrome's side panel can
+  // destroy the toolbar popup before its next awaited instruction runs.
+  // Start opening synchronously while the toolbar click is still a gesture.
+  const panelReady = toolbar && message.type === "choose-area" && message.layout === "sidebar"
+    ? chrome.sidePanel.open({ windowId: message.windowId }).then(() => null, (error) => error)
+    : Promise.resolve(null);
   const run = async () => {
     if (message.type === "stop") {
       await stop(undefined, !target?.rect);
       return;
     }
     if (message.type === "choose-area" && toolbar) {
+      const panelError = await panelReady;
+      if (panelError) throw panelError;
       await stationReady;
       await beginSelection(
         message.tabId,

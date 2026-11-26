@@ -12,6 +12,8 @@ source = root / 'game-controller-extension'
 manifest = json.loads((source / 'manifest.json').read_text())
 output = root / 'dist' / 'extension'
 archive = output / f'NeuroReach-Game-Controller-{manifest["version"]}.zip'
+if not archive.exists():
+    subprocess.run(['node', str(root / 'patient-web/scripts/package-controller.mjs')], check=True, cwd=root)
 first = archive.read_bytes()
 subprocess.run(['node', str(root / 'patient-web/scripts/package-controller.mjs')], check=True, cwd=root)
 assert archive.read_bytes() == first, 'Packaging must be reproducible'
@@ -47,7 +49,7 @@ with ZipFile(archive) as package:
     assert privacy == (root / 'patient-web/public/extension-privacy.html').read_bytes()
     assert b'Limited Use' in privacy
     package.extractall(output / 'unpacked')
-with ZipFile(root / 'patient-web/public/game-controller-extension.zip') as manual:
+with ZipFile(root / 'patient-web/public/game-controller-extension.zip') as manual, ZipFile(archive) as package:
     for name in names:
-        assert manual.read('neuroreach-game-controller/' + name) == ZipFile(archive).read(name)
+        assert manual.read('neuroreach-game-controller/' + name) == package.read(name)
 print(f'PASS: {archive.name}; root manifest, icons, permissions, CSP, local scripts, checksums, reproducibility, and manual/store parity.')

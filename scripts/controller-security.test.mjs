@@ -41,6 +41,30 @@ test('only known controller entry pages are trusted', () => {
   assert.equal(r.evaluate("controllerSite('https://blizzard-labs.github.io/thalis-rehab-game/#game-controller')"), 'https://blizzard-labs.github.io/thalis-rehab-game');
 });
 
+test('first sidebar connection survives the toolbar closing while the panel opens', async () => {
+  const r = runtime();
+  let opened, selected = false;
+  r.chrome.sidePanel = { open: ({ windowId }) => {
+    assert.equal(windowId, 1);
+    return new Promise(resolve => { opened = resolve; });
+  } };
+  r.chrome.debugger.attach = async () => {};
+  r.chrome.runtime.sendMessage = async () => {};
+  r.chrome.scripting.executeScript = async ({ func }) => { if (func.name === 'chooseArea') selected = true; };
+  // No live popup is needed after this message; its response can be discarded.
+  r.chrome.runtime.onMessage.listeners[0](
+    { type: 'choose-area', tabId: 1, windowId: 1, layout: 'sidebar' },
+    { id: 'extension', url: 'chrome-extension://extension/popup.html' },
+    () => {},
+  );
+  assert.equal(typeof opened, 'function');
+  await new Promise(resolve => setTimeout(resolve, 0));
+  assert.equal(selected, false);
+  opened(); await r.flush();
+  assert.equal(selected, true);
+  assert.equal(r.evaluate('layout'), 'sidebar');
+});
+
 test('malformed messages, arbitrary methods, keys and coordinates cannot become input', async () => {
   const r = runtime(); await r.arm();
   for (const message of [null, false, [], 'click', {type:'Runtime.evaluate', expression:'alert(1)'}, {type:'key',key:'Enter'}, {type:'steer',key:'Space'}, {type:'move',x:Infinity,y:.5}, {type:'move',x:-1,y:1}, {type:'move',x:'0.5',y:0}, {type:'move',x:1.01,y:0}]) r.send(message);

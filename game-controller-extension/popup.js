@@ -38,12 +38,10 @@ button.onclick = async () => {
   button.disabled = true;
   const layout = view.value;
   try {
-    // Opening a native panel requires the original click's user activation.
-    if (layout === "sidebar")
-      await chrome.sidePanel.open({ windowId: game.windowId });
     const result = await chrome.runtime.sendMessage({
       type: "choose-area",
       tabId: game.id,
+      windowId: game.windowId,
       layout,
     });
     if (!result.ok) throw new Error(result.error);
