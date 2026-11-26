@@ -36,6 +36,7 @@ export function ExtensionHelp() {
       <p>
         The extension requests browser debugging access to send controls to your
         selected game. <strong>Alt+Shift+S</strong> stops controls at any time.
+        {" "}<a href={assetUrl("extension-privacy.html")} target="_blank" rel="noopener noreferrer">Extension privacy policy</a>.
       </p>
       {!isLocalStation() && (
         <p>

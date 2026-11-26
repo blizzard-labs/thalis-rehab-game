@@ -19,6 +19,7 @@ Use the README for playing, companion installation, and clinician workflows. Thi
 | [Verification evidence](localhost-validation.md) | Acceptance coverage, published release, and physical validation limits. |
 | [Garden design](gardengrow.md) / [Star Catcher design](reachcollect.md) | Game behavior and movement goals. |
 | [Outside game integration](game-library.md) | Presets, provider research, permissions, and per-game observations. |
+| [Extension publication](extension-store/listing.md) | Store ZIP, listing, privacy disclosures, reviewer instructions, and verification evidence. |
 | [Privacy notices](privacy-notices.md) | Notice sources, implemented data practices, and operator obligations. |
 
 ## Local development

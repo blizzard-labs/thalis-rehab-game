@@ -20,7 +20,7 @@ export async function openGameFixture(
 ) {
   const root = await mkdtemp(path.join(os.tmpdir(), "nr-game-controller-"));
   const extension = path.join(root, "extension");
-  await cp("../game-controller-extension", extension, { recursive: true });
+  await cp(process.env.NEUROREACH_EXTENSION_DIR || "../game-controller-extension", extension, { recursive: true });
   const manifest = JSON.parse(
     await readFile(path.join(extension, "manifest.json"), "utf8"),
   );

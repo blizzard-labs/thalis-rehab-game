@@ -1,4 +1,4 @@
-importScripts("sites.js");
+importScripts("sites.js", "protocol.js");
 const hosts = [
   "poki.com",
   "coolmathgames.com",
@@ -35,6 +35,34 @@ const stationReady = chrome.storage.session.get("station").then((stored) => {
 });
 let queue = Promise.resolve();
 let pendingMotion = false;
+let pendingArm = false;
+let generation = 0;
+let queuedInputs = 0;
+function disarm() {
+  armed = false;
+  generation += 1;
+}
+function queueInput(port, task, settled = () => {}) {
+  const session = target;
+  const epoch = generation;
+  const current = () => armed && owner === port && target === session && generation === epoch && Date.now() - lastBeat <= 1200;
+  if (queuedInputs >= 8) {
+    disarm();
+    settled();
+    void enqueue(() => stop("Input arrived too quickly. Enable controls to try again."));
+    return false;
+  }
+  queuedInputs += 1;
+  void enqueue(async () => {
+    try {
+      if (current()) await task(current);
+    } finally {
+      queuedInputs -= 1;
+      settled();
+    }
+  });
+  return true;
+}
 const supported = (url) => {
   try {
     const u = new URL(url);
@@ -257,7 +285,7 @@ async function release() {
   }
 }
 async function stop(message, detach = false) {
-  armed = false;
+  disarm();
   // A controller's cleanup must not replace a useful disconnect explanation.
   if (message) reason = message;
   else if (target?.rect)
@@ -533,7 +561,7 @@ async function connectGame(tabId, rect) {
 }
 
 chrome.runtime.onMessage.addListener((message, sender, respond) => {
-  if (sender.id !== chrome.runtime.id) return;
+  if (sender.id !== chrome.runtime.id || !message || typeof message !== "object") return;
   const toolbar = sender.url === chrome.runtime.getURL("popup.html");
   if (toolbar && message.type === "game-view") {
     chrome.tabs.get(message.tabId).then(
@@ -572,6 +600,7 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
     )
       await stop("The game layout moved. Choose its play area again.", true);
   };
+  if (message.type === "stop" || message.type === "choose-area") disarm();
   enqueue(run)
     .then(() => respond({ ok: true }))
     .catch((error) => respond({ ok: false, error: error.message }));
@@ -617,6 +646,7 @@ chrome.runtime.onConnect.addListener((port) => {
     }
   });
   port.onMessage.addListener((message) => {
+    if (!message || typeof message !== "object") return;
     if (
       sidebar &&
       message.type === "panel-ready" &&
@@ -626,6 +656,8 @@ chrome.runtime.onConnect.addListener((port) => {
       syncPanel(port);
       return;
     }
+    message = controlCommand(message);
+    if (!message) return;
     if (message.type === "hello") {
       if (
         !sidebar &&
@@ -652,33 +684,41 @@ chrome.runtime.onConnect.addListener((port) => {
       return;
     }
     if (message.type === "stop") {
-      armed = false;
+      disarm();
       // The app also sends stop on configuration changes. It may arrive
       // while the player is drawing a replacement area in the game.
       void enqueue(() => stop());
       return;
     }
     if (message.type === "arm") {
+      if (pendingArm) return;
+      pendingArm = true;
+      const session = target;
+      const epoch = generation;
       void enqueue(async () => {
-        if (!target?.rect || owner !== port) return;
-        const tab = await chrome.tabs.get(target.tabId);
-        if (!tab.active || tab.url !== target.url) {
-          await stop("Return to the selected game, then reconnect.", true);
-          return;
+        try {
+          if (!target?.rect || target !== session || generation !== epoch || owner !== port) return;
+          const tab = await chrome.tabs.get(target.tabId);
+          if (!tab.active || tab.url !== target.url) {
+            await stop("Return to the selected game, then reconnect.", true);
+            return;
+          }
+          await releaseKey();
+          await release();
+          // Games such as Crossy Road pause on window blur. Camera play can
+          // leave its controller behind the game once calibration is complete.
+          if (message.focusGame === true)
+            await chrome.windows.update(tab.windowId, { focused: true });
+          await focusPlayArea(tab.id, target.rect);
+          if (target !== session || generation !== epoch || owner !== port) return;
+          lastBeat = Date.now();
+          armed = true;
+          showAim = message.showAim === true;
+          reason = "Controls enabled. Alt+Shift+S stops immediately.";
+          tell();
+        } finally {
+          pendingArm = false;
         }
-        await releaseKey();
-        await release();
-        // Games such as Crossy Road pause on window blur. Camera play can
-        // leave its controller behind the game once calibration is complete.
-        if (message.focusGame === true)
-          await chrome.windows.update(tab.windowId, { focused: true });
-        await focusPlayArea(tab.id, target.rect);
-        if (!target || owner !== port) return;
-        lastBeat = Date.now();
-        armed = true;
-        showAim = message.showAim === true;
-        reason = "Controls enabled. Alt+Shift+S stops immediately.";
-        tell();
       });
       return;
     }
@@ -694,8 +734,7 @@ chrome.runtime.onConnect.addListener((port) => {
       point = { x: message.x, y: message.y };
       if (pendingMotion) return;
       pendingMotion = true;
-      void enqueue(async () => {
-        try {
+      queueInput(port, async () => {
           if (armed && target) {
             paintAim(true);
             await input("dispatchMouseEvent", {
@@ -705,16 +744,13 @@ chrome.runtime.onConnect.addListener((port) => {
               button: held ? "left" : "none",
             });
           }
-        } finally {
-          pendingMotion = false;
-        }
-      });
+      }, () => { pendingMotion = false; });
     } else if (
       message.type === "click" ||
       message.type === "hold" ||
       message.type === "release"
     ) {
-      void enqueue(async () => {
+      queueInput(port, async () => {
         if (!armed || !target) return;
         if (message.type === "hold" && held) return;
         if (message.type === "release" || held) await release();
@@ -738,9 +774,10 @@ chrome.runtime.onConnect.addListener((port) => {
       });
     } else if (message.type === "key") {
       if (!Object.hasOwn(keyCodes, message.key)) return;
-      void enqueue(async () => {
+      queueInput(port, async (current) => {
         if (!armed || !target) return;
         await releaseKey();
+        if (!current()) return;
         heldKey = message.key;
         await keyEvent("rawKeyDown", message.key);
         await new Promise((resolve) => setTimeout(resolve, 60));
@@ -750,10 +787,10 @@ chrome.runtime.onConnect.addListener((port) => {
       const key = message.key;
       if (key !== null && (!Object.hasOwn(keyCodes, key) || key === "Space"))
         return;
-      void enqueue(async () => {
+      queueInput(port, async (current) => {
         if (!armed || !target || key === heldKey) return;
         await releaseKey();
-        if (key && armed) {
+        if (key && current()) {
           heldKey = key;
           await keyEvent("rawKeyDown", key);
         }
@@ -763,14 +800,15 @@ chrome.runtime.onConnect.addListener((port) => {
 });
 setInterval(() => {
   if (armed && Date.now() - lastBeat > 1200) {
-    armed = false;
+    disarm();
     void enqueue(() => stop("Input connection lost. Controls stopped."));
   }
 }, 400);
 chrome.debugger.onDetach.addListener(({ tabId }) => {
   if (target?.tabId === tabId) {
     target = null;
-    armed = held = false;
+    disarm();
+    held = false;
     showAim = false;
     heldKey = null;
     reason = "Game disconnected. Choose its area again.";
@@ -788,7 +826,7 @@ chrome.tabs.onUpdated.addListener((id, change) => {
     target?.tabId === id &&
     (change.status === "loading" || (change.url && change.url !== target.url))
   ) {
-    armed = false;
+    disarm();
     void enqueue(() => stop("Game page changed. Choose its area again.", true));
   }
 });
@@ -800,12 +838,12 @@ chrome.tabs.onActivated.addListener(({ tabId, windowId }) => {
       controllerTab?.windowId === windowId &&
       tabId !== controllerTab.id)
   ) {
-    armed = false;
+    disarm();
     void enqueue(() => stop("Tab switched. Controls stopped."));
   }
 });
 chrome.commands.onCommand.addListener(() => {
-  armed = false;
+  disarm();
   void enqueue(() => stop(undefined, !target?.rect));
 });
 chrome.windows.onFocusChanged.addListener((windowId) => {
@@ -814,7 +852,7 @@ chrome.windows.onFocusChanged.addListener((windowId) => {
     windowId !== target?.windowId &&
     windowId !== owner?.sender?.tab?.windowId
   ) {
-    armed = false;
+    disarm();
     void enqueue(() =>
       stop("Focus left the game and controller. Controls stopped."),
     );

@@ -144,6 +144,8 @@ For camera controls in **desktop Chrome or Edge**:
 
 Outside games are for independent play, need internet, and use their providers' terms. They do not generate NeuroReach session reports. EEG controls require the local companion's library. See the [full extension instructions](game-controller-extension/README.md).
 
+[Extension privacy policy](https://blizzard-labs.github.io/thalis-rehab-game/extension-privacy.html) · [Store publication materials](docs/extension-store/listing.md)
+
 ## Reports and saved information
 
 | To… | Choose… |

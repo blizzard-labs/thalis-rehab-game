@@ -25,9 +25,11 @@ window.addEventListener("message", (event) => {
   const message = event.data;
   if (message?.channel !== "neuroreach-library" || message.from !== "app")
     return;
+  const command = controlCommand(message);
+  if (!command) return;
   connect();
   try {
-    port?.postMessage(message);
+    port?.postMessage(command);
   } catch {
     port = null;
   }

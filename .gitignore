@@ -33,3 +33,5 @@ archive/
 
 # Generated downloadable controller, rebuilt by predev/prebuild
 patient-web/public/game-controller-extension.zip
+patient-web/public/neuroreach-game-controller-store.zip
+patient-web/public/extension-privacy.html

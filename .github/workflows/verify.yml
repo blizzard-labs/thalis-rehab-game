@@ -31,6 +31,7 @@ jobs:
       - run: npm --prefix clinician-console ci
       - run: npm test
       - run: npm run build
+      - run: python3 packaging/verify-extension.py
       - run: npm --prefix clinician-console run build:main
       - run: npm --prefix clinician-console run build:renderer
       - run: npm --prefix clinician-console test
@@ -54,6 +55,13 @@ jobs:
           name: browser-failure-diagnostics
           path: patient-web/test-results
           retention-days: 7
+      - uses: actions/upload-artifact@v4
+        with:
+          name: neuroreach-extension-store
+          path: |
+            dist/extension/*.zip
+            dist/extension/SHA256SUMS.txt
+            docs/extension-store/
   signal-tests:
     runs-on: windows-latest
     steps:
@@ -128,6 +136,19 @@ jobs:
           $env:NEUROREACH_TEST_PYTHON = (Get-Command python).Source
           $env:NEUROREACH_COMPANION_EXE = (Resolve-Path ../dist/NeuroReach/NeuroReach.exe).Path
           npm run test:e2e -- staff-launch.spec.ts -g "moving patient screen" --workers=1 --repeat-each=3 --trace off
+      - name: Verify extension store archive
+        run: |
+          node patient-web/scripts/package-controller.mjs
+          python packaging/verify-extension.py
+      - name: Exercise packaged extension with camera and synthetic EEG
+        working-directory: patient-web
+        shell: pwsh
+        run: |
+          Invoke-WebRequest https://storage.googleapis.com/mediapipe-assets/pose.jpg -OutFile "$env:RUNNER_TEMP/extension-pose.jpg"
+          $env:NEUROREACH_POSE_FIXTURE = "$env:RUNNER_TEMP/extension-pose.jpg"
+          $env:NEUROREACH_TEST_PYTHON = (Get-Command python).Source
+          $env:NEUROREACH_EXTENSION_DIR = (Resolve-Path ../dist/extension/unpacked).Path
+          npm run test:e2e -- game-controller.spec.ts controller-views.spec.ts --workers=1
       - uses: actions/upload-artifact@v4
         if: failure()
         with:

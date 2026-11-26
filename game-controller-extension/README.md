@@ -37,4 +37,6 @@ Supported sites: Poki, Coolmath Games, Playgama, GamePix, CrazyGames, play2048.c
 
 ## Development and updates
 
-Source: `game-controller-extension/` in the NeuroReach repository. `node patient-web/scripts/package-controller.mjs` creates the distributable ZIP; the app's start/build commands also run it. After source updates, click **Reload** on the extension card and reload NeuroReach. Browser store publication and automatic updates are not configured.
+Source: `game-controller-extension/` in the NeuroReach repository. `npm run package:extension` creates the manual-install ZIP and a separate store ZIP with its manifest at the root; the app's start/build commands also run it. After source updates, click **Reload** on the extension card and reload NeuroReach. A store submission package and review materials are prepared in [the publication guide](../docs/extension-store/listing.md). Store approval and automatic store updates are not active until publication.
+
+[Privacy policy](https://blizzard-labs.github.io/thalis-rehab-game/extension-privacy.html) · [Permissions and data flow](../docs/extension-store/privacy-fields.md)

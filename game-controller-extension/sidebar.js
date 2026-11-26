@@ -36,7 +36,10 @@ window.addEventListener("message", (event) => {
     event.data.from === "app" &&
     event.data.type !== "panel-ready"
   )
-    port?.postMessage(event.data);
+    {
+      const command = controlCommand(event.data);
+      if (command) port?.postMessage(command);
+    }
 });
 function connect() {
   if (port) return;

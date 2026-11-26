@@ -9,8 +9,8 @@
         margin: 0;
         padding: 22px;
         font: 15px/1.5 system-ui;
-        background: #f8f8f0;
-        color: #24392f;
+        background: #fdf9f4;
+        color: #40394b;
       }
       h1 {
         font: 28px Georgia;
@@ -20,9 +20,9 @@
         width: 100%;
         font: 600 15px system-ui;
         padding: 12px;
-        border: 1px solid #52765f;
+        border: 1px solid #725382;
         border-radius: 8px;
-        background: #234e40;
+        background: #725382;
         color: white;
         cursor: pointer;
         margin: 5px 0;
@@ -37,7 +37,7 @@
         margin: 12px 0;
       }
       a {
-        color: #234e40;
+        color: #654477;
       }
       button:disabled {
         opacity: 0.6;
@@ -47,8 +47,8 @@
   <body>
     <h1>NeuroReach</h1>
     <p>
-      Open a game, then select just its playable area. Camera and EEG controls
-      will stay inside that area.
+      Select the playable area of a supported game. Pointer controls stay in
+      that area; keyboard controls go to the selected game tab.
     </p>
     <label
       >Controller view
@@ -64,6 +64,8 @@
       Use on Poki, Coolmath Games, Playgama, GamePix, CrazyGames, 2048 or Angry
       Birds Friends.
     </p>
+    <p>Chrome shows a debugging notice while connected. <strong>Alt+Shift+S</strong> stops game input. Close the controller to stop the camera.</p>
+    <p><a href="privacy.html" target="_blank" rel="noopener noreferrer">Privacy</a> · <a href="https://github.com/blizzard-labs/thalis-rehab-game/tree/main/game-controller-extension#readme" target="_blank" rel="noopener noreferrer">Setup &amp; support</a></p>
     <script src="popup.js"></script>
   </body>
 </html>

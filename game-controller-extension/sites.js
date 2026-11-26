@@ -6,7 +6,8 @@ function controllerSite(address) {
     if (url.username || url.password) return null;
     if (
       url.protocol === "http:" &&
-      ["127.0.0.1", "localhost"].includes(url.hostname)
+      ["127.0.0.1", "localhost"].includes(url.hostname) &&
+      ["/", "/index.html"].includes(url.pathname)
     )
       return url.origin;
     if (

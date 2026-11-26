@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NeuroReach Game Controller — Privacy</title>
+  <style>
+    :root { color-scheme: light dark; font: 17px/1.65 system-ui, sans-serif; }
+    body { max-width: 780px; margin: 0 auto; padding: 36px 24px 64px; }
+    h1, h2 { line-height: 1.2; } h2 { margin-top: 2em; }
+    a { color: light-dark(#654477, #d4b7ec); } p, li { overflow-wrap: anywhere; }
+    header { border-bottom: 1px solid #a99aaf; padding-bottom: 20px; }
+    .date { font-size: .85em; }
+  </style>
+</head>
+<body>
+<header>
+  <p>NeuroReach Game Controller</p>
+  <h1>Your controls. Your choices.</h1>
+  <p>Privacy policy for the browser extension and its NeuroReach controller.</p>
+  <p class="date">Effective November 25, 2026 · Extension version 0.5.0</p>
+</header>
+<main>
+<h2>Who provides it</h2>
+<p>NeuroReach is an open-source project maintained by Krishna Bhatt. For privacy questions, contact <a href="mailto:krishbhatt2019@gmail.com">krishbhatt2019@gmail.com</a>. Do not send medical records, camera recordings, or raw EEG data in email or public issues.</p>
+<h2>What the controller does</h2>
+<p>The extension turns inputs from the NeuroReach controller into keyboard or pointer actions in one supported game tab that you select. It supports independent play, not supervised sessions. You choose the game area and explicitly enable controls. It does not diagnose conditions or measure clinical recovery.</p>
+<h2>Information used on your device</h2>
+<ul>
+  <li><strong>Selected game:</strong> the extension uses its tab identifier, address, title, selected rectangle, and focus/layout state to target input and stop it when the context changes. It does not collect a history of unrelated browsing or scrape game scores.</li>
+  <li><strong>Input commands:</strong> normalized pointer positions, arrow/Space key commands, click/hold/release actions, connection heartbeats, and a temporary setup-transfer token pass between the NeuroReach controller and extension. Only fixed, validated commands are accepted.</li>
+  <li><strong>Camera:</strong> with your browser permission, the NeuroReach web controller processes camera video locally to estimate movement. Video is not recorded or sent to the extension background process, NeuroReach servers, GitHub, or game providers. The controller can keep processing while covered; closing it ends camera capture.</li>
+  <li><strong>Optional EEG:</strong> the local companion processes a supported headset stream. The web controller uses derived signal information locally. The extension receives game actions, not raw EEG or clinical records. EEG requires the companion and the manufacturer's separate setup.</li>
+</ul>
+<h2>Storage and retention</h2>
+<p>The extension stores your Sidebar/Pop-up preference in local browser extension storage until you change it or uninstall the extension. Its session storage remembers which NeuroReach station to use until the browser session ends or the extension is reloaded, disabled, or uninstalled. It does not use Chrome Sync.</p>
+<p>The NeuroReach website separately stores input preferences, optional camera calibration, and notice acknowledgments in that site's browser storage. A view-switch token temporarily transfers setup within that same site. Use <strong>Next guest</strong> to reset personal practice data, or clear the NeuroReach site's data in browser settings. Extension removal alone does not clear website data or companion records. Exported files remain until you delete them.</p>
+<p>The extension does not create session reports or retain a game-input history. Active connection and input state are held in memory. The separate companion controls its own local records; no supervised records are accessible through this extension.</p>
+<h2>Network requests and other services</h2>
+<p>The sidebar loads the NeuroReach controller from <a href="https://blizzard-labs.github.io/thalis-rehab-game/">GitHub Pages</a> or your local companion. GitHub receives ordinary website requests and may keep IP-address/security logs under its <a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement">Privacy Statement</a>. These hosting requests do not include camera video, raw EEG, or saved patient records. The extension has no analytics, advertising SDK, or developer telemetry endpoint.</p>
+<p>Game providers receive the normal keyboard/pointer actions you send to their games. Their pages may independently collect information, use cookies, show ads, or offer purchases under their own policies. NeuroReach is not affiliated with the providers and does not bypass their ads, accounts, or restrictions.</p>
+<h2>Permissions and stopping</h2>
+<ul>
+  <li><strong>Active tab and scripting:</strong> place the selection overlay on the game after you click the extension.</li>
+  <li><strong>Debugger:</strong> deliver keyboard/pointer events to the selected game, including embedded frames. Chrome displays a debugging notice. This extension does not use that permission to read passwords, cookies, browser history, network traffic, or screenshots.</li>
+  <li><strong>Side panel and storage:</strong> show the controller beside the game and remember your view preference.</li>
+  <li><strong>NeuroReach/local host access:</strong> connect the controller to the extension. Only the designated NeuroReach project and local controller entry pages are accepted; other websites cannot issue controls.</li>
+</ul>
+<p><strong>Alt+Shift+S</strong> or <strong>Stop controls</strong> releases game input. Changing game tabs, navigating, moving the selected layout, losing input, or closing the controller also stops forwarding. Stopping controls alone does not stop camera capture or pause the game; close the controller to stop sensors and use the game's own pause control. Disable or uninstall the extension from your browser's Extensions page whenever you wish.</p>
+<h2>Limited use and sharing</h2>
+<p>Information handled by NeuroReach Game Controller is used only to provide its user-facing game-control functionality. It is not sold, used for advertising, or used to determine creditworthiness. The use of information received from Google APIs adheres to the Chrome Web Store User Data Policy, including its Limited Use requirements. The project does not receive sensor recordings or game-input logs through this extension.</p>
+<p>If you voluntarily contact the maintainer, the information you provide is used to address your request. Changes to this policy will be dated and published here; material new data uses require updated disclosures and, where applicable, consent.</p>
+</main>
+<footer><p><a href="https://github.com/blizzard-labs/thalis-rehab-game/tree/main/game-controller-extension#readme">Setup and support</a> · <a href="https://blizzard-labs.github.io/thalis-rehab-game/#library">Open the game library</a></p></footer>
+</body>
+</html>
