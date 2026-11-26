@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { useMotionCamera } from "../practice/useMotionCamera";
 import type { Point } from "../practice/motion";
+import { CameraAccess } from "./CameraAccess";
 
 export type PointerRange = { rest: Point; topLeft: Point; bottomRight: Point };
 export function pointerPosition(range: PointerRange, point: Point) {
@@ -105,6 +106,7 @@ export function PointerSetup({
         aria-label="Mirrored camera preview"
       />
       <p role="status">{camera.status}</p>
+      <CameraAccess camera={camera} />
       <p>
         {points.length === 0
           ? "Rest your hand comfortably with room to move a little in all four directions."
@@ -120,7 +122,7 @@ export function PointerSetup({
       <div className="button-row">
         <button
           className="primary"
-          disabled={count !== null}
+          disabled={count !== null || !camera.stream}
           onClick={() => {
             setError("");
             setCount(2);

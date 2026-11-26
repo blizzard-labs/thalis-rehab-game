@@ -1,4 +1,4 @@
-# Chrome Web Store submission — NeuroReach Game Controller 0.5.0
+# Chrome Web Store submission — NeuroReach Game Controller 0.5.1
 
 This is a prepared submission, not a claim of Chrome Web Store approval. Upload the verified ZIP; do not upload the manual-install download.
 
@@ -6,7 +6,7 @@ This is a prepared submission, not a claim of Chrome Web Store approval. Upload 
 
 | Field | Value |
 | --- | --- |
-| Package | `dist/extension/NeuroReach-Game-Controller-0.5.0.zip` |
+| Package | `dist/extension/NeuroReach-Game-Controller-0.5.1.zip` |
 | Checksum | `dist/extension/SHA256SUMS.txt` |
 | Name | NeuroReach Game Controller |
 | Language | English |

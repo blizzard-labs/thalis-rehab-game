@@ -151,7 +151,7 @@ jobs:
           $env:NEUROREACH_POSE_FIXTURE = "$env:RUNNER_TEMP/extension-pose.jpg"
           $env:NEUROREACH_TEST_PYTHON = (Get-Command python).Source
           $env:NEUROREACH_EXTENSION_DIR = (Resolve-Path ../dist/extension/unpacked).Path
-          npm run test:e2e -- game-controller.spec.ts controller-views.spec.ts --workers=1
+          npm run test:e2e -- game-controller.spec.ts controller-views.spec.ts controller-camera-permission.spec.ts --workers=1
       - uses: actions/upload-artifact@v4
         if: failure()
         with:

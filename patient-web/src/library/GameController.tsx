@@ -8,6 +8,7 @@ import { currentGuest } from "../practice/guestHistory";
 import type { Side, Source } from "../practice/session";
 import { IntentSwitch } from "./intentSwitch";
 import { CameraSlice } from "./cameraSlice";
+import { CameraAccess } from "./CameraAccess";
 import {
   PointerSetup,
   pointerPosition,
@@ -638,6 +639,7 @@ export function GameController() {
                       .filter(Boolean)
                       .join(" · ")}
                   </p>
+                  {cameraNeeded && <CameraAccess camera={camera} />}
                   <label className="controller-meter">
                     Input strength{" "}
                     <meter min="0" max="1" value={state.level ?? 0} />

@@ -7,6 +7,7 @@ function controlCommand(value) {
     case "hello":
     case "heartbeat":
     case "stop":
+    case "camera-permission":
     case "click":
     case "hold":
     case "release":

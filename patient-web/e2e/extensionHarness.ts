@@ -17,6 +17,7 @@ export async function openGameFixture(
   prepare?: (context: BrowserContext) => Promise<void>,
   nativeWindow = false,
   serviceWorkers: "allow" | "block" = "allow",
+  cameraDevice = false,
 ) {
   const root = await mkdtemp(path.join(os.tmpdir(), "nr-game-controller-"));
   const extension = path.join(root, "extension");
@@ -39,6 +40,7 @@ export async function openGameFixture(
       serviceWorkers,
       ...(nativeWindow ? { viewport: null } : {}),
       args: [
+        ...(cameraDevice ? ["--use-fake-device-for-media-stream"] : []),
         ...(nativeWindow
           ? ["--screen-info={1920x1080}", "--window-size=1280,900"]
           : []),

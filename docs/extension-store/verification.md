@@ -1,4 +1,32 @@
-# Extension 0.5.0 — verification record
+# Extension 0.5.1 — camera permission correction
+
+Verified November 25, 2026. This supersedes the 0.5.0 submission package.
+
+## Fixed behavior
+
+Fresh camera setup in Chrome’s native side panel could return `NotAllowedError` without displaying any prompt. The previous recorded-camera tests bypassed browser permission handling, so they did not cover this failure. Chrome’s extension team documents this sidebar limitation in [the Chromium Extensions discussion](https://groups.google.com/a/chromium.org/g/chromium-extensions/c/V09VMCLzvWM/m/N322oyRGAAAJ).
+
+The controller now checks permission before capture in the sidebar. **Open camera setup** opens a normal extension tab embedding the same trusted NeuroReach origin. **Allow camera** requests video only, immediately releases the permission-check stream, and **Return to game** resumes calibration with controls stopped. Denial, cancellation, unavailable devices, and computer/browser permission restrictions have recovery instructions. The helper accepts no arbitrary URL, is bound to its owning controller/tab/session, and is closed when its controller closes.
+
+## Verification
+
+| Check | Result |
+| --- | --- |
+| Unit / root security checks | 155 patient-web and 16 root checks passed, including 11 extension regressions |
+| Exact packaged extension and game browser checks | 27 passed; all nine extension scenarios, recorded camera movement, synthetic EEG, blended input, sidebar/pop-up changes, denial fallback and built-in games |
+| Real permission regression | Native sidebar; unmodified getUserMedia backed by a synthetic camera, actual Chromium denied/granted state; permission check tracks stop, sidebar stream becomes live, no input is armed; retry and cancellation pass |
+| Native prompt / visible UI | Fresh headed Chrome for Testing profile, synthetic device, no fake permission UI or pre-grant. Clicked the actual browser’s Allow button; observed the helper success screen and live sidebar preview after Return to game. The game rectangle remained connected and controls remained stopped. |
+| Build / archive | TypeScript and production build passed. ZIP CRC, file parity, icons, fixed permissions/CSP, deterministic rebuild and checksum checks passed. No new extension permission or host grant. |
+
+The camera permission test is included in the normal web suite and the Windows packaged-extension job. Automated fixtures add only the intercepted game-host grant to their disposable extension copy to emulate toolbar activeTab. The native permission check uses that same fixture approach and a synthetic device: it validates real browser permission UI, not a physical webcam, physical EEG, or clinical effectiveness. Edge and a signed store installation remain separate acceptance checks.
+
+The hosted camera setup HTML/JS and the 0.5.1 extension must be deployed together. Users of manual installations must replace their downloaded extension files, reload its extension card, and reopen the controller. Local-companion users need an updated companion build too, or can use the public website for camera/on-screen controls.
+
+The [verification workflow](https://github.com/blizzard-labs/thalis-rehab-game/actions/workflows/verify.yml) and subsequent [Pages deployment](https://github.com/blizzard-labs/thalis-rehab-game/actions/workflows/pages.yml) must pass for the exact release commit. Public archive parity is checked against the generated `dist/extension/SHA256SUMS.txt` after deployment. Store approval remains separate.
+
+---
+
+# Historical 0.5.0 verification
 
 Prepared November 25, 2026. Store approval is a separate step.
 

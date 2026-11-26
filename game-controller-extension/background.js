@@ -18,6 +18,7 @@ let popupTabId = null;
 let selectedGame = null;
 let transferToken = null;
 let confirmTransfer = null;
+let cameraSetup = null;
 let target = null,
   owner = null,
   armed = false,
@@ -173,6 +174,28 @@ function tell() {
       port.postMessage(status(port));
     } catch {}
   }
+}
+// A native side panel cannot display Chrome's camera prompt. Use a normal tab
+// with the same extension parent and controller-site iframe permission context.
+async function openCameraSetup(port) {
+  if (owner !== port || !target?.rect) return;
+  await stop("Camera setup open. Controls stopped.");
+  if (cameraSetup?.port === port && cameraSetup.target === target) {
+    await chrome.tabs.update(cameraSetup.tabId, { active: true });
+    return;
+  }
+  await closeCameraSetup();
+  const tab = await chrome.tabs.create({ url: "about:blank", active: false, windowId: target.windowId });
+  cameraSetup = { tabId: tab.id, port, target, station };
+  await chrome.tabs.update(tab.id, { url: chrome.runtime.getURL("camera.html"), active: true });
+}
+async function closeCameraSetup() {
+  const previous = cameraSetup;
+  cameraSetup = null;
+  if (previous) await chrome.tabs.remove(previous.tabId).catch(() => {});
+}
+function cameraSetupCurrent() {
+  return cameraSetup && cameraSetup.port === owner && cameraSetup.target === target;
 }
 async function input(method, params) {
   if (!target) return;
@@ -479,6 +502,7 @@ async function beginSelection(tabId, nextLayout = "sidebar") {
   const tab = await chrome.tabs.get(tabId);
   if (!supported(tab.url) || !tab.active)
     throw new Error("Open a supported game in the active tab first.");
+  await closeCameraSetup();
   const switching =
     owner &&
     nextLayout !== layout &&
@@ -562,6 +586,24 @@ async function connectGame(tabId, rect) {
 
 chrome.runtime.onMessage.addListener((message, sender, respond) => {
   if (sender.id !== chrome.runtime.id || !message || typeof message !== "object") return;
+  if (message.type === "camera-context" || message.type === "camera-return") {
+    if (sender.url !== chrome.runtime.getURL("camera.html") || sender.tab?.id !== cameraSetup?.tabId || !cameraSetupCurrent()) {
+      respond({ ok: false });
+      return;
+    }
+    if (message.type === "camera-context") {
+      respond({ station: cameraSetup.station });
+      return;
+    }
+    void enqueue(async () => {
+      if (!cameraSetupCurrent() || sender.tab.id !== cameraSetup.tabId) return;
+      const setup = cameraSetup;
+      await chrome.tabs.update(setup.target.tabId, { active: true });
+      setup.port.postMessage({ type: "camera-permission-result" });
+      await closeCameraSetup();
+    }).then(() => respond({ ok: true }));
+    return true;
+  }
   const toolbar = sender.url === chrome.runtime.getURL("popup.html");
   if (toolbar && message.type === "game-view") {
     chrome.tabs.get(message.tabId).then(
@@ -648,6 +690,7 @@ chrome.runtime.onConnect.addListener((port) => {
     if (port.sender?.tab?.id === popupTabId) popupTabId = null;
     if (owner === port) {
       owner = null;
+      void enqueue(closeCameraSetup);
       void enqueue(() =>
         stop("Controller closed. Controls stopped.", !target?.rect),
       );
@@ -679,6 +722,11 @@ chrome.runtime.onConnect.addListener((port) => {
       return;
     }
     if (!controller || owner !== port) return;
+    if (message.type === "camera-permission") {
+      disarm();
+      void enqueue(() => openCameraSetup(port));
+      return;
+    }
     if (message.type === "setup-saved") {
       confirmTransfer?.(port, message);
       return;
@@ -699,6 +747,7 @@ chrome.runtime.onConnect.addListener((port) => {
       return;
     }
     if (message.type === "arm") {
+      if (cameraSetup) return;
       if (pendingArm) return;
       pendingArm = true;
       const session = target;
@@ -836,6 +885,14 @@ chrome.tabs.onUpdated.addListener((id, change) => {
   ) {
     disarm();
     void enqueue(() => stop("Game page changed. Choose its area again.", true));
+  }
+});
+chrome.tabs.onRemoved.addListener((id) => {
+  if (cameraSetup?.tabId !== id) return;
+  const setup = cameraSetup;
+  cameraSetup = null;
+  if (owner === setup.port) {
+    try { setup.port.postMessage({ type: "camera-permission-result" }); } catch {}
   }
 });
 chrome.tabs.onActivated.addListener(({ tabId, windowId }) => {

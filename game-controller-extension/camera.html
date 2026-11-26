@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NeuroReach · Camera access</title>
+  <style>
+    html, body { margin: 0; height: 100%; background: #fcf8f1; color: #5f536b; font: 18px system-ui, sans-serif; }
+    iframe { display: block; width: 100%; height: 100%; border: 0; }
+    [hidden] { display: none; } p { margin: 3rem; }
+  </style>
+</head>
+<body>
+  <p role="status">Opening camera setup…</p>
+  <iframe hidden title="Allow camera for NeuroReach" allow="camera"></iframe>
+  <script src="sites.js"></script>
+  <script src="camera.js"></script>
+</body>
+</html>

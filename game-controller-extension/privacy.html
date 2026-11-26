@@ -18,7 +18,7 @@
   <p>NeuroReach Game Controller</p>
   <h1>Your controls. Your choices.</h1>
   <p>Privacy policy for the browser extension and its NeuroReach controller.</p>
-  <p class="date">Effective November 25, 2026 · Extension version 0.5.0</p>
+  <p class="date">Effective November 25, 2026 · Extension version 0.5.1</p>
 </header>
 <main>
 <h2>Who provides it</h2>
@@ -29,7 +29,7 @@
 <ul>
   <li><strong>Selected game:</strong> the extension uses its tab identifier, address, title, selected rectangle, and focus/layout state to target input and stop it when the context changes. It does not collect a history of unrelated browsing or scrape game scores.</li>
   <li><strong>Input commands:</strong> normalized pointer positions, arrow/Space key commands, click/hold/release actions, connection heartbeats, and a temporary setup-transfer token pass between the NeuroReach controller and extension. Only fixed, validated commands are accepted.</li>
-  <li><strong>Camera:</strong> with your browser permission, the NeuroReach web controller processes camera video locally to estimate movement. Video is not recorded or sent to the extension background process, NeuroReach servers, GitHub, or game providers. The controller can keep processing while covered; closing it ends camera capture.</li>
+  <li><strong>Camera:</strong> with your browser permission, the NeuroReach web controller processes camera video locally to estimate movement. Video is not recorded or sent to the extension background process, NeuroReach servers, GitHub, or game providers. For sidebar permission, a separate extension tab embeds a NeuroReach camera setup page. It requests video only after you choose Allow camera and immediately stops the temporary stream. No microphone is requested. The controller can keep processing while covered; closing it ends camera capture.</li>
   <li><strong>Optional EEG:</strong> the local companion processes a supported headset stream. The web controller uses derived signal information locally. The extension receives game actions, not raw EEG or clinical records. EEG requires the companion and the manufacturer's separate setup.</li>
 </ul>
 <h2>Storage and retention</h2>

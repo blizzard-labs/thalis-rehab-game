@@ -273,7 +273,7 @@ test("dragging moves the wrist into the hoop before releasing a catch", async ({
 });
 
 for (const [scenario, expected] of [
-  ["camera denial", /permission was declined/],
+  ["camera denial", /Camera access is blocked/],
   ["missing camera API", /browser cannot open a camera/],
 ] as const) {
   test(`${scenario} can continue the same session using a switch`, async ({

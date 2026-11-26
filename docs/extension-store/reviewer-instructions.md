@@ -16,7 +16,7 @@ No NeuroReach login, payment, headset, companion, or patient information is requ
 
 ## Camera mode
 
-1. With a selected game, choose Camera and allow the browser camera prompt.
+1. With a selected game, choose **Camera → Set up input → Open camera setup**. In the normal browser tab that opens, choose **Allow camera**, allow the browser prompt, then **Return to game**. The sidebar cannot display that prompt itself. Also test denial and closing the setup tab: retry and on-screen controls must remain available. The camera check releases its temporary stream; the sidebar starts its own stream on return.
 2. Follow the comfortable resting position and two opposite reach positions. Choose an appropriate preset (Arrow keys for 2048; Slice for a supported slicing game).
 3. Enable controls and make small reaches. Camera input should continue with the game in focus and the sidebar open; pop-up mode may be covered while the camera track remains live.
 4. Cover the camera or revoke access. Input should stop rather than retain a held action. Closing the controller ends camera capture. Stop controls alone stops forwarding but leaves camera setup active.

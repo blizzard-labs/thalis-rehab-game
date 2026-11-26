@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { assetUrl } from "../deployment";
 import { medianWrist, type MotionSample } from "./motion";
 import type { Readings } from "../reports/measurements";
@@ -21,6 +21,11 @@ export function useMotionCamera(
   const useCameraTrack = !!controller;
   const [status, setStatus] = useState("Opening camera…");
   const [stream, setStream] = useState<MediaStream | null>(null);
+  const [problem, setProblem] = useState<"permission" | "unavailable" | null>(null);
+  const [attempt, setAttempt] = useState(0);
+  const retry = useCallback(() => setAttempt((value) => value + 1), []);
+  const inExtensionPanel = useCameraTrack && window.parent !== window &&
+    !!location.ancestorOrigins?.[0]?.startsWith("chrome-extension://");
   const angles = useRef<{ time: number; values: Readings } | null>(null);
   const other = useRef<MotionSample | null>(null);
   const bothArms = useRef(both);
@@ -49,20 +54,32 @@ export function useMotionCamera(
       other.current = null;
       angles.current = null;
     };
-    const fail = (message: string) => {
+    const fail = (message: string, kind: "permission" | "unavailable" = "unavailable") => {
       if (!stopped) {
         release();
         setStream(null);
         setStatus(message);
+        setProblem(kind);
       }
     };
     async function start() {
       setStatus("Opening camera…");
+      setProblem(null);
       if (!navigator.mediaDevices?.getUserMedia) {
         fail(
           "This browser cannot open a camera. Open on localhost or HTTPS, or continue with one button.",
         );
         return;
+      }
+      if (inExtensionPanel) {
+        // Side panels cannot display a permission prompt. Do not make a doomed
+        // request (or label it a user refusal); grant in our normal helper tab.
+        const permission = await navigator.permissions.query({ name: "camera" as PermissionName }).catch(() => null);
+        if (stopped) return;
+        if (permission?.state !== "granted") {
+          fail("Allow your camera in a separate tab, then return here to set your movement range.", "permission");
+          return;
+        }
       }
       media = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: "user", width: 640, height: 480 },
@@ -222,18 +239,20 @@ export function useMotionCamera(
         timer = window.setInterval(() => void capture(performance.now()), 33);
       }
     }
-    void start().catch((error) =>
-      fail(
-        error?.name === "NotAllowedError"
-          ? "Camera permission was declined. You can play with one button."
-          : "Camera unavailable. Check that a webcam is connected and available to this browser.",
-      ),
-    );
+    void start().catch((error) => {
+      if (error?.name === "NotAllowedError") {
+        fail("Camera access is blocked or has not been allowed yet. Check your browser and computer’s camera permissions, or use on-screen controls.", "permission");
+      } else if (error?.name === "NotFoundError") {
+        fail("No camera was found. Connect a webcam and try again, or use on-screen controls.");
+      } else {
+        fail("Camera unavailable. Close other camera apps and check that your webcam is connected, or use on-screen controls.");
+      }
+    });
     return () => {
       release();
       setStream(null);
     };
-  }, [enabled, side, useCameraTrack]);
+  }, [enabled, side, useCameraTrack, inExtensionPanel, attempt]);
   function latest() {
     const value = samples.current[samples.current.length - 1];
     return value && performance.now() - value.time < 650 ? value.point : null;
@@ -255,6 +274,9 @@ export function useMotionCamera(
   return {
     status,
     stream,
+    problem,
+    retry,
+    inExtensionPanel,
     latest,
     steady,
     tracked,

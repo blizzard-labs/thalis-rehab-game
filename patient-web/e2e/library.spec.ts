@@ -93,7 +93,7 @@ test("controller without extension cannot arm and camera denial can use manual c
   ).toBeDisabled();
   await page.getByLabel("Camera", { exact: true }).check();
   await page.getByRole("button", { name: "Set up input" }).click();
-  await expect(page.getByText(/permission was declined/)).toBeVisible();
+  await expect(page.getByText(/Camera access is blocked/)).toBeVisible();
   await page.getByRole("button", { name: "Use on-screen controls" }).click();
   await expect(
     page.getByRole("button", { name: "Select highlighted control" }),

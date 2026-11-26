@@ -13,6 +13,18 @@ Use camera movement, an EEG switch, or on-screen controls with an existing web g
 
 Camera uses a comfortable neutral position and two opposite corners. Small movements map across the selected game area. EEG needs the local companion, a supported Unicorn LSL stream and resting calibration. With EEG alone, wait for a highlighted control, sustain an effort, then return to rest. Camera + EEG uses the hand to aim and EEG to select. On-screen buttons are always available as a fallback.
 
+## Allow the camera in the sidebar
+
+1. Choose **Camera → Set up input → Open camera setup**.
+2. In the new tab, choose **Allow camera**, then allow it in Chrome or Edge’s prompt.
+3. Choose **Return to game**. Set your resting position and two comfortable corners, then **Enable controls**.
+
+The separate tab is needed because the browser cannot show a camera permission prompt inside its sidebar. The permission check releases the camera immediately; your controller starts its preview when you return. Game controls stay stopped during setup.
+
+If no prompt appears, expand **No permission prompt?** in the setup tab. Allow camera access using the camera/site icon beside that tab’s address, check the computer’s camera privacy settings for your browser, and choose **Try camera again**. You can always return and use on-screen controls.
+
+Updating an older manual installation: download and unzip the new extension, replace the contents of the folder you originally loaded, click **Reload** on its card at `chrome://extensions`, then close and reopen the controller. Confirm version **0.5.1** or later. Local-companion users also need a companion build containing the camera setup page; camera play on the public NeuroReach website does not need the companion.
+
 ## Presets
 
 In camera pointer games, a ring in the game window follows your hand and fills while you hold a drag or slice. Adjust **Hold still to select** in the controller if you want more time to place a piece or a shot.
@@ -29,7 +41,7 @@ These are input mappings, not a guarantee that every game works. Menus, embedded
 
 ## Permissions and stopping
 
-`sidePanel` opens the browser sidebar and `storage` remembers your controller view. Host access covers the published NeuroReach project on GitHub Pages and local companions, so the sidebar can use the same app and guest profile. `activeTab` and `scripting` place the selection overlay only after clicking the toolbar. `debugger` sends browser keyboard/mouse events to the selected game tab, including an embedded game. Chrome displays its debugging permission warning. The extension does not capture screenshots, read game scores, request camera access, or collect EEG. NeuroReach computes input locally and sends only movement/key/click commands. No clinical records or sensor recordings are sent to game sites.
+`sidePanel` opens the browser sidebar and `storage` remembers your controller view. Host access covers the published NeuroReach project on GitHub Pages and local companions, so the sidebar can use the same app and guest profile. `activeTab` and `scripting` place the selection overlay only after clicking the toolbar. `debugger` sends browser keyboard/mouse events to the selected game tab, including an embedded game. Chrome displays its debugging permission warning. The extension does not capture screenshots, read game scores, or collect EEG. Its camera setup tab lets the embedded NeuroReach page request browser permission; no video crosses the extension bridge. NeuroReach computes input locally and sends only movement/key/click commands. No clinical records or sensor recordings are sent to game sites.
 
 Chrome's host grant covers the GitHub Pages origin, but only the NeuroReach project's library/controller entry pages and local companion entry pages can connect to the bridge. Other project paths on that shared host are rejected. Only one controller can send inputs. Keyboard actions go to the selected game tab; pointer actions stay in its selected rectangle. Navigation, layout changes, switching away from the game tab, closing the controller, lost input/heartbeat, or leaving the game/controller windows stops control. Stopping releases the held mouse button or steering key and hides the aiming ring. Games themselves may continue running; use their pause button too.
 

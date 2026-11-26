@@ -9,7 +9,7 @@ function runtime() {
   const chrome = {
     runtime: { id: 'extension', getURL: path => `chrome-extension://extension/${path}`, onMessage: event(), onConnect: event() },
     storage: { session: { get: async () => ({}), set: async () => {} } },
-    tabs: { get: async id => ({ id, active: true, url: 'https://poki.com/example', windowId: 1 }), onUpdated: event(), onActivated: event(), sendMessage: async () => {} },
+    tabs: { get: async id => ({ id, active: true, url: 'https://poki.com/example', windowId: 1 }), onUpdated: event(), onActivated: event(), onRemoved: event(), sendMessage: async () => {} },
     windows: { onFocusChanged: event(), update: async () => {} },
     commands: { onCommand: event() },
     debugger: { onDetach: event(), detach: async () => {}, sendCommand: async (tab, method, params) => { sent.push({ tab, method, params }); return { result: { value: false } }; } },
@@ -132,4 +132,50 @@ test('navigation, focus loss, emergency shortcut and controller close stop queue
     r.send({type:'click'}); interrupt(r); r.evaluate('unblock()'); await r.flush();
     assert.equal(r.evaluate('armed'), false); assert.equal(r.sent.length, 0);
   }
+});
+
+test('camera helper is fixed-site, owner-bound, single-instance and cannot arm controls', async () => {
+  const r = runtime();
+  const created = [], updated = [], removed = [];
+  r.chrome.tabs.create = async options => { created.push(options); return {id: 30}; };
+  r.chrome.tabs.update = async (id, options) => { updated.push({id, ...options}); };
+  r.chrome.tabs.remove = async id => { removed.push(id); };
+  const stranger = r.port('http://127.0.0.1:5173/#library');
+  r.send({type:'camera-permission',url:'https://evil.example'}, stranger);
+  await r.flush(); assert.equal(created.length, 0);
+  await r.arm();
+  r.send({type:'camera-permission',url:'https://evil.example'}); await r.flush();
+  assert.equal(r.evaluate('armed'), false);
+  assert.equal(created.length, 1);
+  assert.equal(updated[0].url, 'chrome-extension://extension/camera.html');
+  r.send({type:'camera-permission'}); r.send({type:'arm'}); await r.flush();
+  assert.equal(created.length, 1); assert.equal(r.evaluate('armed'), false);
+  const message = (type, sender) => new Promise(resolve => r.chrome.runtime.onMessage.listeners[0]({type}, {id:'extension', ...sender}, resolve));
+  for (const sender of [
+    {url:'http://127.0.0.1:5173/#game-controller',tab:{id:30}},
+    {url:'chrome-extension://extension/camera.html',tab:{id:31}},
+  ]) {
+    assert.equal((await message('camera-context',sender)).ok, false);
+    assert.equal((await message('camera-return',sender)).ok, false);
+  }
+  const helper = {url:'chrome-extension://extension/camera.html',tab:{id:30}};
+  assert.equal((await message('camera-context',helper)).station, 'http://127.0.0.1:5173');
+  await message('camera-return',helper); await r.flush();
+  assert.equal(r.evaluate('armed'), false);
+  assert.equal(r.evaluate('cameraSetup'), null);
+  assert.deepEqual(removed, [30]);
+  assert(r.controller.replies.some(m => m.type === 'camera-permission-result'));
+  assert.equal((await message('camera-return',helper)).ok, false);
+});
+
+test('closing the controller cancels its camera helper without granting a new owner access', async () => {
+  const r = runtime();
+  const removed = [];
+  r.chrome.tabs.create = async () => ({id:30}); r.chrome.tabs.update = async () => {};
+  r.chrome.tabs.remove = async id => { removed.push(id); };
+  r.send({type:'camera-permission'}); await r.flush();
+  r.controller.onDisconnect.listeners[0](); await r.flush();
+  assert.equal(r.evaluate('cameraSetup'), null);
+  assert.deepEqual(removed,[30]);
+  assert.equal(r.evaluate('armed'), false);
 });

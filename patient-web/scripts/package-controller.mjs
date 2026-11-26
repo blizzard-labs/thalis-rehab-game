@@ -57,7 +57,7 @@ export async function packageController({
   const source = join(repository, "game-controller-extension");
   const manifest = JSON.parse(await readFile(join(source, "manifest.json"), "utf8"));
   const names = ["manifest.json", "background.js", "bridge.js", "protocol.js", "sites.js",
-    "popup.html", "popup.js", "sidebar.html", "sidebar.js", "privacy.html",
+    "popup.html", "popup.js", "sidebar.html", "sidebar.js", "camera.html", "camera.js", "privacy.html",
     ...Object.values(manifest.icons)].sort();
   const files = await Promise.all(names.map(async name => [name, await readFile(join(source, name))]));
   files.push(["LICENSE", await readFile(join(repository, "LICENSE"))]);

@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NeuroReach · Camera access</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 32px 20px; background: #fcf8f1; color: #5f536b; font: 18px/1.6 system-ui, sans-serif; }
+    main { max-width: 620px; margin: 5vh auto; background: #fffdf9; padding: clamp(24px, 5vw, 48px); border: 1px solid #ded3df; border-radius: 24px; }
+    h1 { color: #705080; font: 500 clamp(30px, 5vw, 42px)/1.2 Georgia, serif; }
+    .brand { font-weight: 700; color: #705080; }
+    button { font: 600 18px/1.4 system-ui, sans-serif; padding: 13px 20px; border: 1px solid #95809f; border-radius: 12px; background: #705080; color: white; cursor: pointer; }
+    button:disabled { opacity: .6; cursor: wait; } button:focus-visible, summary:focus-visible { outline: 3px solid #bd922e; outline-offset: 4px; }
+    #back { background: transparent; color: #705080; } .actions { display: flex; gap: 12px; flex-wrap: wrap; margin: 24px 0; }
+    details { margin-top: 28px; } summary { cursor: pointer; } [hidden] { display: none; }
+  </style>
+</head>
+<body>
+  <main>
+    <p class="brand">NeuroReach</p>
+    <h1>Allow your camera</h1>
+    <p>Chrome and Edge need this separate tab to show the camera prompt for the sidebar. Choose <strong>Allow camera</strong>, then allow access in the browser prompt.</p>
+    <p>Your video is processed on this device for movement controls. This check does not record video or request a microphone. Game controls remain stopped.</p>
+    <p id="status" role="status" aria-live="polite">Ready when you are.</p>
+    <div class="actions">
+      <button id="allow">Allow camera</button>
+      <button id="back">Return to game</button>
+    </div>
+    <details id="help">
+      <summary>No permission prompt?</summary>
+      <p>If access was blocked earlier, open the camera or site controls icon beside this tab’s address and allow camera access. Then choose <strong>Try camera again</strong>.</p>
+      <p>Also check your computer’s privacy settings: allow camera access for Chrome or Edge. Close other apps using the camera. A work or school browser may require your administrator to allow access.</p>
+      <p>You can return to the game and choose on-screen controls at any time.</p>
+    </details>
+  </main>
+  <script src="camera-permission.js"></script>
+</body>
+</html>
