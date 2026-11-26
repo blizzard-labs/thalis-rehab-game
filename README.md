@@ -4,12 +4,6 @@
   <img src="patient-web/img/logo-small.png" alt="NeuroReach logo" width="420">
 </a>
 
-# NeuroReach
-
-**EEG-Assisted Rehab**
-
-Accessible games for upper-limb practice—with or without an EEG headset.
-
 <p>
   <a href="https://github.com/blizzard-labs/thalis-rehab-game/actions/workflows/verify.yml"><img src="https://github.com/blizzard-labs/thalis-rehab-game/actions/workflows/verify.yml/badge.svg?branch=main" alt="Build and test status"></a>
   <a href="https://github.com/blizzard-labs/thalis-rehab-game/releases/latest"><img src="https://img.shields.io/github/v/release/blizzard-labs/thalis-rehab-game?label=release&amp;color=725382" alt="Latest companion release"></a>
