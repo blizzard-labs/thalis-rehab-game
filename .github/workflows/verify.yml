@@ -92,6 +92,9 @@ jobs:
         with:
           node-version: 22
       - run: npm --prefix patient-web ci
+      - name: Install browser for extension acceptance
+        working-directory: patient-web
+        run: npx playwright install chromium
       - run: python -m PyInstaller --clean --noconfirm packaging/companion.spec
       - name: Check packaged startup and assets
         timeout-minutes: 2
