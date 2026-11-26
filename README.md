@@ -12,7 +12,7 @@ Accessible games for upper-limb practice—with or without an EEG headset.
 
 <p>
   <a href="https://github.com/blizzard-labs/thalis-rehab-game/actions/workflows/verify.yml"><img src="https://github.com/blizzard-labs/thalis-rehab-game/actions/workflows/verify.yml/badge.svg?branch=main" alt="Build and test status"></a>
-  <a href="https://github.com/blizzard-labs/thalis-rehab-game/releases/latest"><img src="https://img.shields.io/github/v/release/blizzard-labs/thalis-rehab-game?label=companion&amp;color=725382" alt="Latest companion release"></a>
+  <a href="https://github.com/blizzard-labs/thalis-rehab-game/releases/latest"><img src="https://img.shields.io/github/v/release/blizzard-labs/thalis-rehab-game?label=release&amp;color=725382" alt="Latest companion release"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-526d89" alt="MIT license"></a>
 </p>
 
@@ -30,7 +30,7 @@ Accessible games for upper-limb practice—with or without an EEG headset.
 
 ---
 
-### Make practice something to look forward to
+## Make practice something to look forward to
 
 Grow a garden, catch stars, explore an orchard, travel downriver, or keep a lighthouse shining. NeuroReach brings seated movement practice into five interactive games, with controls that adapt to how you want to play.
 
