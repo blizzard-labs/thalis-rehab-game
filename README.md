@@ -1,10 +1,44 @@
-# NeuroReach: EEG-Assisted Rehab
+<div align="center">
 
-<img src="patient-web/img/logo-small.png" alt="NeuroReach" width="360">
+<a href="https://blizzard-labs.github.io/thalis-rehab-game/">
+  <img src="patient-web/src/brand/seal.webp" alt="NeuroReach logo" width="112" height="112">
+</a>
 
-Welcoming games for seated upper-limb practice. Play with buttons, touch, a camera, or a supported EEG headset.
+# NeuroReach
 
-**[Open NeuroReach](https://blizzard-labs.github.io/thalis-rehab-game/)** · [Companion setup](#companion-setup) · [Help](#troubleshooting) · [Developer guide](docs/development.md)
+**EEG-Assisted Rehab**
+
+Accessible games for upper-limb practice—with or without an EEG headset.
+
+<p>
+  <a href="https://github.com/blizzard-labs/thalis-rehab-game/actions/workflows/verify.yml"><img src="https://github.com/blizzard-labs/thalis-rehab-game/actions/workflows/verify.yml/badge.svg?branch=main" alt="Build and test status"></a>
+  <a href="https://github.com/blizzard-labs/thalis-rehab-game/releases/latest"><img src="https://img.shields.io/github/v/release/blizzard-labs/thalis-rehab-game?label=companion&amp;color=725382" alt="Latest companion release"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-526d89" alt="MIT license"></a>
+</p>
+
+<p>
+  <a href="https://blizzard-labs.github.io/thalis-rehab-game/"><strong>Play NeuroReach →</strong></a>
+  &nbsp; · &nbsp;
+  <a href="https://github.com/blizzard-labs/thalis-rehab-game/releases/latest"><strong>Download the companion</strong></a>
+</p>
+
+[Getting started](#start-playing) · [Companion setup](#companion-setup) · [Developer guide](docs/development.md) · [Get involved](#get-involved)
+
+<sub>Open source · Powered by <a href="https://krishna-bhatt.com">THALis</a></sub>
+
+</div>
+
+---
+
+### Make practice something to look forward to
+
+Grow a garden, catch stars, explore an orchard, travel downriver, or keep a lighthouse shining. NeuroReach brings seated movement practice into five interactive games, with controls that adapt to how you want to play.
+
+| Play your way | Guide a session | Follow your progress |
+| :--- | :--- | :--- |
+| Buttons, touch, camera, or supported EEG input. Start in your browser without a headset. | Invite a patient with a private link or QR code. Monitor their game and camera from the companion. | Review session details and trends over time. Export PDF reports and CSV data. |
+
+**New here?** [Try a game in your browser](https://blizzard-labs.github.io/thalis-rehab-game/) or [set up the companion](#companion-setup) for supervised sessions. No Python or terminal commands needed.
 
 ## Choose how to play
 
@@ -146,4 +180,19 @@ NeuroReach is an experimental wellness and engagement tool. It does not replace 
 
 [Introduction video](https://youtu.be/hHVyAqoD-6w) · [System walkthrough](https://youtu.be/Uo2iDNLLS2w) · [Project resources](https://neuroreach.notion.site/NeuroReach-EEG-Assisted-Motor-Rehabilitation-RESOURCES-3ac0b3bfcc1381189586e200abe4d8cd)
 
-**Developers and IT:** build commands, configuration, tests, deployment, packaging, and architecture are in the **[developer guide](docs/development.md)**.
+## Get involved
+
+NeuroReach is open source under the [MIT license](LICENSE). Contributions from players, clinicians, designers, researchers, and developers are welcome.
+
+- **Share feedback:** [report a bug or suggest an improvement](https://github.com/blizzard-labs/thalis-rehab-game/issues). Tell us what you tried, what happened, and your device/browser. Keep patient information out of public issues and screenshots.
+- **Improve the project:** help with accessible interactions, game design, documentation, or code. The [developer guide](docs/development.md) covers setup, architecture, and checks to run before submitting a pull request.
+- **Explore the work:** watch the [introduction](https://youtu.be/hHVyAqoD-6w), browse the [project resources](https://neuroreach.notion.site/NeuroReach-EEG-Assisted-Motor-Rehabilitation-RESOURCES-3ac0b3bfcc1381189586e200abe4d8cd), or read the [latest release notes](https://github.com/blizzard-labs/thalis-rehab-game/releases/latest).
+
+---
+
+<p align="center">
+  <a href="https://blizzard-labs.github.io/thalis-rehab-game/">Play NeuroReach</a> ·
+  <a href="#companion-setup">Companion setup</a> ·
+  <a href="#troubleshooting">Help</a> ·
+  <a href="LICENSE">MIT license</a>
+</p>
