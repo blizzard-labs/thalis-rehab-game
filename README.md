@@ -1,7 +1,7 @@
 <div align="center">
 
 <a href="https://blizzard-labs.github.io/thalis-rehab-game/">
-  <img src="patient-web/src/brand/seal.webp" alt="NeuroReach logo" width="112" height="112">
+  <img src="patient-web/img/logo-small.png" alt="NeuroReach logo" width="420">
 </a>
 
 # NeuroReach
